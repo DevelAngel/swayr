@@ -10,6 +10,7 @@ pub type Dim = u16;
 pub type Pid = u16;
 
 #[derive(Deserialize)]
+#[allow(dead_code)]
 pub struct Rect {
     x: Dim,
     y: Dim,
@@ -78,6 +79,7 @@ pub enum ShellType {
 }
 
 #[derive(Deserialize)]
+#[allow(dead_code)]
 pub struct Node {
     id: Id,
     name: Option<String>,
@@ -162,6 +164,7 @@ pub fn get_tree() -> Node {
     }
 }
 
+#[allow(dead_code)]
 pub struct Con<'a> {
     name: &'a str,
     id: Id,
