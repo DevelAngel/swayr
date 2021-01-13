@@ -108,29 +108,36 @@ pub struct Node {
 }
 
 impl Node {
-    fn add_children<'a>(&'a self, v: &'a mut Vec<&'a Node>) {
-        for n in self.nodes.iter() {
-            v.push(&n);
-            n.add_children(v);
-        }
-    }
-
-    fn iter(&self) -> NodeIter {
-        let mut v = vec![self];
-        self.add_children(&mut v);
-        NodeIter { stack: v }
+    fn iter(&self) -> PreOrderNodeIter {
+        PreOrderNodeIter::new(self)
     }
 }
 
-struct NodeIter<'a> {
+struct PreOrderNodeIter<'a> {
     stack: Vec<&'a Node>,
 }
 
-impl<'a> Iterator for NodeIter<'a> {
+impl<'a> PreOrderNodeIter<'a> {
+    fn new(node: &'a Node) -> PreOrderNodeIter {
+        PreOrderNodeIter { stack: vec![node] }
+    }
+}
+
+impl<'a> Iterator for PreOrderNodeIter<'a> {
     type Item = &'a Node;
 
-    fn next(&mut self) -> Option<<Self as Iterator>::Item> {
-        self.stack.pop()
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(node) = self.stack.pop() {
+            for n in &node.nodes {
+                self.stack.push(&n);
+            }
+            for n in &node.floating_nodes {
+                self.stack.push(&n);
+            }
+            Some(node)
+        } else {
+            None
+        }
     }
 }
 
@@ -163,7 +170,7 @@ pub struct Con<'a> {
 
 impl<'a> std::fmt::Display for Con<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "{} {}", self.name, self.app_id.unwrap_or(""))
+        write!(f, "{} — {}", self.app_id.unwrap_or(""), self.name)
     }
 }
 
@@ -186,4 +193,22 @@ pub fn get_cons<'a>(tree: &'a Node) -> Vec<Con<'a>> {
         }
     }
     v
+}
+
+#[test]
+fn test_get_cons() {
+    let tree = get_tree();
+
+    println!("Those IDs are in get_tree():");
+    for n in tree.iter() {
+        println!("  id: {}", n.id);
+    }
+
+    let cons = get_cons(&tree);
+
+    println!("There are {} cons.", cons.len());
+
+    for c in cons {
+        println!("{}", c);
+    }
 }
