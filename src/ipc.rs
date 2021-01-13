@@ -80,6 +80,16 @@ pub enum ShellType {
 
 #[derive(Deserialize)]
 #[allow(dead_code)]
+pub struct WindowProperties {
+    pub class: Option<String>,
+    pub instance: Option<String>,
+    pub title: Option<String>,
+    //pub window_type: Option<WindowType>
+    //pub transient_for: DONTKNOW,
+}
+
+#[derive(Deserialize)]
+#[allow(dead_code)]
 pub struct Node {
     pub id: Id,
     pub name: Option<String>,
@@ -107,6 +117,7 @@ pub struct Node {
     pub max_render_time: Option<i32>,
     pub pid: Option<Pid>,
     pub shell: Option<ShellType>,
+    pub window_properties: Option<WindowProperties>,
 }
 
 impl Node {

@@ -26,6 +26,7 @@ pub fn get_cons<'a>(tree: &'a ipc::Node) -> Vec<Con<'a>> {
                 id: n.id,
                 app_id: match &n.app_id {
                     Some(s) => Some(s.as_ref()),
+                    // TODO: Use n.window_properties.class instead!
                     None => None,
                 },
             })
