@@ -9,7 +9,7 @@ pub type Id = u32;
 pub type Dim = u16;
 pub type Pid = u16;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 #[allow(dead_code)]
 pub struct Rect {
     pub x: Dim,
@@ -19,7 +19,7 @@ pub struct Rect {
 }
 
 // TODO: Maybe there are more?
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub enum Border {
     #[serde(rename = "none")]
     None,
@@ -30,7 +30,7 @@ pub enum Border {
 }
 
 // TODO: Maybe there are more?
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub enum Layout {
     #[serde(rename = "splith")]
     SplitH,
@@ -46,7 +46,7 @@ pub enum Layout {
     None,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub enum Orientation {
     #[serde(rename = "horizontal")]
     Horizontal,
@@ -70,7 +70,7 @@ pub enum NodeType {
     FloatingCon,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub enum ShellType {
     #[serde(rename = "xdg_shell")]
     XdgShell,
@@ -78,7 +78,7 @@ pub enum ShellType {
     XWayland,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 #[allow(dead_code)]
 pub struct WindowProperties {
     pub class: Option<String>,
@@ -88,7 +88,7 @@ pub struct WindowProperties {
     //pub transient_for: DONTKNOW,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 #[allow(dead_code)]
 pub struct Node {
     pub id: Id,
@@ -121,22 +121,22 @@ pub struct Node {
 }
 
 impl Node {
-    pub fn iter(&self) -> PreOrderNodeIter {
-        PreOrderNodeIter::new(self)
+    pub fn iter(&self) -> NodeIter {
+        NodeIter::new(self)
     }
 }
 
-pub struct PreOrderNodeIter<'a> {
+pub struct NodeIter<'a> {
     stack: Vec<&'a Node>,
 }
 
-impl<'a> PreOrderNodeIter<'a> {
-    fn new(node: &'a Node) -> PreOrderNodeIter {
-        PreOrderNodeIter { stack: vec![node] }
+impl<'a> NodeIter<'a> {
+    fn new(node: &'a Node) -> NodeIter {
+        NodeIter { stack: vec![node] }
     }
 }
 
-impl<'a> Iterator for PreOrderNodeIter<'a> {
+impl<'a> Iterator for NodeIter<'a> {
     type Item = &'a Node;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -183,4 +183,46 @@ fn test_get_tree() {
     for n in tree.iter() {
         println!("  id: {}, type: {:?}", n.id, n.r#type);
     }
+}
+
+#[derive(Deserialize, Debug)]
+#[allow(dead_code)]
+pub enum WindowEventType {
+    #[serde(rename = "new")]
+    New,
+    #[serde(rename = "close")]
+    Close,
+    #[serde(rename = "focus")]
+    Focus,
+    #[serde(rename = "title")]
+    Title,
+    #[serde(rename = "fullscreen_mode")]
+    FullscreenMode,
+    #[serde(rename = "move")]
+    Move,
+    #[serde(rename = "floating")]
+    Floating,
+    #[serde(rename = "urgent")]
+    Urgent,
+    #[serde(rename = "mark")]
+    Mark,
+}
+
+#[derive(Deserialize, Debug)]
+#[allow(dead_code)]
+pub struct Reply {
+    pub success: bool,
+    pub error: String,
+}
+
+#[derive(Deserialize, Debug)]
+#[allow(dead_code)]
+pub struct WindowEvent {
+    pub change: WindowEventType,
+    pub container: Node,
+}
+
+pub struct WindowProps {
+    /// Milliseconds since UNIX epoch.
+    last_focus_time: u128,
 }
