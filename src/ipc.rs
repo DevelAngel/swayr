@@ -210,13 +210,6 @@ pub enum WindowEventType {
 
 #[derive(Deserialize, Debug)]
 #[allow(dead_code)]
-pub struct Reply {
-    pub success: bool,
-    pub error: String,
-}
-
-#[derive(Deserialize, Debug)]
-#[allow(dead_code)]
 pub struct WindowEvent {
     pub change: WindowEventType,
     pub container: Node,
