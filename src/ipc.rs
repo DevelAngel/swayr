@@ -1,7 +1,7 @@
 extern crate serde;
 extern crate serde_json;
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use std::process as proc;
 
@@ -215,7 +215,7 @@ pub struct WindowEvent {
     pub container: Node,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct WindowProps {
     /// Milliseconds since UNIX epoch.
     pub last_focus_time: u128,

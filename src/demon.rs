@@ -1,9 +1,12 @@
 use crate::ipc;
 use serde_json::Deserializer;
 use std::collections::HashMap;
+use std::io::Write;
+use std::os::unix::net::{UnixListener, UnixStream};
 use std::process as proc;
 use std::sync::Arc;
 use std::sync::RwLock;
+use std::thread;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 pub fn monitor_window_events(win_props: Arc<RwLock<HashMap<ipc::Id, ipc::WindowProps>>>) {
@@ -56,4 +59,37 @@ fn get_epoch_time_as_millis() -> u128 {
         .duration_since(UNIX_EPOCH)
         .expect("Couldn't get epoch time!")
         .as_millis()
+}
+
+pub fn serve_client_requests(
+    win_props: Arc<RwLock<HashMap<ipc::Id, ipc::WindowProps>>>,
+) -> std::io::Result<()> {
+    // FIXME: Use sensible path.
+    let listener = UnixListener::bind("/home/horn/tmp/SWAYR_SOCKET")?;
+
+    for stream in listener.incoming() {
+        match stream {
+            Ok(stream) => {
+                /* connection succeeded */
+                let wp_clone = win_props.clone();
+                thread::spawn(move || handle_client_request(stream, wp_clone));
+            }
+            Err(err) => {
+                /* connection failed */
+                eprintln!("Could not accept client request: {:?}", err);
+                break;
+            }
+        }
+    }
+    Ok(())
+}
+
+fn handle_client_request(
+    mut stream: UnixStream,
+    win_props: Arc<RwLock<HashMap<ipc::Id, ipc::WindowProps>>>,
+) {
+    let json = serde_json::to_string(&*win_props.read().unwrap()).unwrap();
+    if let Err(err) = stream.write_all(json.as_bytes()) {
+        eprintln!("Error writing to client: {:?}", err);
+    }
 }
