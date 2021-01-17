@@ -14,7 +14,7 @@ fn main() {
     let win_props_for_ev_handler = win_props.clone();
 
     let subscriber_handle =
-        thread::spawn(|| demon::monitor_window_events(win_props_for_ev_handler));
+        thread::spawn(move || demon::monitor_window_events(win_props_for_ev_handler));
 
     let subscriber_result = subscriber_handle.join();
     match subscriber_result {

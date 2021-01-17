@@ -215,7 +215,8 @@ pub struct WindowEvent {
     pub container: Node,
 }
 
+#[derive(Debug)]
 pub struct WindowProps {
     /// Milliseconds since UNIX epoch.
-    last_focus_time: u128,
+    pub last_focus_time: u128,
 }
