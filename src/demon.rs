@@ -65,7 +65,7 @@ pub fn serve_client_requests(
     win_props: Arc<RwLock<HashMap<ipc::Id, ipc::WindowProps>>>,
 ) -> std::io::Result<()> {
     // FIXME: Use sensible path.
-    let listener = UnixListener::bind("/home/horn/tmp/SWAYR_SOCKET")?;
+    let listener = UnixListener::bind(ipc::SWAYR_SOCKET_PATH)?;
 
     for stream in listener.incoming() {
         match stream {

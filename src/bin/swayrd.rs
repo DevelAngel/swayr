@@ -16,11 +16,14 @@ fn main() {
     let subscriber_handle =
         thread::spawn(move || demon::monitor_window_events(win_props_for_ev_handler));
 
-    demon::serve_client_requests(win_props);
-
-    let subscriber_result = subscriber_handle.join();
-    match subscriber_result {
-        Ok(()) => println!("Subscriber thread shut down cleanly."),
+    match demon::serve_client_requests(win_props) {
+        Ok(()) => {
+            let subscriber_result = subscriber_handle.join();
+            match subscriber_result {
+                Ok(()) => println!("Subscriber thread shut down cleanly."),
+                Err(err) => panic!(err),
+            }
+        }
         Err(err) => panic!(err),
     }
 }

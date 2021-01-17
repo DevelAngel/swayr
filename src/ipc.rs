@@ -5,6 +5,8 @@ use serde::{Deserialize, Serialize};
 
 use std::process as proc;
 
+pub const SWAYR_SOCKET_PATH: &str = "/home/horn/tmp/SWAYR_SOCKET";
+
 pub type Id = u32;
 pub type Dim = u16;
 pub type Pid = u16;

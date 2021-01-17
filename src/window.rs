@@ -1,28 +1,30 @@
 use crate::ipc;
 
 #[allow(dead_code)]
-pub struct Con<'a> {
+pub struct Window<'a> {
     name: &'a str,
     id: ipc::Id,
     app_id: Option<&'a str>,
 }
 
-impl<'a> std::fmt::Display for Con<'a> {
+impl<'a> std::fmt::Display for Window<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         write!(f, "{} — {}", self.app_id.unwrap_or(""), self.name)
     }
 }
 
-/// Gets all cons (aka, application windows) of the tree.
-pub fn get_cons<'a>(tree: &'a ipc::Node) -> Vec<Con<'a>> {
+/// Gets all application windows of the tree.
+pub fn get_windows(tree: &ipc::Node) -> Vec<Window> {
     let mut v = vec![];
     for n in tree.iter() {
-        if n.r#type == ipc::NodeType::Con || n.r#type == ipc::NodeType::FloatingCon {
-            v.push(Con {
+        if n.name.is_some()
+            && (n.r#type == ipc::NodeType::Con || n.r#type == ipc::NodeType::FloatingCon)
+        {
+            v.push(Window {
                 name: &n
                     .name
                     .as_ref()
-                    .expect(format!("Con without name. id = {}", n.id).as_str()),
+                    .unwrap_or_else(|| panic!("Con without name. id = {}", n.id)),
                 id: n.id,
                 app_id: match &n.app_id {
                     Some(s) => Some(s.as_ref()),
@@ -36,9 +38,9 @@ pub fn get_cons<'a>(tree: &'a ipc::Node) -> Vec<Con<'a>> {
 }
 
 #[test]
-fn test_get_cons() {
+fn test_get_windows() {
     let tree = ipc::get_tree();
-    let cons = get_cons(&tree);
+    let cons = get_windows(&tree);
 
     println!("There are {} cons.", cons.len());
 
