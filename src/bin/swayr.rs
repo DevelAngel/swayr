@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::os::unix::net::UnixStream;
 use swayr::ipc;
+use swayr::util;
 use swayr::window;
 
 fn main() {
@@ -10,7 +11,7 @@ fn main() {
         println!("  {}", win);
     }
 
-    if let Ok(sock) = UnixStream::connect(ipc::SWAYR_SOCKET_PATH) {
+    if let Ok(sock) = UnixStream::connect(util::get_swayr_socket_path()) {
         let win_props: Result<HashMap<ipc::Id, ipc::WindowProps>, serde_json::Error> =
             serde_json::from_reader(sock);
         println!("Here are the window properties:\n{:#?}", win_props)

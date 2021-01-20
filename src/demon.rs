@@ -1,4 +1,5 @@
 use crate::ipc;
+use crate::util;
 use serde_json::Deserializer;
 use std::collections::HashMap;
 use std::io::Write;
@@ -33,6 +34,12 @@ fn handle_window_event(
     ev: ipc::WindowEvent,
     win_props: Arc<RwLock<HashMap<ipc::Id, ipc::WindowProps>>>,
 ) {
+    if util::is_debug() {
+        println!(
+            "Handling {:?} event for container {}",
+            ev.change, ev.container.id
+        );
+    }
     match ev.change {
         ipc::WindowEventType::Focus => {
             let mut write_lock = win_props.write().unwrap();
@@ -52,6 +59,13 @@ fn handle_window_event(
         }
         _ => (),
     }
+
+    if util::is_debug() {
+        println!(
+            "New window properties state:\n{:#?}",
+            win_props.read().unwrap()
+        );
+    }
 }
 
 fn get_epoch_time_as_millis() -> u128 {
@@ -64,21 +78,19 @@ fn get_epoch_time_as_millis() -> u128 {
 pub fn serve_client_requests(
     win_props: Arc<RwLock<HashMap<ipc::Id, ipc::WindowProps>>>,
 ) -> std::io::Result<()> {
-    // FIXME: Use sensible path.
-    let listener = UnixListener::bind(ipc::SWAYR_SOCKET_PATH)?;
+    match std::fs::remove_file(util::get_swayr_socket_path()) {
+        Ok(()) => println!("Deleted stale socket from previous run."),
+        Err(e) => eprintln!("{:?}", e),
+    }
 
+    let listener = UnixListener::bind(util::get_swayr_socket_path())?;
     for stream in listener.incoming() {
         match stream {
             Ok(stream) => {
-                /* connection succeeded */
                 let wp_clone = win_props.clone();
                 thread::spawn(move || handle_client_request(stream, wp_clone));
             }
-            Err(err) => {
-                /* connection failed */
-                eprintln!("Could not accept client request: {:?}", err);
-                break;
-            }
+            Err(err) => return Err(err),
         }
     }
     Ok(())
