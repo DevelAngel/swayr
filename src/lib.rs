@@ -1,3 +1,4 @@
+pub mod client;
 pub mod demon;
 pub mod ipc;
 pub mod util;

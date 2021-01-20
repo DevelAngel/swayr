@@ -7,7 +7,7 @@ use std::process as proc;
 
 pub type Id = u32;
 pub type Dim = u16;
-pub type Pid = u16;
+pub type Pid = u32;
 
 #[derive(Deserialize, Debug)]
 #[allow(dead_code)]

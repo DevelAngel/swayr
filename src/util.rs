@@ -1,3 +1,4 @@
+use crate::window;
 use std::io::Write;
 use std::process as proc;
 
@@ -9,12 +10,26 @@ pub fn get_swayr_socket_path() -> String {
     format!("/run/user/{}/swayr-sock", users::get_current_uid())
 }
 
+pub fn swaymsg(args: Vec<&str>) -> String {
+    let mut cmd = proc::Command::new("swaymsg");
+    for a in args {
+        cmd.arg(a);
+    }
+
+    let output = cmd.output().expect("Error running swaymsg!");
+    String::from_utf8(output.stdout).unwrap()
+}
+
+pub fn select_window<'a>(windows: &'a Vec<window::Window>) -> Option<&'a window::Window<'a>> {
+    wofi_select("Select window", windows)
+}
+
 pub fn wofi_select<'a, 'b, TS>(prompt: &'a str, choices: &'b Vec<TS>) -> Option<&'b TS>
 where
     TS: std::fmt::Display + Sized,
 {
     let mut map: std::collections::HashMap<String, &TS> = std::collections::HashMap::new();
-    for c in choices.iter() {
+    for c in choices {
         map.insert(format!("{}", c), c);
     }
 
@@ -29,9 +44,9 @@ where
 
     {
         let stdin = wofi.stdin.as_mut().expect("Failed to open wofi stdin");
-        for k in map.keys() {
+        for c in choices {
             stdin
-                .write_all(format!("{}\n", k).as_bytes())
+                .write_all(format!("{}\n", c).as_bytes())
                 .expect("Failed to write to wofi stdin");
         }
     }

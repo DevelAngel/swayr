@@ -1,15 +1,23 @@
 use crate::ipc;
 
-#[allow(dead_code)]
+#[derive(Debug)]
 pub struct Window<'a> {
+    // TODO: Drop all fields except for node!
+    app_id: Option<&'a str>,
     name: &'a str,
     id: ipc::Id,
-    app_id: Option<&'a str>,
+    pub node: &'a ipc::Node,
 }
 
 impl<'a> std::fmt::Display for Window<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "{} — {}", self.app_id.unwrap_or(""), self.name)
+        write!(
+            f,
+            "{} — {} <{}>",
+            self.app_id.unwrap_or(""),
+            self.name,
+            self.id
+        )
     }
 }
 
@@ -21,16 +29,14 @@ pub fn get_windows(tree: &ipc::Node) -> Vec<Window> {
             && (n.r#type == ipc::NodeType::Con || n.r#type == ipc::NodeType::FloatingCon)
         {
             v.push(Window {
-                name: &n
-                    .name
-                    .as_ref()
-                    .unwrap_or_else(|| panic!("Con without name. id = {}", n.id)),
+                name: &n.name.as_ref().unwrap(),
                 id: n.id,
                 app_id: match &n.app_id {
                     Some(s) => Some(s.as_ref()),
                     // TODO: Use n.window_properties.class instead!
                     None => None,
                 },
+                node: &n,
             })
         }
     }
