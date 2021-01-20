@@ -38,16 +38,16 @@ where
 
     let output = wofi.wait_with_output().expect("Failed to read stdout");
     let choice = String::from_utf8_lossy(&output.stdout);
-    // FIXME: Remove trailing \n from choice.
-    //println!("choice: {:?}", choice);
-    map.get(&*choice).copied()
+    let mut choice = String::from(choice);
+    choice.pop(); // Remove trailing \n from choice.
+    map.get(&choice).copied()
 }
 
 #[test]
+#[ignore = "interactive test requiring user input"]
 fn test_wofi_select() {
     let choices = vec!["a", "b", "c"];
     let choice = wofi_select("Choose wisely", &choices);
-    println!("choice: {:?}", choice);
     assert!(choice.is_some());
     assert!(choices.contains(choice.unwrap()));
 }
