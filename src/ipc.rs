@@ -20,6 +20,8 @@ pub struct Rect {
 // TODO: Maybe there are more?
 #[derive(Deserialize, Debug)]
 pub enum Border {
+    #[serde(rename = "normal")]
+    Normal,
     #[serde(rename = "none")]
     None,
     #[serde(rename = "pixel")]
