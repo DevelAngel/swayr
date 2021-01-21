@@ -3,7 +3,6 @@ extern crate serde_json;
 extern crate users;
 
 use serde::{Deserialize, Serialize};
-use std::process as proc;
 
 pub type Id = u32;
 pub type Dim = u16;
@@ -151,37 +150,6 @@ impl<'a> Iterator for NodeIter<'a> {
         } else {
             None
         }
-    }
-}
-
-pub fn get_tree() -> Node {
-    let output = proc::Command::new("swaymsg")
-        .arg("-t")
-        .arg("get_tree")
-        .output()
-        .expect("Error running swaymsg!");
-    let result = serde_json::from_str(
-        String::from_utf8(output.stdout)
-            .expect("Wrong string data!")
-            .as_str(),
-    );
-
-    match result {
-        Ok(node) => node,
-        Err(e) => {
-            eprintln!("Error: {}", e);
-            panic!()
-        }
-    }
-}
-
-#[test]
-fn test_get_tree() {
-    let tree = get_tree();
-
-    println!("Those IDs are in get_tree():");
-    for n in tree.iter() {
-        println!("  id: {}, type: {:?}", n.id, n.r#type);
     }
 }
 

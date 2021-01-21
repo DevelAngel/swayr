@@ -7,7 +7,18 @@ pub fn is_debug() -> bool {
 }
 
 pub fn get_swayr_socket_path() -> String {
-    format!("/run/user/{}/swayr-sock", users::get_current_uid())
+    let wayland_display = std::env::var("WAYLAND_DISPLAY");
+    format!(
+        "/run/user/{}/swayr-{}.sock",
+        users::get_current_uid(),
+        match wayland_display {
+            Ok(val) => val,
+            Err(_e) => {
+                eprintln!("Couldn't get WAYLAND_DISPLAY!");
+                String::from("unknown")
+            }
+        }
+    )
 }
 
 pub fn swaymsg(args: Vec<&str>) -> String {
@@ -35,6 +46,9 @@ where
 
     let mut wofi = proc::Command::new("wofi")
         .arg("--show=dmenu")
+        .arg("--allow-markup")
+        .arg("--allow-images")
+        .arg("--insensitive")
         .arg("--prompt")
         .arg(prompt)
         .stdin(proc::Stdio::piped())

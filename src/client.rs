@@ -13,26 +13,10 @@ fn get_window_props() -> Result<HashMap<ipc::Id, ipc::WindowProps>, serde_json::
 }
 
 pub fn switch_window() {
-    let root_node = ipc::get_tree();
+    let root_node = get_tree();
     let mut windows = window::get_windows(&root_node);
     if let Ok(win_props) = get_window_props() {
-        windows.sort_unstable_by(|a, b| {
-            if a.node.focused {
-                std::cmp::Ordering::Greater
-            } else if b.node.focused {
-                std::cmp::Ordering::Less
-            } else {
-                let lru_a = win_props
-                    .get(&a.node.id)
-                    .map(|p| p.last_focus_time)
-                    .unwrap_or(0);
-                let lru_b = win_props
-                    .get(&b.node.id)
-                    .map(|p| p.last_focus_time)
-                    .unwrap_or(0);
-                lru_a.cmp(&lru_b).reverse()
-            }
-        });
+        window::sort_windows(&mut windows, win_props);
     }
 
     if let Some(window) = util::select_window(&windows) {
@@ -40,5 +24,40 @@ pub fn switch_window() {
             format!("[con_id={}]", window.node.id).as_str(),
             "focus",
         ]);
+    }
+}
+
+pub fn get_tree() -> ipc::Node {
+    let output = util::swaymsg(vec!["-t", "get_tree"]);
+    let result = serde_json::from_str(output.as_str());
+
+    match result {
+        Ok(node) => node,
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            panic!()
+        }
+    }
+}
+
+#[test]
+fn test_get_tree() {
+    let tree = get_tree();
+
+    println!("Those IDs are in get_tree():");
+    for n in tree.iter() {
+        println!("  id: {}, type: {:?}", n.id, n.r#type);
+    }
+}
+
+#[test]
+fn test_get_windows() {
+    let tree = get_tree();
+    let cons = window::get_windows(&tree);
+
+    println!("There are {} cons.", cons.len());
+
+    for c in cons {
+        println!("  {}", c);
     }
 }
