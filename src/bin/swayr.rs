@@ -1,13 +1,14 @@
+#[macro_use]
 extern crate clap;
 use clap::Clap;
 use swayr::client;
 
-/// Windows are sorted so that urgent windows come first, then windows in
-/// last-recently-used order, and the focused window last.
+/// Windows are sorted urgent first, then windows in LRU order, focused window
+/// last.  Licensed under the GPLv3 (or later).
 #[derive(Clap)]
 #[clap(
     name = "swayr -- a window switcher for sway",
-    version = option_env!("CARGO_PKG_VERSION").unwrap_or("<unknown version>"),
+    version = crate_version!(),
     author = "Tassilo Horn <tsdh@gnu.org>"
 )]
 struct Opts {
