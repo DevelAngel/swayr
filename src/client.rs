@@ -15,8 +15,9 @@ fn get_window_props() -> Result<HashMap<ipc::Id, ipc::WindowProps>, serde_json::
 pub fn switch_window() {
     let root_node = get_tree();
     let mut windows = window::get_windows(&root_node);
-    if let Ok(win_props) = get_window_props() {
-        window::sort_windows(&mut windows, win_props);
+    match get_window_props() {
+        Ok(win_props) => window::sort_windows(&mut windows, win_props),
+        Err(e) => eprintln!("Got no win_props: {:?}", e),
     }
 
     if let Some(window) = util::select_window(&windows) {

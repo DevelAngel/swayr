@@ -40,8 +40,11 @@ where
     TS: std::fmt::Display + Sized,
 {
     let mut map: std::collections::HashMap<String, &TS> = std::collections::HashMap::new();
+    let mut strs: Vec<String> = vec![];
     for c in choices {
-        map.insert(format!("{}", c), c);
+        let s = format!("{}", c);
+        strs.push(String::from(s.as_str()));
+        map.insert(s, c);
     }
 
     let mut wofi = proc::Command::new("wofi")
@@ -58,11 +61,11 @@ where
 
     {
         let stdin = wofi.stdin.as_mut().expect("Failed to open wofi stdin");
-        for c in choices {
-            stdin
-                .write_all(format!("{}\n", c).as_bytes())
-                .expect("Failed to write to wofi stdin");
-        }
+        let wofi_input = strs.join("\n");
+        println!("Wofi input:\n{}", wofi_input);
+        stdin
+            .write_all(wofi_input.as_bytes())
+            .expect("Failed to write to wofi stdin");
     }
 
     let output = wofi.wait_with_output().expect("Failed to read stdout");

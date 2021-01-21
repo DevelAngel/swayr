@@ -65,9 +65,9 @@ pub fn sort_windows(windows: &mut Vec<Window>, win_props: HashMap<ipc::Id, ipc::
             std::cmp::Ordering::Less
         } else if !a.node.urgent && b.node.urgent {
             std::cmp::Ordering::Greater
-        } else if a.node.focused {
+        } else if a.node.focused && !b.node.focused {
             std::cmp::Ordering::Greater
-        } else if b.node.focused {
+        } else if !a.node.focused && b.node.focused {
             std::cmp::Ordering::Less
         } else {
             let lru_a = win_props
