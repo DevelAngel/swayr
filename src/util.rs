@@ -52,6 +52,7 @@ where
         .arg("--allow-markup")
         .arg("--allow-images")
         .arg("--insensitive")
+        .arg("--cache-file=/dev/null")
         .arg("--prompt")
         .arg(prompt)
         .stdin(proc::Stdio::piped())
