@@ -18,13 +18,16 @@ struct Opts {
 
 #[derive(Clap)]
 enum SwayrCommand {
-    /// Switch window using wofi (urgent first, then LRU order, focused last)
+    /// Switch window with display order urgent first, then LRU order, focused last
     SwitchWindow,
+    /// Quit a window with display order focused first, then reverse-LRU order, urgent last
+    QuitWindow,
 }
 
 fn main() {
     let opts: Opts = Opts::parse();
     match opts.command {
         SwayrCommand::SwitchWindow => client::switch_window(),
+        SwayrCommand::QuitWindow => client::quit_window(),
     }
 }

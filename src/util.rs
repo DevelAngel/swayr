@@ -2,10 +2,6 @@ use crate::window;
 use std::io::Write;
 use std::process as proc;
 
-pub fn is_debug() -> bool {
-    true
-}
-
 pub fn get_swayr_socket_path() -> String {
     let wayland_display = std::env::var("WAYLAND_DISPLAY");
     format!(
@@ -31,8 +27,11 @@ pub fn swaymsg(args: Vec<&str>) -> String {
     String::from_utf8(output.stdout).unwrap()
 }
 
-pub fn select_window<'a>(windows: &'a Vec<window::Window>) -> Option<&'a window::Window<'a>> {
-    wofi_select("Select window", windows)
+pub fn select_window<'a>(
+    prompt: &'a str,
+    windows: &'a Vec<window::Window>,
+) -> Option<&'a window::Window<'a>> {
+    wofi_select(prompt, windows)
 }
 
 pub fn wofi_select<'a, 'b, TS>(prompt: &'a str, choices: &'b Vec<TS>) -> Option<&'b TS>

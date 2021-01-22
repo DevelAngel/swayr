@@ -12,15 +12,24 @@ fn get_window_props() -> Result<HashMap<ipc::Id, ipc::WindowProps>, serde_json::
     }
 }
 
+fn get_windows(root_node: &ipc::Node) -> std::vec::Vec<window::Window> {
+    let win_props = match get_window_props() {
+        Ok(win_props) => Some(win_props),
+        Err(e) => {
+            eprintln!("Got no win_props: {:?}", e);
+            None
+        }
+    };
+
+    window::get_windows(&root_node, win_props.unwrap_or(HashMap::new()))
+}
+
 pub fn switch_window() {
     let root_node = get_tree();
-    let mut windows = window::get_windows(&root_node);
-    match get_window_props() {
-        Ok(win_props) => window::sort_windows(&mut windows, win_props),
-        Err(e) => eprintln!("Got no win_props: {:?}", e),
-    }
+    let mut windows = get_windows(&root_node);
+    windows.sort();
 
-    if let Some(window) = util::select_window(&windows) {
+    if let Some(window) = util::select_window("Switch to window", &windows) {
         util::swaymsg(vec![
             format!("[con_id={}]", window.node.id).as_str(),
             "focus",
@@ -28,7 +37,20 @@ pub fn switch_window() {
     }
 }
 
-pub fn get_tree() -> ipc::Node {
+pub fn quit_window() {
+    let root_node = get_tree();
+    let mut windows = get_windows(&root_node);
+    windows.sort_by(|a, b| a.cmp(b).reverse());
+
+    if let Some(window) = util::select_window("Quit window", &windows) {
+        util::swaymsg(vec![
+            format!("[con_id={}]", window.node.id).as_str(),
+            "kill",
+        ]);
+    }
+}
+
+fn get_tree() -> ipc::Node {
     let output = util::swaymsg(vec!["-t", "get_tree"]);
     let result = serde_json::from_str(output.as_str());
 

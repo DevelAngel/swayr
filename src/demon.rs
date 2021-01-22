@@ -34,12 +34,6 @@ fn handle_window_event(
     ev: ipc::WindowEvent,
     win_props: Arc<RwLock<HashMap<ipc::Id, ipc::WindowProps>>>,
 ) {
-    if util::is_debug() {
-        println!(
-            "Handling {:?} event for container {}",
-            ev.change, ev.container.id
-        );
-    }
     match ev.change {
         ipc::WindowEventType::Focus => {
             let mut write_lock = win_props.write().unwrap();
@@ -58,13 +52,6 @@ fn handle_window_event(
             win_props.write().unwrap().remove(&ev.container.id);
         }
         _ => (),
-    }
-
-    if util::is_debug() {
-        println!(
-            "New window properties state:\n{:#?}",
-            win_props.read().unwrap()
-        );
     }
 }
 
