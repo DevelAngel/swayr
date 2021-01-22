@@ -80,7 +80,7 @@ pub fn serve_client_requests(
 ) -> std::io::Result<()> {
     match std::fs::remove_file(util::get_swayr_socket_path()) {
         Ok(()) => println!("Deleted stale socket from previous run."),
-        Err(e) => eprintln!("{:?}", e),
+        Err(e) => eprintln!("Could not delete socket:\n{:?}", e),
     }
 
     let listener = UnixListener::bind(util::get_swayr_socket_path())?;
