@@ -25,7 +25,7 @@ pub fn monitor_window_events(win_props: Arc<RwLock<HashMap<ipc::Id, ipc::WindowP
     for res in stream {
         match res {
             Ok(win_ev) => handle_window_event(win_ev, win_props.clone()),
-            Err(err) => panic!("{:?}", err),
+            Err(err) => eprintln!("Error handling window event:\n{:?}", err),
         }
     }
 }
