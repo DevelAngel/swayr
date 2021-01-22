@@ -6,13 +6,14 @@ use serde::{Deserialize, Serialize};
 
 pub type Id = u32;
 pub type Dim = u16;
+pub type Pos = i16; // Position can be off-screen, so i16 instead of u16.
 pub type Pid = u32;
 
 #[derive(Deserialize, Debug)]
 #[allow(dead_code)]
 pub struct Rect {
-    pub x: Dim,
-    pub y: Dim,
+    pub x: Pos,
+    pub y: Pos,
     pub width: Dim,
     pub height: Dim,
 }
