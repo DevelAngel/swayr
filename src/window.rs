@@ -35,9 +35,9 @@ impl<'a> std::fmt::Display for Window<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         write!(
             f,
-            "<span weight=\"bold\"{}>{}</span> — {} [{}]",
+            "<span font_weight=\"bold\" {}>{}</span> — {} [{}]",
             if self.node.urgent {
-                ", background=\"red\""
+                " background=\"darkred\" foreground=\"white\""
             } else {
                 ""
             },
