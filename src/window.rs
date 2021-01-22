@@ -35,7 +35,12 @@ impl<'a> std::fmt::Display for Window<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         write!(
             f,
-            "<b>{}</b> — {} [{}]",
+            "<span weight=\"bold\"{}>{}</span> — {} [{}]",
+            if self.node.urgent {
+                ", background=\"red\""
+            } else {
+                ""
+            },
             self.get_app_name(),
             self.get_title(),
             self.get_id()
