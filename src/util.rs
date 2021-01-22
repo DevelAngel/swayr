@@ -1,4 +1,3 @@
-use crate::window;
 use std::collections::HashMap;
 use std::io::Write;
 use std::process as proc;
@@ -28,16 +27,9 @@ pub fn swaymsg(args: Vec<&str>) -> String {
     String::from_utf8(output.stdout).unwrap()
 }
 
-pub fn select_window<'a>(
-    prompt: &'a str,
-    windows: &'a Vec<window::Window>,
-) -> Option<&'a window::Window<'a>> {
-    wofi_select(prompt, windows)
-}
-
 pub fn wofi_select<'a, 'b, TS>(
     prompt: &'a str,
-    choices: &'b Vec<TS>,
+    choices: &'b [TS],
 ) -> Option<&'b TS>
 where
     TS: std::fmt::Display + Sized,

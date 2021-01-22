@@ -1,13 +1,13 @@
+use crate::con;
 use crate::ipc;
 use crate::util;
-use crate::window;
 
 pub fn switch_window() {
     let root_node = get_tree();
-    let mut windows = window::get_windows(&root_node);
+    let mut windows = con::get_windows(&root_node);
     windows.sort();
 
-    if let Some(window) = util::select_window("Switch to window", &windows) {
+    if let Some(window) = con::select_window("Switch to window", &windows) {
         util::swaymsg(vec![
             format!("[con_id={}]", window.get_id()).as_str(),
             "focus",
@@ -17,10 +17,10 @@ pub fn switch_window() {
 
 pub fn quit_window() {
     let root_node = get_tree();
-    let mut windows = window::get_windows(&root_node);
+    let mut windows = con::get_windows(&root_node);
     windows.sort_by(|a, b| a.cmp(b).reverse());
 
-    if let Some(window) = util::select_window("Quit window", &windows) {
+    if let Some(window) = con::select_window("Quit window", &windows) {
         util::swaymsg(vec![
             format!("[con_id={}]", window.get_id()).as_str(),
             "kill",
@@ -54,7 +54,7 @@ fn test_get_tree() {
 #[test]
 fn test_get_windows() {
     let tree = get_tree();
-    let cons = window::get_windows(&tree);
+    let cons = con::get_windows(&tree);
 
     println!("There are {} cons.", cons.len());
 

@@ -49,14 +49,14 @@ impl Ord for Window<'_> {
     fn cmp(&self, other: &Self) -> cmp::Ordering {
         if self == other {
             cmp::Ordering::Equal
-        } else if self.node.urgent && !other.node.urgent {
+        } else if self.node.urgent && !other.node.urgent
+            || !self.node.focused && other.node.focused
+        {
             cmp::Ordering::Less
-        } else if !self.node.urgent && other.node.urgent {
+        } else if !self.node.urgent && other.node.urgent
+            || self.node.focused && !other.node.focused
+        {
             std::cmp::Ordering::Greater
-        } else if self.node.focused && !other.node.focused {
-            std::cmp::Ordering::Greater
-        } else if !self.node.focused && other.node.focused {
-            std::cmp::Ordering::Less
         } else {
             let lru_a =
                 self.win_props.as_ref().map_or(0, |wp| wp.last_focus_time);
@@ -73,8 +73,8 @@ impl PartialOrd for Window<'_> {
     }
 }
 
-impl<'a> std::fmt::Display for Window<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+impl<'a> fmt::Display for Window<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         write!(
             f,
             "<span font_weight=\"bold\" {}>“{}”</span>   \
@@ -130,5 +130,12 @@ pub fn get_windows(root_node: &ipc::Node) -> Vec<Window> {
         }
     };
 
-    build_windows(&root_node, win_props.unwrap_or(HashMap::new()))
+    build_windows(&root_node, win_props.unwrap_or_default())
+}
+
+pub fn select_window<'a>(
+    prompt: &'a str,
+    windows: &'a [Window],
+) -> Option<&'a Window<'a>> {
+    util::wofi_select(prompt, windows)
 }
