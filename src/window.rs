@@ -1,10 +1,14 @@
 use crate::ipc;
+use crate::util;
 use std::cmp;
 use std::collections::HashMap;
+use std::fmt;
+use std::os::unix::net::UnixStream;
 
 #[derive(Debug)]
 pub struct Window<'a> {
-    pub node: &'a ipc::Node,
+    node: &'a ipc::Node,
+    workspace: &'a ipc::Node,
     win_props: Option<ipc::WindowProps>,
 }
 
@@ -54,8 +58,10 @@ impl Ord for Window<'_> {
         } else if !self.node.focused && other.node.focused {
             std::cmp::Ordering::Less
         } else {
-            let lru_a = self.win_props.as_ref().map_or(0, |wp| wp.last_focus_time);
-            let lru_b = other.win_props.as_ref().map_or(0, |wp| wp.last_focus_time);
+            let lru_a =
+                self.win_props.as_ref().map_or(0, |wp| wp.last_focus_time);
+            let lru_b =
+                other.win_props.as_ref().map_or(0, |wp| wp.last_focus_time);
             lru_a.cmp(&lru_b).reverse()
         }
     }
@@ -68,37 +74,61 @@ impl PartialOrd for Window<'_> {
 }
 
 impl<'a> std::fmt::Display for Window<'a> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         write!(
             f,
-            "<span font_weight=\"bold\" {}>{}</span> — {} [{}]",
+            "<span font_weight=\"bold\" {}>“{}”</span>   \
+             <i>{}</i>   \
+             on workspace <b>{}</b>   \
+             <span alpha=\"20000\">id {}</span>", // Almost hide ID!
             if self.node.urgent {
                 " background=\"darkred\" foreground=\"white\""
             } else {
                 ""
             },
-            self.get_app_name(),
             self.get_title(),
+            self.get_app_name(),
+            self.workspace.name.as_ref().unwrap(),
             self.get_id()
         )
     }
 }
 
-/// Gets all application windows of the tree.
-pub fn get_windows(
+fn build_windows(
     tree: &ipc::Node,
     mut win_props: HashMap<ipc::Id, ipc::WindowProps>,
 ) -> Vec<Window> {
     let mut v = vec![];
-    for n in tree.iter() {
-        if n.name.is_some()
-            && (n.r#type == ipc::NodeType::Con || n.r#type == ipc::NodeType::FloatingCon)
-        {
+    for workspace in tree.workspaces() {
+        for n in workspace.windows() {
             v.push(Window {
                 node: &n,
                 win_props: win_props.remove(&n.id),
+                workspace: &workspace,
             })
         }
     }
     v
+}
+
+fn get_window_props(
+) -> Result<HashMap<ipc::Id, ipc::WindowProps>, serde_json::Error> {
+    if let Ok(sock) = UnixStream::connect(util::get_swayr_socket_path()) {
+        serde_json::from_reader(sock)
+    } else {
+        panic!("Could not connect to socket!")
+    }
+}
+
+/// Gets all application windows of the tree.
+pub fn get_windows(root_node: &ipc::Node) -> Vec<Window> {
+    let win_props = match get_window_props() {
+        Ok(win_props) => Some(win_props),
+        Err(e) => {
+            eprintln!("Got no win_props: {:?}", e);
+            None
+        }
+    };
+
+    build_windows(&root_node, win_props.unwrap_or(HashMap::new()))
 }

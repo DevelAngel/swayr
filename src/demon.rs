@@ -10,7 +10,9 @@ use std::sync::RwLock;
 use std::thread;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-pub fn monitor_window_events(win_props: Arc<RwLock<HashMap<ipc::Id, ipc::WindowProps>>>) {
+pub fn monitor_window_events(
+    win_props: Arc<RwLock<HashMap<ipc::Id, ipc::WindowProps>>>,
+) {
     let child = proc::Command::new("swaymsg")
         .arg("--monitor")
         .arg("--raw")
@@ -21,7 +23,8 @@ pub fn monitor_window_events(win_props: Arc<RwLock<HashMap<ipc::Id, ipc::WindowP
         .spawn()
         .expect("Failed to subscribe to window events");
     let stdout: std::process::ChildStdout = child.stdout.unwrap();
-    let stream = Deserializer::from_reader(stdout).into_iter::<ipc::WindowEvent>();
+    let stream =
+        Deserializer::from_reader(stdout).into_iter::<ipc::WindowEvent>();
     for res in stream {
         match res {
             Ok(win_ev) => handle_window_event(win_ev, win_props.clone()),

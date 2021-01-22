@@ -13,8 +13,9 @@ fn main() {
         Arc::new(RwLock::new(HashMap::new()));
     let win_props_for_ev_handler = win_props.clone();
 
-    let subscriber_handle =
-        thread::spawn(move || demon::monitor_window_events(win_props_for_ev_handler));
+    let subscriber_handle = thread::spawn(move || {
+        demon::monitor_window_events(win_props_for_ev_handler)
+    });
 
     match demon::serve_client_requests(win_props) {
         Ok(()) => {

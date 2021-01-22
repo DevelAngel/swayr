@@ -1,4 +1,5 @@
 use crate::window;
+use std::collections::HashMap;
 use std::io::Write;
 use std::process as proc;
 
@@ -34,11 +35,14 @@ pub fn select_window<'a>(
     wofi_select(prompt, windows)
 }
 
-pub fn wofi_select<'a, 'b, TS>(prompt: &'a str, choices: &'b Vec<TS>) -> Option<&'b TS>
+pub fn wofi_select<'a, 'b, TS>(
+    prompt: &'a str,
+    choices: &'b Vec<TS>,
+) -> Option<&'b TS>
 where
     TS: std::fmt::Display + Sized,
 {
-    let mut map: std::collections::HashMap<String, &TS> = std::collections::HashMap::new();
+    let mut map: HashMap<String, &TS> = HashMap::new();
     let mut strs: Vec<String> = vec![];
     for c in choices {
         let s = format!("{}", c);

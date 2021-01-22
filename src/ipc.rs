@@ -126,6 +126,27 @@ impl Node {
     pub fn iter(&self) -> NodeIter {
         NodeIter::new(self)
     }
+
+    pub fn windows(&self) -> Vec<&Node> {
+        self.iter()
+            .filter(|n| {
+                (n.r#type == NodeType::Con || n.r#type == NodeType::FloatingCon)
+                    && n.name.is_some()
+            })
+            .collect()
+    }
+
+    pub fn workspaces(&self) -> Vec<&Node> {
+        self.iter()
+            .filter(|n| n.r#type == NodeType::Workspace)
+            .collect()
+    }
+
+    pub fn outputs(&self) -> Vec<&Node> {
+        self.iter()
+            .filter(|n| n.r#type == NodeType::Output)
+            .collect()
+    }
 }
 
 pub struct NodeIter<'a> {
