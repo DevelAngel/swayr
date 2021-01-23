@@ -17,7 +17,7 @@ pub fn get_swayr_socket_path() -> String {
     )
 }
 
-pub fn swaymsg(args: Vec<&str>) -> String {
+pub fn swaymsg(args: &[&str]) -> String {
     let mut cmd = proc::Command::new("swaymsg");
     for a in args {
         cmd.arg(a);

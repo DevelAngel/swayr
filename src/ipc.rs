@@ -225,12 +225,12 @@ pub enum WorkspaceEventType {
 pub enum ConEvent {
     WindowEvent {
         change: WindowEventType,
-        container: Node,
+        container: Box<Node>,
     },
     WorkspaceEvent {
         change: WorkspaceEventType,
-        current: Node,
-        old: Node,
+        current: Box<Node>,
+        old: Box<Node>,
     },
 }
 

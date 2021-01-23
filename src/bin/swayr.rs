@@ -24,6 +24,8 @@ enum SwayrCommand {
     QuitWindow,
     /// Switch workspace with LRU display order
     SwitchWorkspace,
+    /// Select and execute a swaymsg command
+    ExecuteSwaymsgCommand,
 }
 
 fn main() {
@@ -32,5 +34,6 @@ fn main() {
         SwayrCommand::SwitchWindow => client::switch_window(),
         SwayrCommand::QuitWindow => client::quit_window(),
         SwayrCommand::SwitchWorkspace => client::switch_workspace(),
+        SwayrCommand::ExecuteSwaymsgCommand => client::exec_swaymsg_command(),
     }
 }

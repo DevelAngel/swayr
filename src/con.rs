@@ -6,7 +6,7 @@ use std::fmt;
 use std::os::unix::net::UnixStream;
 
 pub fn get_tree() -> ipc::Node {
-    let output = util::swaymsg(vec!["-t", "get_tree"]);
+    let output = util::swaymsg(&["-t", "get_tree"]);
     let result = serde_json::from_str(output.as_str());
 
     match result {
