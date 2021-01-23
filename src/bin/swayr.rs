@@ -22,6 +22,8 @@ enum SwayrCommand {
     SwitchWindow,
     /// Quit a window with display order focused first, then reverse-LRU order, urgent last
     QuitWindow,
+    /// Switch workspace with LRU display order
+    SwitchWorkspace,
 }
 
 fn main() {
@@ -29,5 +31,6 @@ fn main() {
     match opts.command {
         SwayrCommand::SwitchWindow => client::switch_window(),
         SwayrCommand::QuitWindow => client::quit_window(),
+        SwayrCommand::SwitchWorkspace => client::switch_workspace(),
     }
 }

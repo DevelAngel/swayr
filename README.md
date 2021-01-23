@@ -5,9 +5,11 @@ creations, deletions, and focus changes using sway's JSON IPC interface.  The
 client `swayr` offers subcommands, see `swayr --help`.
 
 Right now, there are these subcommands:
-* `switch-window`: a wofi-based window switcher sorting the windows in the
-  order urgent first, then LRU, focused last.
-* `quit-window`: displays all windows using wofi and quits the selected one.
+* `switch-window` displays all windows in the order urgent first, then LRU,
+  focused last and focuses the selected.
+* `quit-window` displays all windows and quits the selected one.
+* `switch-workspace` displays all workspaces in LRU order and switches to the
+  selected.
 
 Swayr is licensed under the
 [GPLv3](https://www.gnu.org/licenses/gpl-3.0.en.html) (or later).

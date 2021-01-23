@@ -11,50 +11,86 @@ use std::thread;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 pub fn monitor_window_events(
-    win_props: Arc<RwLock<HashMap<ipc::Id, ipc::WindowProps>>>,
+    con_props: Arc<RwLock<HashMap<ipc::Id, ipc::ConProps>>>,
 ) {
     let child = proc::Command::new("swaymsg")
         .arg("--monitor")
         .arg("--raw")
         .arg("-t")
         .arg("subscribe")
-        .arg("[\"window\"]")
+        .arg("[\"window\", \"workspace\"]")
         .stdout(proc::Stdio::piped())
         .spawn()
         .expect("Failed to subscribe to window events");
     let stdout: std::process::ChildStdout = child.stdout.unwrap();
-    let stream =
-        Deserializer::from_reader(stdout).into_iter::<ipc::WindowEvent>();
+    let stream = Deserializer::from_reader(stdout).into_iter::<ipc::ConEvent>();
     for res in stream {
         match res {
-            Ok(win_ev) => handle_window_event(win_ev, win_props.clone()),
+            Ok(win_ev) => handle_con_event(win_ev, con_props.clone()),
             Err(err) => eprintln!("Error handling window event:\n{:?}", err),
         }
     }
 }
 
-fn handle_window_event(
-    ev: ipc::WindowEvent,
-    win_props: Arc<RwLock<HashMap<ipc::Id, ipc::WindowProps>>>,
+fn update_last_focus_time(
+    id: ipc::Id,
+    con_props: Arc<RwLock<HashMap<ipc::Id, ipc::ConProps>>>,
 ) {
-    match ev.change {
-        ipc::WindowEventType::Focus => {
-            let mut write_lock = win_props.write().unwrap();
-            if let Some(mut wp) = write_lock.get_mut(&ev.container.id) {
-                wp.last_focus_time = get_epoch_time_as_millis();
-            } else {
-                write_lock.insert(
-                    ev.container.id,
-                    ipc::WindowProps {
-                        last_focus_time: get_epoch_time_as_millis(),
-                    },
-                );
+    let mut write_lock = con_props.write().unwrap();
+    if let Some(mut wp) = write_lock.get_mut(&id) {
+        wp.last_focus_time = get_epoch_time_as_millis();
+    } else {
+        write_lock.insert(
+            id,
+            ipc::ConProps {
+                last_focus_time: get_epoch_time_as_millis(),
+            },
+        );
+    }
+}
+
+fn remove_winprops(
+    id: &ipc::Id,
+    con_props: Arc<RwLock<HashMap<ipc::Id, ipc::ConProps>>>,
+) {
+    con_props.write().unwrap().remove(id);
+}
+
+fn handle_con_event(
+    ev: ipc::ConEvent,
+    con_props: Arc<RwLock<HashMap<ipc::Id, ipc::ConProps>>>,
+) {
+    let mut handled = true;
+    let con_props2 = con_props.clone();
+
+    match ev {
+        ipc::ConEvent::WindowEvent { change, container } => match change {
+            ipc::WindowEventType::New | ipc::WindowEventType::Focus => {
+                update_last_focus_time(container.id, con_props)
             }
-        }
-        ipc::WindowEventType::Close => {
-            win_props.write().unwrap().remove(&ev.container.id);
-        }
-        _ => (),
+            ipc::WindowEventType::Close => {
+                remove_winprops(&container.id, con_props)
+            }
+            _ => handled = false,
+        },
+        ipc::ConEvent::WorkspaceEvent {
+            change,
+            current,
+            old: _,
+        } => match change {
+            ipc::WorkspaceEventType::Init | ipc::WorkspaceEventType::Focus => {
+                println!("WsEv");
+                update_last_focus_time(current.id, con_props)
+            }
+            ipc::WorkspaceEventType::Empty => {
+                remove_winprops(&current.id, con_props)
+            }
+            _ => handled = false,
+        },
+    }
+
+    if handled {
+        println!("New con_props state:\n{:#?}", *con_props2.read().unwrap());
     }
 }
 
@@ -66,7 +102,7 @@ fn get_epoch_time_as_millis() -> u128 {
 }
 
 pub fn serve_client_requests(
-    win_props: Arc<RwLock<HashMap<ipc::Id, ipc::WindowProps>>>,
+    con_props: Arc<RwLock<HashMap<ipc::Id, ipc::ConProps>>>,
 ) -> std::io::Result<()> {
     match std::fs::remove_file(util::get_swayr_socket_path()) {
         Ok(()) => println!("Deleted stale socket from previous run."),
@@ -77,7 +113,7 @@ pub fn serve_client_requests(
     for stream in listener.incoming() {
         match stream {
             Ok(stream) => {
-                let wp_clone = win_props.clone();
+                let wp_clone = con_props.clone();
                 thread::spawn(move || handle_client_request(stream, wp_clone));
             }
             Err(err) => return Err(err),
@@ -88,9 +124,9 @@ pub fn serve_client_requests(
 
 fn handle_client_request(
     mut stream: UnixStream,
-    win_props: Arc<RwLock<HashMap<ipc::Id, ipc::WindowProps>>>,
+    con_props: Arc<RwLock<HashMap<ipc::Id, ipc::ConProps>>>,
 ) {
-    let json = serde_json::to_string(&*win_props.read().unwrap()).unwrap();
+    let json = serde_json::to_string(&*con_props.read().unwrap()).unwrap();
     if let Err(err) = stream.write_all(json.as_bytes()) {
         eprintln!("Error writing to client: {:?}", err);
     }

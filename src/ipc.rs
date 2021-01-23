@@ -202,13 +202,40 @@ pub enum WindowEventType {
 
 #[derive(Deserialize, Debug)]
 #[allow(dead_code)]
-pub struct WindowEvent {
-    pub change: WindowEventType,
-    pub container: Node,
+pub enum WorkspaceEventType {
+    #[serde(rename = "init")]
+    Init,
+    #[serde(rename = "empty")]
+    Empty,
+    #[serde(rename = "focus")]
+    Focus,
+    #[serde(rename = "move")]
+    Move,
+    #[serde(rename = "rename")]
+    Rename,
+    #[serde(rename = "urgent")]
+    Urgent,
+    #[serde(rename = "reload")]
+    Reload,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(untagged)]
+#[allow(dead_code)]
+pub enum ConEvent {
+    WindowEvent {
+        change: WindowEventType,
+        container: Node,
+    },
+    WorkspaceEvent {
+        change: WorkspaceEventType,
+        current: Node,
+        old: Node,
+    },
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct WindowProps {
+pub struct ConProps {
     /// Milliseconds since UNIX epoch.
     pub last_focus_time: u128,
 }

@@ -9,15 +9,15 @@ use swayr::demon;
 use swayr::ipc;
 
 fn main() {
-    let win_props: Arc<RwLock<HashMap<ipc::Id, ipc::WindowProps>>> =
+    let con_props: Arc<RwLock<HashMap<ipc::Id, ipc::ConProps>>> =
         Arc::new(RwLock::new(HashMap::new()));
-    let win_props_for_ev_handler = win_props.clone();
+    let con_props_for_ev_handler = con_props.clone();
 
     let subscriber_handle = thread::spawn(move || {
-        demon::monitor_window_events(win_props_for_ev_handler)
+        demon::monitor_window_events(con_props_for_ev_handler)
     });
 
-    match demon::serve_client_requests(win_props) {
+    match demon::serve_client_requests(con_props) {
         Ok(()) => {
             let subscriber_result = subscriber_handle.join();
             match subscriber_result {

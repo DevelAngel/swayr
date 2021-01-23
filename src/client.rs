@@ -1,10 +1,9 @@
 use crate::con;
-use crate::ipc;
 use crate::util;
 
 pub fn switch_window() {
-    let root_node = get_tree();
-    let mut windows = con::get_windows(&root_node);
+    let root = con::get_tree();
+    let mut windows = con::get_windows(&root);
     windows.sort();
 
     if let Some(window) = con::select_window("Switch to window", &windows) {
@@ -15,9 +14,21 @@ pub fn switch_window() {
     }
 }
 
+pub fn switch_workspace() {
+    let root = con::get_tree();
+    let mut workspaces = con::get_workspaces(&root, false);
+    workspaces.sort();
+
+    if let Some(workspace) =
+        con::select_workspace("Switch to workspace", &workspaces)
+    {
+        util::swaymsg(vec!["workspace", "number", workspace.get_name()]);
+    }
+}
+
 pub fn quit_window() {
-    let root_node = get_tree();
-    let mut windows = con::get_windows(&root_node);
+    let root = con::get_tree();
+    let mut windows = con::get_windows(&root);
     windows.sort_by(|a, b| a.cmp(b).reverse());
 
     if let Some(window) = con::select_window("Quit window", &windows) {
@@ -25,40 +36,5 @@ pub fn quit_window() {
             format!("[con_id={}]", window.get_id()).as_str(),
             "kill",
         ]);
-    }
-}
-
-fn get_tree() -> ipc::Node {
-    let output = util::swaymsg(vec!["-t", "get_tree"]);
-    let result = serde_json::from_str(output.as_str());
-
-    match result {
-        Ok(node) => node,
-        Err(e) => {
-            eprintln!("Error: {}", e);
-            panic!()
-        }
-    }
-}
-
-#[test]
-fn test_get_tree() {
-    let tree = get_tree();
-
-    println!("Those IDs are in get_tree():");
-    for n in tree.iter() {
-        println!("  id: {}, type: {:?}", n.id, n.r#type);
-    }
-}
-
-#[test]
-fn test_get_windows() {
-    let tree = get_tree();
-    let cons = con::get_windows(&tree);
-
-    println!("There are {} cons.", cons.len());
-
-    for c in cons {
-        println!("  {}", c);
     }
 }
