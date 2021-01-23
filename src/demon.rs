@@ -22,7 +22,7 @@ pub fn monitor_window_events(
         .stdout(proc::Stdio::piped())
         .spawn()
         .expect("Failed to subscribe to window events");
-    let stdout: std::process::ChildStdout = child.stdout.unwrap();
+    let stdout: proc::ChildStdout = child.stdout.unwrap();
     let stream = Deserializer::from_reader(stdout).into_iter::<ipc::ConEvent>();
     for res in stream {
         match res {

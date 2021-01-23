@@ -137,15 +137,9 @@ fn build_windows(
 fn build_workspaces(
     root: &ipc::Node,
     mut con_props: HashMap<ipc::Id, ipc::ConProps>,
-    include_scratchpad: bool,
 ) -> Vec<Workspace> {
     let mut v = vec![];
     for workspace in root.workspaces() {
-        if !include_scratchpad
-            && workspace.name.as_ref().unwrap().eq("__i3_scratch")
-        {
-            continue;
-        }
         v.push(Workspace {
             node: &workspace,
             con_props: con_props.remove(&workspace.id),
@@ -198,7 +192,32 @@ pub fn get_workspaces(
         }
     };
 
-    build_workspaces(root, con_props.unwrap_or_default(), include_scratchpad)
+    let workspaces = build_workspaces(root, con_props.unwrap_or_default());
+    let mut workspaces = if include_scratchpad {
+        workspaces
+    } else {
+        workspaces
+            .into_iter()
+            .filter(|ws| !ws.is_scratchpad())
+            .collect()
+    };
+    workspaces.sort();
+    println!(
+        "Sorted WS: {:?}",
+        workspaces
+            .iter()
+            .map(Workspace::get_name)
+            .collect::<Vec<&str>>()
+    );
+    workspaces.rotate_left(1);
+    println!(
+        "Rotated WS: {:?}",
+        workspaces
+            .iter()
+            .map(Workspace::get_name)
+            .collect::<Vec<&str>>()
+    );
+    workspaces
 }
 
 #[test]
@@ -240,6 +259,10 @@ impl Workspace<'_> {
 
     pub fn get_id(&self) -> &ipc::Id {
         &self.node.id
+    }
+
+    pub fn is_scratchpad(&self) -> bool {
+        self.get_name().eq("__i3_scratch")
     }
 }
 

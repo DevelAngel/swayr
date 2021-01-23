@@ -17,8 +17,7 @@ pub fn switch_window() {
 
 pub fn switch_workspace() {
     let root = con::get_tree();
-    let mut workspaces = con::get_workspaces(&root, false);
-    workspaces.sort();
+    let workspaces = con::get_workspaces(&root, false);
 
     if let Some(workspace) =
         con::select_workspace("Switch to workspace", &workspaces)
