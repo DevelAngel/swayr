@@ -140,18 +140,20 @@ fn build_workspaces(
 ) -> Vec<Workspace> {
     let mut v = vec![];
     for workspace in root.workspaces() {
+        let mut wins: Vec<Window> = workspace
+            .windows()
+            .iter()
+            .map(|w| Window {
+                node: &w,
+                con_props: con_props.remove(&w.id),
+                workspace: &workspace,
+            })
+            .collect();
+        wins.sort();
         v.push(Workspace {
             node: &workspace,
             con_props: con_props.remove(&workspace.id),
-            windows: workspace
-                .windows()
-                .iter()
-                .map(|w| Window {
-                    node: &w,
-                    con_props: con_props.remove(&w.id),
-                    workspace: &workspace,
-                })
-                .collect(),
+            windows: wins,
         })
     }
     v
@@ -244,6 +246,45 @@ pub fn select_workspace<'a>(
     workspaces: &'a [Workspace],
 ) -> Option<&'a Workspace<'a>> {
     util::wofi_select(prompt, workspaces)
+}
+
+pub enum WsOrWin<'a> {
+    Ws { ws: &'a Workspace<'a> },
+    Win { win: &'a Window<'a> },
+}
+
+impl<'a> fmt::Display for WsOrWin<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+        match self {
+            WsOrWin::Ws { ws } => ws.fmt(f),
+            WsOrWin::Win { win } => match f.write_str("\t") {
+                Ok(()) => win.fmt(f),
+                Err(e) => Err(e),
+            },
+        }
+    }
+}
+
+impl WsOrWin<'_> {
+    pub fn from_workspaces<'a>(
+        workspaces: &'a [Workspace],
+    ) -> Vec<WsOrWin<'a>> {
+        let mut v = vec![];
+        for ws in workspaces {
+            v.push(WsOrWin::Ws { ws });
+            for win in &ws.windows {
+                v.push(WsOrWin::Win { win: &win });
+            }
+        }
+        v
+    }
+}
+
+pub fn select_workspace_or_window<'a>(
+    prompt: &'a str,
+    ws_or_wins: &'a [WsOrWin<'a>],
+) -> Option<&'a WsOrWin<'a>> {
+    util::wofi_select(prompt, ws_or_wins)
 }
 
 pub struct Workspace<'a> {

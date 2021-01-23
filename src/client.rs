@@ -26,6 +26,28 @@ pub fn switch_workspace() {
     }
 }
 
+pub fn switch_workspace_or_window() {
+    let root = con::get_tree();
+    let workspaces = con::get_workspaces(&root, false);
+    let ws_or_wins = con::WsOrWin::from_workspaces(&workspaces);
+    if let Some(ws_or_win) = con::select_workspace_or_window(
+        "Select workspace or window",
+        &ws_or_wins,
+    ) {
+        match ws_or_win {
+            con::WsOrWin::Ws { ws } => {
+                util::swaymsg(&["workspace", "number", ws.get_name()]);
+            }
+            con::WsOrWin::Win { win } => {
+                util::swaymsg(&[
+                    format!("[con_id={}]", win.get_id()).as_str(),
+                    "focus",
+                ]);
+            }
+        }
+    }
+}
+
 pub fn quit_window() {
     let root = con::get_tree();
     let mut windows = con::get_windows(&root);
