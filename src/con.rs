@@ -7,13 +7,16 @@ use std::os::unix::net::UnixStream;
 
 pub fn get_tree() -> ipc::Node {
     let output = util::swaymsg(&["-t", "get_tree"]);
-    let result = serde_json::from_str(output.as_str());
+    let json = output.as_str();
+    let result = serde_json::from_str(json);
 
     match result {
         Ok(node) => node,
-        Err(e) => {
-            eprintln!("Error: {}", e);
-            panic!()
+        Err(err) => {
+            panic!(
+                "Can't read get_tree response: {}\nThe JSON is: {}",
+                err, json
+            );
         }
     }
 }

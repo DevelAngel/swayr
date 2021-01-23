@@ -23,8 +23,9 @@ pub fn monitor_window_events(
         .spawn()
         .expect("Failed to subscribe to window events");
     let stdout: proc::ChildStdout = child.stdout.unwrap();
-    let stream = Deserializer::from_reader(stdout).into_iter::<ipc::ConEvent>();
-    for res in stream {
+    let reader = std::io::BufReader::new(stdout);
+    let deserializer = Deserializer::from_reader(reader);
+    for res in deserializer.into_iter::<ipc::ConEvent>() {
         match res {
             Ok(win_ev) => handle_con_event(win_ev, con_props.clone()),
             Err(err) => eprintln!("Error handling window event:\n{:?}", err),

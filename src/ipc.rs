@@ -230,7 +230,8 @@ pub enum ConEvent {
     WorkspaceEvent {
         change: WorkspaceEventType,
         current: Box<Node>,
-        old: Box<Node>,
+        // If the old was empty, it'll be killed => "old": null
+        old: Option<Box<Node>>,
     },
 }
 
