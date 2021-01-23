@@ -1,6 +1,6 @@
 [package]
 name = "swayr"
-version = "0.0.3"
+version = "0.0.4"
 description = "A wofi-based LRU window-switcher for sway written in Rust"
 homepage = "https://git.sr.ht/~tsdh/swayr"
 repository = "https://git.sr.ht/~tsdh/swayr"
