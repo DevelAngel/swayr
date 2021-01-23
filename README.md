@@ -10,6 +10,12 @@ Right now, there are these subcommands:
 * `quit-window` displays all windows and quits the selected one.
 * `switch-workspace` displays all workspaces in LRU order and switches to the
   selected.
+* `switch-workspace-or-window` displays all workspaces and their windows and
+  allows to switch to either a workspace or window.
+* `execute-swaymsg-command` displays most swaymsg which don't require
+  additional input and executes the selected one.  That's handy especially for
+  less often used commands not bound to a key.
+
 
 Swayr is licensed under the
 [GPLv3](https://www.gnu.org/licenses/gpl-3.0.en.html) (or later).
