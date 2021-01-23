@@ -48,6 +48,7 @@ where
         .arg("--allow-images")
         .arg("--insensitive")
         .arg("--cache-file=/dev/null")
+        .arg("--parse-search")
         .arg("--prompt")
         .arg(prompt)
         .stdin(proc::Stdio::piped())
