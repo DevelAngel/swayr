@@ -134,6 +134,7 @@ fn build_windows(
             })
         }
     }
+    v.sort();
     v
 }
 
@@ -159,6 +160,7 @@ fn build_workspaces(
             windows: wins,
         })
     }
+    v.sort();
     v
 }
 
@@ -206,22 +208,7 @@ pub fn get_workspaces(
             .filter(|ws| !ws.is_scratchpad())
             .collect()
     };
-    workspaces.sort();
-    println!(
-        "Sorted WS: {:?}",
-        workspaces
-            .iter()
-            .map(Workspace::get_name)
-            .collect::<Vec<&str>>()
-    );
     workspaces.rotate_left(1);
-    println!(
-        "Rotated WS: {:?}",
-        workspaces
-            .iter()
-            .map(Workspace::get_name)
-            .collect::<Vec<&str>>()
-    );
     workspaces
 }
 
@@ -293,7 +280,7 @@ pub fn select_workspace_or_window<'a>(
 pub struct Workspace<'a> {
     node: &'a ipc::Node,
     con_props: Option<ipc::ConProps>,
-    windows: Vec<Window<'a>>,
+    pub windows: Vec<Window<'a>>,
 }
 
 impl Workspace<'_> {

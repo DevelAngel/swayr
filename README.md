@@ -9,9 +9,12 @@ Right now, there are these subcommands:
   focused last and focuses the selected.
 * `quit-window` displays all windows and quits the selected one.
 * `switch-workspace` displays all workspaces in LRU order and switches to the
-  selected.
+  selected one.
 * `switch-workspace-or-window` displays all workspaces and their windows and
-  allows to switch to either a workspace or window.
+   switches to the selected workspace or window.
+* `quit-workspace-or-window` displays all workspaces and their windows and
+  allows to quit either the selected workspace (all its windows) or the
+  selected window.
 * `execute-swaymsg-command` displays most swaymsg which don't require
   additional input and executes the selected one.  That's handy especially for
   less often used commands not bound to a key.

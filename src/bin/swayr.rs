@@ -18,14 +18,16 @@ struct Opts {
 
 #[derive(Clap)]
 enum SwayrCommand {
-    /// Switch window with display order urgent first, then LRU order, focused last
+    /// Focus the selected window
     SwitchWindow,
-    /// Quit a window with display order focused first, then reverse-LRU order, urgent last
+    /// Quit the selected window
     QuitWindow,
-    /// Switch workspace with LRU display order
+    /// Switch to the selected workspace
     SwitchWorkspace,
-    /// Switch workspace or window with LRU display order
+    /// Switch to the selected workspace or focus the selected window
     SwitchWorkspaceOrWindow,
+    /// Quit all windows of selected workspace or the selected window
+    QuitWorkspaceOrWindow,
     /// Select and execute a swaymsg command
     ExecuteSwaymsgCommand,
 }
@@ -38,6 +40,9 @@ fn main() {
         SwayrCommand::SwitchWorkspace => client::switch_workspace(),
         SwayrCommand::SwitchWorkspaceOrWindow => {
             client::switch_workspace_or_window()
+        }
+        SwayrCommand::QuitWorkspaceOrWindow => {
+            client::quit_workspace_or_window()
         }
         SwayrCommand::ExecuteSwaymsgCommand => client::exec_swaymsg_command(),
     }

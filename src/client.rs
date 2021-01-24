@@ -1,17 +1,22 @@
 use crate::con;
+use crate::ipc;
 use crate::util;
 use std::fmt;
 
+fn focus_window_by_id(id: &ipc::Id) {
+    util::swaymsg(&[format!("[con_id={}]", id).as_str(), "focus"]);
+}
+
+fn quit_window_by_id(id: &ipc::Id) {
+    util::swaymsg(&[format!("[con_id={}]", id).as_str(), "kill"]);
+}
+
 pub fn switch_window() {
     let root = con::get_tree();
-    let mut windows = con::get_windows(&root);
-    windows.sort();
+    let windows = con::get_windows(&root);
 
     if let Some(window) = con::select_window("Switch to window", &windows) {
-        util::swaymsg(&[
-            format!("[con_id={}]", window.get_id()).as_str(),
-            "focus",
-        ]);
+        focus_window_by_id(&window.get_id())
     }
 }
 
@@ -38,26 +43,35 @@ pub fn switch_workspace_or_window() {
             con::WsOrWin::Ws { ws } => {
                 util::swaymsg(&["workspace", "number", ws.get_name()]);
             }
-            con::WsOrWin::Win { win } => {
-                util::swaymsg(&[
-                    format!("[con_id={}]", win.get_id()).as_str(),
-                    "focus",
-                ]);
-            }
+            con::WsOrWin::Win { win } => focus_window_by_id(&win.get_id()),
         }
     }
 }
 
 pub fn quit_window() {
     let root = con::get_tree();
-    let mut windows = con::get_windows(&root);
-    windows.sort_by(|a, b| a.cmp(b).reverse());
+    let windows = con::get_windows(&root);
 
     if let Some(window) = con::select_window("Quit window", &windows) {
-        util::swaymsg(&[
-            format!("[con_id={}]", window.get_id()).as_str(),
-            "kill",
-        ]);
+        quit_window_by_id(window.get_id())
+    }
+}
+
+pub fn quit_workspace_or_window() {
+    let root = con::get_tree();
+    let workspaces = con::get_workspaces(&root, false);
+    let ws_or_wins = con::WsOrWin::from_workspaces(&workspaces);
+    if let Some(ws_or_win) =
+        con::select_workspace_or_window("Quit workspace or window", &ws_or_wins)
+    {
+        match ws_or_win {
+            con::WsOrWin::Ws { ws } => {
+                for win in &ws.windows {
+                    quit_window_by_id(win.get_id())
+                }
+            }
+            con::WsOrWin::Win { win } => quit_window_by_id(win.get_id()),
+        }
     }
 }
 
