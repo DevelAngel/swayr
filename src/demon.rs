@@ -13,7 +13,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 pub fn monitor_con_events(
     con_props: Arc<RwLock<HashMap<ipc::Id, ipc::ConProps>>>,
 ) {
-    let child = proc::Command::new("swaymsg")
+    let mut child = proc::Command::new("swaymsg")
         .arg("--monitor")
         .arg("--raw")
         .arg("-t")
@@ -22,7 +22,7 @@ pub fn monitor_con_events(
         .stdout(proc::Stdio::piped())
         .spawn()
         .expect("Failed to subscribe to window events");
-    let stdout: proc::ChildStdout = child.stdout.unwrap();
+    let stdout = child.stdout.take().unwrap();
     let reader = std::io::BufReader::new(stdout);
     let deserializer = Deserializer::from_reader(reader);
     for res in deserializer.into_iter::<ipc::ConEvent>() {
@@ -31,8 +31,19 @@ pub fn monitor_con_events(
             Err(err) => eprintln!("Error handling window event:\n{:?}", err),
         }
     }
-    eprintln!("Stopped monitoring con events. Restarting...");
-    monitor_con_events(con_props);
+
+    match child.try_wait() {
+        Ok(exit_code) => match exit_code {
+            None => {
+                eprintln!("Stopped monitoring con events. Restarting...");
+                monitor_con_events(con_props)
+            }
+            Some(exit_code) => {
+                println!("Swaymsg exited with code {}. Exiting.", exit_code)
+            }
+        },
+        Err(err) => println!("Swaymsg errored with {}. Exiting.", err),
+    }
 }
 
 fn update_last_focus_time(
