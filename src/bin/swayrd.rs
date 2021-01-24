@@ -13,18 +13,9 @@ fn main() {
         Arc::new(RwLock::new(HashMap::new()));
     let con_props_for_ev_handler = con_props.clone();
 
-    let subscriber_handle = thread::spawn(move || {
-        demon::monitor_con_events(con_props_for_ev_handler)
+    thread::spawn(move || {
+        demon::monitor_con_events(con_props_for_ev_handler);
     });
 
-    match demon::serve_client_requests(con_props) {
-        Ok(()) => {
-            let subscriber_result = subscriber_handle.join();
-            match subscriber_result {
-                Ok(()) => println!("Subscriber thread shut down cleanly."),
-                Err(err) => panic!(err),
-            }
-        }
-        Err(err) => panic!(err),
-    }
+    demon::serve_client_requests(con_props);
 }

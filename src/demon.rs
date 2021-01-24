@@ -7,7 +7,6 @@ use std::os::unix::net::{UnixListener, UnixStream};
 use std::process as proc;
 use std::sync::Arc;
 use std::sync::RwLock;
-use std::thread;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 pub fn monitor_con_events(
@@ -122,23 +121,30 @@ fn get_epoch_time_as_millis() -> u128 {
 
 pub fn serve_client_requests(
     con_props: Arc<RwLock<HashMap<ipc::Id, ipc::ConProps>>>,
-) -> std::io::Result<()> {
+) {
     match std::fs::remove_file(util::get_swayr_socket_path()) {
         Ok(()) => println!("Deleted stale socket from previous run."),
         Err(e) => eprintln!("Could not delete socket:\n{:?}", e),
     }
 
-    let listener = UnixListener::bind(util::get_swayr_socket_path())?;
-    for stream in listener.incoming() {
-        match stream {
-            Ok(stream) => {
-                let wp_clone = con_props.clone();
-                thread::spawn(move || handle_client_request(stream, wp_clone));
+    match UnixListener::bind(util::get_swayr_socket_path()) {
+        Ok(listener) => {
+            for stream in listener.incoming() {
+                match stream {
+                    Ok(stream) => {
+                        handle_client_request(stream, con_props.clone());
+                    }
+                    Err(err) => {
+                        eprintln!("Error handling client request: {}", err);
+                        break;
+                    }
+                }
             }
-            Err(err) => return Err(err),
+        }
+        Err(err) => {
+            eprintln!("Could not bind socket: {}", err)
         }
     }
-    Ok(())
 }
 
 fn handle_client_request(
