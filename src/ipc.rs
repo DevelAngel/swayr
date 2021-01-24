@@ -229,8 +229,9 @@ pub enum ConEvent {
     },
     WorkspaceEvent {
         change: WorkspaceEventType,
-        current: Box<Node>,
-        // If the old was empty, it'll be killed => "old": null
+        // On a reload event, current and old are both null.
+        current: Option<Box<Node>>,
+        // If the old was empty, it'll be killed => "old": null.
         old: Option<Box<Node>>,
     },
 }

@@ -39,8 +39,8 @@ pub struct Window<'a> {
 }
 
 impl Window<'_> {
-    pub fn get_id(&self) -> &ipc::Id {
-        &self.node.id
+    pub fn get_id(&self) -> ipc::Id {
+        self.node.id
     }
 
     pub fn get_app_name(&self) -> &str {
@@ -288,8 +288,8 @@ impl Workspace<'_> {
         self.node.name.as_ref().unwrap()
     }
 
-    pub fn get_id(&self) -> &ipc::Id {
-        &self.node.id
+    pub fn get_id(&self) -> ipc::Id {
+        self.node.id
     }
 
     pub fn is_scratchpad(&self) -> bool {

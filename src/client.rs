@@ -54,11 +54,11 @@ pub fn exec_swayr_cmd(cmd: &SwayrCommand) {
     }
 }
 
-fn focus_window_by_id(id: &ipc::Id) {
+fn focus_window_by_id(id: ipc::Id) {
     util::swaymsg(&[format!("[con_id={}]", id).as_str(), "focus"]);
 }
 
-fn quit_window_by_id(id: &ipc::Id) {
+fn quit_window_by_id(id: ipc::Id) {
     util::swaymsg(&[format!("[con_id={}]", id).as_str(), "kill"]);
 }
 
@@ -67,7 +67,7 @@ pub fn switch_window() {
     let windows = con::get_windows(&root);
 
     if let Some(window) = con::select_window("Switch to window", &windows) {
-        focus_window_by_id(&window.get_id())
+        focus_window_by_id(window.get_id())
     }
 }
 
@@ -94,7 +94,7 @@ pub fn switch_workspace_or_window() {
             con::WsOrWin::Ws { ws } => {
                 util::swaymsg(&["workspace", "number", ws.get_name()]);
             }
-            con::WsOrWin::Win { win } => focus_window_by_id(&win.get_id()),
+            con::WsOrWin::Win { win } => focus_window_by_id(win.get_id()),
         }
     }
 }

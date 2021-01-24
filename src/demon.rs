@@ -53,10 +53,10 @@ fn update_last_focus_time(
 }
 
 fn remove_con_props(
-    id: &ipc::Id,
+    id: ipc::Id,
     con_props: Arc<RwLock<HashMap<ipc::Id, ipc::ConProps>>>,
 ) {
-    con_props.write().unwrap().remove(id);
+    con_props.write().unwrap().remove(&id);
 }
 
 fn handle_con_event(
@@ -72,7 +72,7 @@ fn handle_con_event(
                 update_last_focus_time(container.id, con_props)
             }
             ipc::WindowEventType::Close => {
-                remove_con_props(&container.id, con_props)
+                remove_con_props(container.id, con_props)
             }
             _ => handled = false,
         },
@@ -82,12 +82,17 @@ fn handle_con_event(
             old: _,
         } => match change {
             ipc::WorkspaceEventType::Init | ipc::WorkspaceEventType::Focus => {
-                println!("WsEv");
-                update_last_focus_time(current.id, con_props)
+                update_last_focus_time(
+                    current
+                        .expect("No current in Init or Focus workspace event")
+                        .id,
+                    con_props,
+                )
             }
-            ipc::WorkspaceEventType::Empty => {
-                remove_con_props(&current.id, con_props)
-            }
+            ipc::WorkspaceEventType::Empty => remove_con_props(
+                current.expect("No current in Empty workspace event").id,
+                con_props,
+            ),
             _ => handled = false,
         },
     }
