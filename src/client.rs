@@ -1,7 +1,58 @@
 use crate::con;
 use crate::ipc;
 use crate::util;
+use clap::Clap;
 use std::fmt;
+
+#[derive(Clap, Debug)]
+pub enum SwayrCommand {
+    /// Focus the selected window
+    SwitchWindow,
+    /// Quit the selected window
+    QuitWindow,
+    /// Switch to the selected workspace
+    SwitchWorkspace,
+    /// Switch to the selected workspace or focus the selected window
+    SwitchWorkspaceOrWindow,
+    /// Quit all windows of selected workspace or the selected window
+    QuitWorkspaceOrWindow,
+    /// Select and execute a swaymsg command
+    ExecuteSwaymsgCommand,
+    /// Select and execute a swayr command
+    ExecuteSwayrCommand,
+}
+
+impl fmt::Display for SwayrCommand {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+        write!(f, "{:?}", self)
+    }
+}
+
+pub fn exec_swayr_cmd(cmd: &SwayrCommand) {
+    match cmd {
+        SwayrCommand::SwitchWindow => switch_window(),
+        SwayrCommand::QuitWindow => quit_window(),
+        SwayrCommand::SwitchWorkspace => switch_workspace(),
+        SwayrCommand::SwitchWorkspaceOrWindow => switch_workspace_or_window(),
+        SwayrCommand::QuitWorkspaceOrWindow => quit_workspace_or_window(),
+        SwayrCommand::ExecuteSwaymsgCommand => exec_swaymsg_command(),
+        SwayrCommand::ExecuteSwayrCommand => {
+            if let Some(c) = util::wofi_select(
+                "Select swayr command",
+                &[
+                    SwayrCommand::ExecuteSwaymsgCommand,
+                    SwayrCommand::QuitWindow,
+                    SwayrCommand::QuitWorkspaceOrWindow,
+                    SwayrCommand::SwitchWindow,
+                    SwayrCommand::SwitchWorkspace,
+                    SwayrCommand::SwitchWorkspaceOrWindow,
+                ],
+            ) {
+                exec_swayr_cmd(c);
+            }
+        }
+    }
+}
 
 fn focus_window_by_id(id: &ipc::Id) {
     util::swaymsg(&[format!("[con_id={}]", id).as_str(), "focus"]);

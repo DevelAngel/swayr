@@ -14,7 +14,7 @@ fn main() {
     let con_props_for_ev_handler = con_props.clone();
 
     let subscriber_handle = thread::spawn(move || {
-        demon::monitor_window_events(con_props_for_ev_handler)
+        demon::monitor_con_events(con_props_for_ev_handler)
     });
 
     match demon::serve_client_requests(con_props) {

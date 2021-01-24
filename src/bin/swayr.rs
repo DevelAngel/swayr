@@ -13,37 +13,10 @@ use swayr::client;
 )]
 struct Opts {
     #[clap(subcommand)]
-    command: SwayrCommand,
-}
-
-#[derive(Clap)]
-enum SwayrCommand {
-    /// Focus the selected window
-    SwitchWindow,
-    /// Quit the selected window
-    QuitWindow,
-    /// Switch to the selected workspace
-    SwitchWorkspace,
-    /// Switch to the selected workspace or focus the selected window
-    SwitchWorkspaceOrWindow,
-    /// Quit all windows of selected workspace or the selected window
-    QuitWorkspaceOrWindow,
-    /// Select and execute a swaymsg command
-    ExecuteSwaymsgCommand,
+    command: client::SwayrCommand,
 }
 
 fn main() {
     let opts: Opts = Opts::parse();
-    match opts.command {
-        SwayrCommand::SwitchWindow => client::switch_window(),
-        SwayrCommand::QuitWindow => client::quit_window(),
-        SwayrCommand::SwitchWorkspace => client::switch_workspace(),
-        SwayrCommand::SwitchWorkspaceOrWindow => {
-            client::switch_workspace_or_window()
-        }
-        SwayrCommand::QuitWorkspaceOrWindow => {
-            client::quit_workspace_or_window()
-        }
-        SwayrCommand::ExecuteSwaymsgCommand => client::exec_swaymsg_command(),
-    }
+    client::exec_swayr_cmd(&opts.command);
 }

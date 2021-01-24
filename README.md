@@ -18,6 +18,9 @@ Right now, there are these subcommands:
 * `execute-swaymsg-command` displays most swaymsg which don't require
   additional input and executes the selected one.  That's handy especially for
   less often used commands not bound to a key.
+* `execute-swayr-command` displays all commands above and executes the selected
+  one.  (This is useful for accessing swayr commands which are not bound to a
+  key.)
 
 
 Swayr is licensed under the

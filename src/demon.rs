@@ -10,7 +10,7 @@ use std::sync::RwLock;
 use std::thread;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-pub fn monitor_window_events(
+pub fn monitor_con_events(
     con_props: Arc<RwLock<HashMap<ipc::Id, ipc::ConProps>>>,
 ) {
     let child = proc::Command::new("swaymsg")
@@ -31,6 +31,8 @@ pub fn monitor_window_events(
             Err(err) => eprintln!("Error handling window event:\n{:?}", err),
         }
     }
+    eprintln!("Stopped monitoring con events. Restarting...");
+    monitor_con_events(con_props);
 }
 
 fn update_last_focus_time(
@@ -50,7 +52,7 @@ fn update_last_focus_time(
     }
 }
 
-fn remove_winprops(
+fn remove_con_props(
     id: &ipc::Id,
     con_props: Arc<RwLock<HashMap<ipc::Id, ipc::ConProps>>>,
 ) {
@@ -70,7 +72,7 @@ fn handle_con_event(
                 update_last_focus_time(container.id, con_props)
             }
             ipc::WindowEventType::Close => {
-                remove_winprops(&container.id, con_props)
+                remove_con_props(&container.id, con_props)
             }
             _ => handled = false,
         },
@@ -84,7 +86,7 @@ fn handle_con_event(
                 update_last_focus_time(current.id, con_props)
             }
             ipc::WorkspaceEventType::Empty => {
-                remove_winprops(&current.id, con_props)
+                remove_con_props(&current.id, con_props)
             }
             _ => handled = false,
         },
