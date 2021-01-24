@@ -24,7 +24,7 @@ pub enum SwayrCommand {
 
 impl fmt::Display for SwayrCommand {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
-        write!(f, "{:?}", self)
+        write!(f, "<b>{:?}</b>", self)
     }
 }
 
@@ -228,7 +228,7 @@ struct SwaymsgCmd<'a> {
 
 impl<'a> fmt::Display for SwaymsgCmd<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
-        write!(f, "{}", self.cmd.join(" "))
+        write!(f, "<b>{}</b>", self.cmd.join(" "))
     }
 }
 
