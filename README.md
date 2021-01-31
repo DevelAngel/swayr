@@ -22,6 +22,11 @@ Right now, there are these subcommands:
   one.  (This is useful for accessing swayr commands which are not bound to a
   key.)
 
+## Bugs
+
+Bugs and requests can be reported [here](https://todo.sr.ht/~tsdh/swayr).
+
+## License
 
 Swayr is licensed under the
 [GPLv3](https://www.gnu.org/licenses/gpl-3.0.en.html) (or later).
