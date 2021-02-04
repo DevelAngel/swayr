@@ -22,6 +22,35 @@ Right now, there are these subcommands:
   one.  (This is useful for accessing swayr commands which are not bound to a
   key.)
 
+## Usage
+
+You need to start the swayr demon `swayrd` in your sway config
+(`~/.config/sway/config`) like so:
+
+```
+exec env RUST_BACKTRACE=1 swayrd > /tmp/swayrd.log 2>&1
+```
+
+The setting of `RUST_BACKTRACE=1` and the redirection of the output to some
+logfile is optional but helps a lot when something doesn't work.  Especially,
+if you encounter a crash in certain situations and you want to report a bug, it
+would be utmost helpful if you could reproduce the issue with backtrace and
+logging and attach that to your bug report.
+
+Next to starting the demon, you want to bind swayr commands to some keys like
+so:
+
+```
+bindsym $mod+Delete exec env RUST_BACKTRACE=1 swayr quit-window > /tmp/swayr.log 2>&1
+bindsym $mod+Space exec env RUST_BACKTRACE=1 swayr switch-window >> /tmp/swayr.log 2>&1
+bindsym $mod+Shift+Space exec env RUST_BACKTRACE=1 swayr switch-workspace-or-window >> /tmp/swayr.log 2>&1
+bindsym $mod+c exec env RUST_BACKTRACE=1 swayr execute-swaymsg-command >> /tmp/swayr.log 2>&1
+bindsym $mod+Shift+c exec env RUST_BACKTRACE=1 swayr execute-swayr-command >> /tmp/swa
+```
+
+Of course, configure the keys to your liking.  Again, enabling rust backtraces
+and logging are optional.
+
 ## Bugs
 
 Bugs and requests can be reported [here](https://todo.sr.ht/~tsdh/swayr).
