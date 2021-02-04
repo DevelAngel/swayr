@@ -1,8 +1,8 @@
 [package]
 name = "swayr"
-version = "0.0.8"
+version = "0.0.9"
 description = "A wofi-based LRU window-switcher for sway written in Rust"
-homepage = "https://git.sr.ht/~tsdh/swayr"
+homepage = "https://sr.ht/~tsdh/swayr/"
 repository = "https://git.sr.ht/~tsdh/swayr"
 authors = ["Tassilo Horn <tsdh@gnu.org>"]
 license = "GPL-3.0+"
