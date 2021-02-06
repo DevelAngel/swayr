@@ -55,6 +55,10 @@ and logging are optional.
 
 Bugs and requests can be reported [here](https://todo.sr.ht/~tsdh/swayr).
 
+## Build status
+
+[![builds.sr.ht status](https://builds.sr.ht/~tsdh/swayr.svg)](https://builds.sr.ht/~tsdh/swayr?)
+
 ## License
 
 Swayr is licensed under the
