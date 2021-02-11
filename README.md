@@ -56,6 +56,12 @@ bindsym $mod+Shift+c exec env RUST_BACKTRACE=1 swayr execute-swayr-command >> /t
 Of course, configure the keys to your liking.  Again, enabling rust backtraces
 and logging are optional.
 
+## Questions & Patches
+
+For asking questions, sending feedback, or patches, refer to [my public inbox
+(mailinglist)](https://sr.ht/~tsdh/public-inbox).  Please mention the project
+you are referring to in the subject.
+
 ## Bugs
 
 Bugs and requests can be reported [here](https://todo.sr.ht/~tsdh/swayr).
