@@ -59,8 +59,8 @@ and logging are optional.
 ## Questions & Patches
 
 For asking questions, sending feedback, or patches, refer to [my public inbox
-(mailinglist)](https://sr.ht/~tsdh/public-inbox).  Please mention the project
-you are referring to in the subject.
+(mailinglist)](https://lists.sr.ht/~tsdh/public-inbox).  Please mention the
+project you are referring to in the subject.
 
 ## Bugs
 
