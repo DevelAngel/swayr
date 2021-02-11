@@ -1,3 +1,5 @@
+//! Functions and data structures concerned with sway JSON IPC.
+
 extern crate serde;
 extern crate serde_json;
 extern crate users;

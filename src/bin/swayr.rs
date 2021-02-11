@@ -1,3 +1,5 @@
+//! The `swayr` binary.
+
 #[macro_use]
 extern crate clap;
 use clap::Clap;

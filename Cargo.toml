@@ -1,7 +1,7 @@
 [package]
 name = "swayr"
 version = "0.0.9"
-description = "A wofi-based LRU window-switcher for sway written in Rust"
+description = "A wofi-based LRU window-switcher (and more) for the sway window manager"
 homepage = "https://sr.ht/~tsdh/swayr/"
 repository = "https://git.sr.ht/~tsdh/swayr"
 authors = ["Tassilo Horn <tsdh@gnu.org>"]

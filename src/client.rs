@@ -1,3 +1,5 @@
+//! Functions and data structures of the swayr client.
+
 use crate::con;
 use crate::ipc;
 use crate::util;
@@ -6,6 +8,8 @@ use std::fmt;
 
 #[derive(Clap, Debug)]
 pub enum SwayrCommand {
+    /// Switch to next urgent window (if any) or to last recently used window.
+    SwitchToUrgentOrLRUWindow,
     /// Focus the selected window
     SwitchWindow,
     /// Quit the selected window
@@ -30,6 +34,9 @@ impl fmt::Display for SwayrCommand {
 
 pub fn exec_swayr_cmd(cmd: &SwayrCommand) {
     match cmd {
+        SwayrCommand::SwitchToUrgentOrLRUWindow => {
+            switch_to_urgent_or_lru_window()
+        }
         SwayrCommand::SwitchWindow => switch_window(),
         SwayrCommand::QuitWindow => quit_window(),
         SwayrCommand::SwitchWorkspace => switch_workspace(),
@@ -60,6 +67,22 @@ fn focus_window_by_id(id: ipc::Id) {
 
 fn quit_window_by_id(id: ipc::Id) {
     util::swaymsg(&[format!("[con_id={}]", id).as_str(), "kill"]);
+}
+
+pub fn switch_to_urgent_or_lru_window() {
+    let root = con::get_tree();
+    let windows = con::get_windows(&root);
+    if let Some(win) = windows
+        .iter()
+        .filter(|w| w.is_urgent())
+        .next()
+        .or_else(|| windows.iter().next())
+    {
+        println!("Switching to {}", win);
+        focus_window_by_id(win.get_id())
+    } else {
+        println!("No window to switch to.")
+    }
 }
 
 pub fn switch_window() {

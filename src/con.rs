@@ -1,3 +1,5 @@
+//! Convenience data structures built from the IPC structs.
+
 use crate::ipc;
 use crate::util;
 use std::cmp;
@@ -61,6 +63,14 @@ impl Window<'_> {
     pub fn get_title(&self) -> &str {
         self.node.name.as_ref().unwrap()
     }
+
+    pub fn is_urgent(&self) -> bool {
+        self.node.urgent
+    }
+
+    pub fn is_focused(&self) -> bool {
+        self.node.focused
+    }
 }
 
 impl PartialEq for Window<'_> {
@@ -75,12 +85,12 @@ impl Ord for Window<'_> {
     fn cmp(&self, other: &Self) -> cmp::Ordering {
         if self == other {
             cmp::Ordering::Equal
-        } else if self.node.urgent && !other.node.urgent
-            || !self.node.focused && other.node.focused
+        } else if self.is_urgent() && !other.is_urgent()
+            || !self.is_focused() && other.is_focused()
         {
             cmp::Ordering::Less
-        } else if !self.node.urgent && other.node.urgent
-            || self.node.focused && !other.node.focused
+        } else if !self.is_urgent() && other.is_urgent()
+            || self.is_focused() && !other.is_focused()
         {
             std::cmp::Ordering::Greater
         } else {

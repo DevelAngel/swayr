@@ -1,3 +1,5 @@
+//! Functions and data structures of the swayrd demon.
+
 use crate::ipc;
 use crate::util;
 use serde_json::Deserializer;

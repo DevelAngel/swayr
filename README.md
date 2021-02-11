@@ -1,13 +1,15 @@
-# Swayr is a window switcher for sway
+# Swayr is a window switcher (and more) for sway
 
-Swayr consists of a demon, and a client.  The demon `swayrd` records window
-creations, deletions, and focus changes using sway's JSON IPC interface.  The
-client `swayr` offers subcommands, see `swayr --help`.
+Swayr consists of a demon, and a client.  The demon `swayrd` records
+window/workspace creations, deletions, and focus changes using sway's JSON IPC
+interface.  The client `swayr` offers subcommands, see `swayr --help`.
 
 Right now, there are these subcommands:
 * `switch-window` displays all windows in the order urgent first, then LRU,
   focused last and focuses the selected.
 * `quit-window` displays all windows and quits the selected one.
+* `switch-to-urgent-or-lru-window` switches to the next window with urgency
+  hint (if any) or to the last recently used window.
 * `switch-workspace` displays all workspaces in LRU order and switches to the
   selected one.
 * `switch-workspace-or-window` displays all workspaces and their windows and
@@ -43,7 +45,10 @@ so:
 ```
 bindsym $mod+Delete exec env RUST_BACKTRACE=1 swayr quit-window > /tmp/swayr.log 2>&1
 bindsym $mod+Space exec env RUST_BACKTRACE=1 swayr switch-window >> /tmp/swayr.log 2>&1
-bindsym $mod+Shift+Space exec env RUST_BACKTRACE=1 swayr switch-workspace-or-window >> /tmp/swayr.log 2>&1
+bindsym $mod+Tab exec env RUST_BACKTRACE=1 \
+    swayr switch-to-urgent-or-lru-window >> /tmp/swayr.log 2>&1
+bindsym $mod+Shift+Space exec env RUST_BACKTRACE=1 \
+    swayr switch-workspace-or-window >> /tmp/swayr.log 2>&1
 bindsym $mod+c exec env RUST_BACKTRACE=1 swayr execute-swaymsg-command >> /tmp/swayr.log 2>&1
 bindsym $mod+Shift+c exec env RUST_BACKTRACE=1 swayr execute-swayr-command >> /tmp/swa
 ```
