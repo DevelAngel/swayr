@@ -144,7 +144,6 @@ fn build_windows(
             })
         }
     }
-    v.sort();
     v
 }
 
@@ -184,16 +183,24 @@ fn get_con_props() -> Result<HashMap<ipc::Id, ipc::ConProps>, serde_json::Error>
 }
 
 /// Gets all application windows of the tree.
-pub fn get_windows(root: &ipc::Node) -> Vec<Window> {
-    let con_props = match get_con_props() {
-        Ok(con_props) => Some(con_props),
-        Err(e) => {
-            eprintln!("Got no con_props: {:?}", e);
-            None
+pub fn get_windows(root: &ipc::Node, sort: bool) -> Vec<Window> {
+    let con_props = if sort {
+        match get_con_props() {
+            Ok(con_props) => Some(con_props),
+            Err(e) => {
+                eprintln!("Got no con_props: {:?}", e);
+                None
+            }
         }
+    } else {
+        None
     };
 
-    build_windows(root, con_props.unwrap_or_default())
+    let mut wins = build_windows(root, con_props.unwrap_or_default());
+    if sort {
+        wins.sort();
+    }
+    wins
 }
 
 /// Gets all application windows of the tree.
@@ -225,7 +232,7 @@ pub fn get_workspaces(
 #[test]
 fn test_get_windows() {
     let root = get_tree();
-    let cons = get_windows(&root);
+    let cons = get_windows(&root, true);
 
     println!("There are {} cons.", cons.len());
 

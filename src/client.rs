@@ -12,6 +12,10 @@ pub enum SwayrCommand {
     SwitchToUrgentOrLRUWindow,
     /// Focus the selected window
     SwitchWindow,
+    /// Focus the next window.
+    NextWindow,
+    /// Focus the previous window.
+    PrevWindow,
     /// Quit the selected window
     QuitWindow,
     /// Switch to the selected workspace
@@ -38,6 +42,12 @@ pub fn exec_swayr_cmd(cmd: &SwayrCommand) {
             switch_to_urgent_or_lru_window()
         }
         SwayrCommand::SwitchWindow => switch_window(),
+        SwayrCommand::NextWindow => {
+            focus_next_window_in_direction(Direction::Forward)
+        }
+        SwayrCommand::PrevWindow => {
+            focus_next_window_in_direction(Direction::Backward)
+        }
         SwayrCommand::QuitWindow => quit_window(),
         SwayrCommand::SwitchWorkspace => switch_workspace(),
         SwayrCommand::SwitchWorkspaceOrWindow => switch_workspace_or_window(),
@@ -53,6 +63,9 @@ pub fn exec_swayr_cmd(cmd: &SwayrCommand) {
                     SwayrCommand::SwitchWindow,
                     SwayrCommand::SwitchWorkspace,
                     SwayrCommand::SwitchWorkspaceOrWindow,
+                    SwayrCommand::SwitchToUrgentOrLRUWindow,
+                    SwayrCommand::NextWindow,
+                    SwayrCommand::PrevWindow,
                 ],
             ) {
                 exec_swayr_cmd(c);
@@ -71,12 +84,11 @@ fn quit_window_by_id(id: ipc::Id) {
 
 pub fn switch_to_urgent_or_lru_window() {
     let root = con::get_tree();
-    let windows = con::get_windows(&root);
+    let windows = con::get_windows(&root, true);
     if let Some(win) = windows
         .iter()
-        .filter(|w| w.is_urgent())
-        .next()
-        .or_else(|| windows.iter().next())
+        .find(|w| w.is_urgent())
+        .or_else(|| windows.get(0))
     {
         println!("Switching to {}", win);
         focus_window_by_id(win.get_id())
@@ -87,10 +99,47 @@ pub fn switch_to_urgent_or_lru_window() {
 
 pub fn switch_window() {
     let root = con::get_tree();
-    let windows = con::get_windows(&root);
+    let windows = con::get_windows(&root, true);
 
     if let Some(window) = con::select_window("Switch to window", &windows) {
         focus_window_by_id(window.get_id())
+    }
+}
+
+pub enum Direction {
+    Backward,
+    Forward,
+}
+
+pub fn focus_next_window_in_direction(dir: Direction) {
+    let root = con::get_tree();
+    let windows = con::get_windows(&root, false);
+
+    if windows.len() < 2 {
+        return;
+    }
+
+    let pred: Box<dyn Fn(&con::Window) -> bool> =
+        if windows.iter().find(|w| w.is_focused()).is_none() {
+            let last_focused_win_id =
+                con::get_windows(&root, true).get(0).unwrap().get_id();
+            Box::new(move |w| w.get_id() == last_focused_win_id)
+        } else {
+            Box::new(|w: &con::Window| w.is_focused())
+        };
+
+    let mut iter: Box<dyn Iterator<Item = &con::Window>> = match dir {
+        Direction::Forward => Box::new(windows.iter().rev().cycle()),
+        Direction::Backward => Box::new(windows.iter().cycle()),
+    };
+
+    loop {
+        let win = iter.next().unwrap();
+        if pred(win) {
+            let win = iter.next().unwrap();
+            focus_window_by_id(win.get_id());
+            return;
+        }
     }
 }
 
@@ -124,7 +173,7 @@ pub fn switch_workspace_or_window() {
 
 pub fn quit_window() {
     let root = con::get_tree();
-    let windows = con::get_windows(&root);
+    let windows = con::get_windows(&root, true);
 
     if let Some(window) = con::select_window("Quit window", &windows) {
         quit_window_by_id(window.get_id())
