@@ -1,10 +1,13 @@
 //! Functions and data structures of the swayr client.
 
 use crate::con;
-use crate::ipc;
 use crate::util;
+
 use clap::Clap;
 use std::fmt;
+
+use swayipc as s;
+use swayipc::reply as r;
 
 #[derive(Clap, Debug)]
 pub enum SwayrCommand {
@@ -74,16 +77,23 @@ pub fn exec_swayr_cmd(cmd: &SwayrCommand) {
     }
 }
 
-fn focus_window_by_id(id: ipc::Id) {
+fn focus_window_by_id(id: i64) {
     util::swaymsg(&[format!("[con_id={}]", id).as_str(), "focus"]);
 }
 
-fn quit_window_by_id(id: ipc::Id) {
+fn quit_window_by_id(id: i64) {
     util::swaymsg(&[format!("[con_id={}]", id).as_str(), "kill"]);
 }
 
+fn get_tree() -> r::Node {
+    match s::Connection::new() {
+        Ok(mut con) => con.get_tree().expect("Got no root node"),
+        Err(err) => panic!(err),
+    }
+}
+
 pub fn switch_to_urgent_or_lru_window() {
-    let root = con::get_tree();
+    let root = get_tree();
     let windows = con::get_windows(&root, true);
     if let Some(win) = windows
         .iter()
@@ -98,7 +108,7 @@ pub fn switch_to_urgent_or_lru_window() {
 }
 
 pub fn switch_window() {
-    let root = con::get_tree();
+    let root = get_tree();
     let windows = con::get_windows(&root, true);
 
     if let Some(window) = con::select_window("Switch to window", &windows) {
@@ -112,7 +122,7 @@ pub enum Direction {
 }
 
 pub fn focus_next_window_in_direction(dir: Direction) {
-    let root = con::get_tree();
+    let root = get_tree();
     let windows = con::get_windows(&root, false);
 
     if windows.len() < 2 {
@@ -144,7 +154,7 @@ pub fn focus_next_window_in_direction(dir: Direction) {
 }
 
 pub fn switch_workspace() {
-    let root = con::get_tree();
+    let root = get_tree();
     let workspaces = con::get_workspaces(&root, false);
 
     if let Some(workspace) =
@@ -155,7 +165,7 @@ pub fn switch_workspace() {
 }
 
 pub fn switch_workspace_or_window() {
-    let root = con::get_tree();
+    let root = get_tree();
     let workspaces = con::get_workspaces(&root, false);
     let ws_or_wins = con::WsOrWin::from_workspaces(&workspaces);
     if let Some(ws_or_win) = con::select_workspace_or_window(
@@ -172,7 +182,7 @@ pub fn switch_workspace_or_window() {
 }
 
 pub fn quit_window() {
-    let root = con::get_tree();
+    let root = get_tree();
     let windows = con::get_windows(&root, true);
 
     if let Some(window) = con::select_window("Quit window", &windows) {
@@ -181,7 +191,7 @@ pub fn quit_window() {
 }
 
 pub fn quit_workspace_or_window() {
-    let root = con::get_tree();
+    let root = get_tree();
     let workspaces = con::get_workspaces(&root, false);
     let ws_or_wins = con::WsOrWin::from_workspaces(&workspaces);
     if let Some(ws_or_win) =

@@ -2,46 +2,22 @@
 
 use crate::ipc;
 use crate::util;
+use ipc::NodeMethods;
 use std::cmp;
 use std::collections::HashMap;
 use std::fmt;
 use std::os::unix::net::UnixStream;
-
-pub fn get_tree() -> ipc::Node {
-    let output = util::swaymsg(&["-t", "get_tree"]);
-    let json = output.as_str();
-    let result = serde_json::from_str(json);
-
-    match result {
-        Ok(node) => node,
-        Err(err) => {
-            panic!(
-                "Can't read get_tree response: {}\nThe JSON is: {}",
-                err, json
-            );
-        }
-    }
-}
-
-#[test]
-fn test_get_tree() {
-    let tree = get_tree();
-
-    println!("Those IDs are in get_tree():");
-    for n in tree.iter() {
-        println!("  id: {}, type: {:?}", n.id, n.r#type);
-    }
-}
+use swayipc::reply as r;
 
 #[derive(Debug)]
 pub struct Window<'a> {
-    node: &'a ipc::Node,
-    workspace: &'a ipc::Node,
-    con_props: Option<ipc::ConProps>,
+    node: &'a r::Node,
+    workspace: &'a r::Node,
+    con_props: Option<ipc::ExtraProps>,
 }
 
 impl Window<'_> {
-    pub fn get_id(&self) -> ipc::Id {
+    pub fn get_id(&self) -> i64 {
         self.node.id
     }
 
@@ -131,8 +107,8 @@ impl<'a> fmt::Display for Window<'a> {
 }
 
 fn build_windows(
-    root: &ipc::Node,
-    mut con_props: HashMap<ipc::Id, ipc::ConProps>,
+    root: &r::Node,
+    mut con_props: HashMap<i64, ipc::ExtraProps>,
 ) -> Vec<Window> {
     let mut v = vec![];
     for workspace in root.workspaces() {
@@ -148,8 +124,8 @@ fn build_windows(
 }
 
 fn build_workspaces(
-    root: &ipc::Node,
-    mut con_props: HashMap<ipc::Id, ipc::ConProps>,
+    root: &r::Node,
+    mut con_props: HashMap<i64, ipc::ExtraProps>,
 ) -> Vec<Workspace> {
     let mut v = vec![];
     for workspace in root.workspaces() {
@@ -173,8 +149,7 @@ fn build_workspaces(
     v
 }
 
-fn get_con_props() -> Result<HashMap<ipc::Id, ipc::ConProps>, serde_json::Error>
-{
+fn get_con_props() -> Result<HashMap<i64, ipc::ExtraProps>, serde_json::Error> {
     if let Ok(sock) = UnixStream::connect(util::get_swayr_socket_path()) {
         serde_json::from_reader(sock)
     } else {
@@ -183,7 +158,7 @@ fn get_con_props() -> Result<HashMap<ipc::Id, ipc::ConProps>, serde_json::Error>
 }
 
 /// Gets all application windows of the tree.
-pub fn get_windows(root: &ipc::Node, sort: bool) -> Vec<Window> {
+pub fn get_windows(root: &r::Node, sort: bool) -> Vec<Window> {
     let con_props = if sort {
         match get_con_props() {
             Ok(con_props) => Some(con_props),
@@ -205,7 +180,7 @@ pub fn get_windows(root: &ipc::Node, sort: bool) -> Vec<Window> {
 
 /// Gets all application windows of the tree.
 pub fn get_workspaces(
-    root: &ipc::Node,
+    root: &r::Node,
     include_scratchpad: bool,
 ) -> Vec<Workspace> {
     let con_props = match get_con_props() {
@@ -227,18 +202,6 @@ pub fn get_workspaces(
     };
     workspaces.rotate_left(1);
     workspaces
-}
-
-#[test]
-fn test_get_windows() {
-    let root = get_tree();
-    let cons = get_windows(&root, true);
-
-    println!("There are {} cons.", cons.len());
-
-    for c in cons {
-        println!("  {}", c);
-    }
 }
 
 pub fn select_window<'a>(
@@ -295,8 +258,8 @@ pub fn select_workspace_or_window<'a>(
 }
 
 pub struct Workspace<'a> {
-    node: &'a ipc::Node,
-    con_props: Option<ipc::ConProps>,
+    node: &'a r::Node,
+    con_props: Option<ipc::ExtraProps>,
     pub windows: Vec<Window<'a>>,
 }
 
@@ -305,7 +268,7 @@ impl Workspace<'_> {
         self.node.name.as_ref().unwrap()
     }
 
-    pub fn get_id(&self) -> ipc::Id {
+    pub fn get_id(&self) -> i64 {
         self.node.id
     }
 

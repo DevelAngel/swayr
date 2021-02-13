@@ -2,116 +2,123 @@
 
 use crate::ipc;
 use crate::util;
-use serde_json::Deserializer;
+
 use std::collections::HashMap;
 use std::io::Write;
 use std::os::unix::net::{UnixListener, UnixStream};
-use std::process as proc;
 use std::sync::Arc;
 use std::sync::RwLock;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-pub fn monitor_con_events(
-    con_props: Arc<RwLock<HashMap<ipc::Id, ipc::ConProps>>>,
+use swayipc as s;
+use swayipc::reply as r;
+
+pub fn monitor_sway_events(
+    extra_props: Arc<RwLock<HashMap<i64, ipc::ExtraProps>>>,
 ) {
-    let mut child = proc::Command::new("swaymsg")
-        .arg("--monitor")
-        .arg("--raw")
-        .arg("-t")
-        .arg("subscribe")
-        .arg("[\"window\", \"workspace\"]")
-        .stdout(proc::Stdio::piped())
-        .spawn()
-        .expect("Failed to subscribe to window events");
-    let stdout = child.stdout.take().unwrap();
-    let reader = std::io::BufReader::new(stdout);
-    let deserializer = Deserializer::from_reader(reader);
-    for res in deserializer.into_iter::<ipc::ConEvent>() {
-        match res {
-            Ok(win_ev) => handle_con_event(win_ev, con_props.clone()),
-            Err(err) => eprintln!("Error handling window event:\n{:?}", err),
+    let iter = s::Connection::new()
+        .expect("Could not connect!")
+        .subscribe(&[s::EventType::Window, s::EventType::Workspace])
+        .expect("Could not subscribe to window and workspace events.");
+
+    for ev_result in iter {
+        let handled;
+        match ev_result {
+            Ok(ev) => match ev {
+                r::Event::Window(win_ev) => {
+                    let extra_props_clone = extra_props.clone();
+                    handled = handle_window_event(win_ev, extra_props_clone);
+                }
+                r::Event::Workspace(ws_ev) => {
+                    let extra_props_clone = extra_props.clone();
+                    handled = handle_workspace_event(ws_ev, extra_props_clone);
+                }
+                _ => handled = false,
+            },
+            Err(e) => {
+                eprintln!("Error while receiving events: {}", e);
+                handled = false;
+            }
+        }
+        if handled {
+            println!(
+                "New extra_props state:\n{:#?}",
+                *extra_props.read().unwrap()
+            );
         }
     }
+}
 
-    match child.try_wait() {
-        Ok(exit_code) => match exit_code {
-            None => {
-                eprintln!("Stopped monitoring con events. Restarting...");
-                monitor_con_events(con_props)
-            }
-            Some(exit_code) => {
-                println!("Swaymsg exited with code {}. Exiting.", exit_code)
-            }
-        },
-        Err(err) => println!("Swaymsg errored with {}. Exiting.", err),
+fn handle_window_event(
+    ev: Box<r::WindowEvent>,
+    extra_props: Arc<RwLock<HashMap<i64, ipc::ExtraProps>>>,
+) -> bool {
+    let r::WindowEvent { change, container } = *ev;
+    match change {
+        r::WindowChange::New | r::WindowChange::Focus => {
+            update_last_focus_time(container.id, extra_props);
+            true
+        }
+        r::WindowChange::Close => {
+            remove_extra_props(container.id, extra_props);
+            true
+        }
+        _ => false,
+    }
+}
+
+fn handle_workspace_event(
+    ev: Box<r::WorkspaceEvent>,
+    extra_props: Arc<RwLock<HashMap<i64, ipc::ExtraProps>>>,
+) -> bool {
+    let r::WorkspaceEvent {
+        change,
+        current,
+        old: _,
+    } = *ev;
+    match change {
+        r::WorkspaceChange::Init | r::WorkspaceChange::Focus => {
+            update_last_focus_time(
+                current
+                    .expect("No current in Init or Focus workspace event")
+                    .id,
+                extra_props,
+            );
+            true
+        }
+        r::WorkspaceChange::Empty => {
+            remove_extra_props(
+                current.expect("No current in Empty workspace event").id,
+                extra_props,
+            );
+            false
+        }
+        _ => false,
     }
 }
 
 fn update_last_focus_time(
-    id: ipc::Id,
-    con_props: Arc<RwLock<HashMap<ipc::Id, ipc::ConProps>>>,
+    id: i64,
+    extra_props: Arc<RwLock<HashMap<i64, ipc::ExtraProps>>>,
 ) {
-    let mut write_lock = con_props.write().unwrap();
+    let mut write_lock = extra_props.write().unwrap();
     if let Some(mut wp) = write_lock.get_mut(&id) {
         wp.last_focus_time = get_epoch_time_as_millis();
     } else {
         write_lock.insert(
             id,
-            ipc::ConProps {
+            ipc::ExtraProps {
                 last_focus_time: get_epoch_time_as_millis(),
             },
         );
     }
 }
 
-fn remove_con_props(
-    id: ipc::Id,
-    con_props: Arc<RwLock<HashMap<ipc::Id, ipc::ConProps>>>,
+fn remove_extra_props(
+    id: i64,
+    extra_props: Arc<RwLock<HashMap<i64, ipc::ExtraProps>>>,
 ) {
-    con_props.write().unwrap().remove(&id);
-}
-
-fn handle_con_event(
-    ev: ipc::ConEvent,
-    con_props: Arc<RwLock<HashMap<ipc::Id, ipc::ConProps>>>,
-) {
-    let mut handled = true;
-    let con_props2 = con_props.clone();
-
-    match ev {
-        ipc::ConEvent::WindowEvent { change, container } => match change {
-            ipc::WindowEventType::New | ipc::WindowEventType::Focus => {
-                update_last_focus_time(container.id, con_props)
-            }
-            ipc::WindowEventType::Close => {
-                remove_con_props(container.id, con_props)
-            }
-            _ => handled = false,
-        },
-        ipc::ConEvent::WorkspaceEvent {
-            change,
-            current,
-            old: _,
-        } => match change {
-            ipc::WorkspaceEventType::Init | ipc::WorkspaceEventType::Focus => {
-                update_last_focus_time(
-                    current
-                        .expect("No current in Init or Focus workspace event")
-                        .id,
-                    con_props,
-                )
-            }
-            ipc::WorkspaceEventType::Empty => remove_con_props(
-                current.expect("No current in Empty workspace event").id,
-                con_props,
-            ),
-            _ => handled = false,
-        },
-    }
-
-    if handled {
-        println!("New con_props state:\n{:#?}", *con_props2.read().unwrap());
-    }
+    extra_props.write().unwrap().remove(&id);
 }
 
 fn get_epoch_time_as_millis() -> u128 {
@@ -122,7 +129,7 @@ fn get_epoch_time_as_millis() -> u128 {
 }
 
 pub fn serve_client_requests(
-    con_props: Arc<RwLock<HashMap<ipc::Id, ipc::ConProps>>>,
+    extra_props: Arc<RwLock<HashMap<i64, ipc::ExtraProps>>>,
 ) {
     match std::fs::remove_file(util::get_swayr_socket_path()) {
         Ok(()) => println!("Deleted stale socket from previous run."),
@@ -134,7 +141,7 @@ pub fn serve_client_requests(
             for stream in listener.incoming() {
                 match stream {
                     Ok(stream) => {
-                        handle_client_request(stream, con_props.clone());
+                        handle_client_request(stream, extra_props.clone());
                     }
                     Err(err) => {
                         eprintln!("Error handling client request: {}", err);
@@ -151,9 +158,9 @@ pub fn serve_client_requests(
 
 fn handle_client_request(
     mut stream: UnixStream,
-    con_props: Arc<RwLock<HashMap<ipc::Id, ipc::ConProps>>>,
+    extra_props: Arc<RwLock<HashMap<i64, ipc::ExtraProps>>>,
 ) {
-    let json = serde_json::to_string(&*con_props.read().unwrap()).unwrap();
+    let json = serde_json::to_string(&*extra_props.read().unwrap()).unwrap();
     if let Err(err) = stream.write_all(json.as_bytes()) {
         eprintln!("Error writing to client: {:?}", err);
     }
