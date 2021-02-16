@@ -181,14 +181,14 @@ pub fn get_workspaces<'a>(
 }
 
 pub fn select_window<'a>(
-    prompt: &'a str,
+    prompt: &str,
     windows: &'a [Window],
 ) -> Option<&'a Window<'a>> {
     util::wofi_select(prompt, windows)
 }
 
 pub fn select_workspace<'a>(
-    prompt: &'a str,
+    prompt: &str,
     workspaces: &'a [Workspace],
 ) -> Option<&'a Workspace<'a>> {
     util::wofi_select(prompt, workspaces)
