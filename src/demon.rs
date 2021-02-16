@@ -1,10 +1,11 @@
 //! Functions and data structures of the swayrd demon.
 
+use crate::cmds;
 use crate::ipc;
 use crate::util;
 
 use std::collections::HashMap;
-use std::io::Write;
+use std::io::Read;
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::sync::Arc;
 use std::sync::RwLock;
@@ -102,7 +103,7 @@ fn update_last_focus_time(
     extra_props: Arc<RwLock<HashMap<i64, ipc::ExtraProps>>>,
 ) {
     let mut write_lock = extra_props.write().unwrap();
-    if let Some(mut wp) = write_lock.get_mut(&id) {
+    if let Some(wp) = write_lock.get_mut(&id) {
         wp.last_focus_time = get_epoch_time_as_millis();
     } else {
         write_lock.insert(
@@ -160,8 +161,17 @@ fn handle_client_request(
     mut stream: UnixStream,
     extra_props: Arc<RwLock<HashMap<i64, ipc::ExtraProps>>>,
 ) {
-    let json = serde_json::to_string(&*extra_props.read().unwrap()).unwrap();
-    if let Err(err) = stream.write_all(json.as_bytes()) {
-        eprintln!("Error writing to client: {:?}", err);
+    let mut cmd_str = String::new();
+    if stream.read_to_string(&mut cmd_str).is_ok() {
+        if let Ok(cmd) = serde_json::from_str::<ipc::SwayrCommand>(&cmd_str) {
+            cmds::exec_swayr_cmd(&cmd, extra_props);
+        } else {
+            eprintln!(
+                "Could not serialize following string to SwayrCommand.\n{}",
+                cmd_str
+            );
+        }
+    } else {
+        eprintln!("Could not read command from client.");
     }
 }

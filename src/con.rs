@@ -6,7 +6,6 @@ use ipc::NodeMethods;
 use std::cmp;
 use std::collections::HashMap;
 use std::fmt;
-use std::os::unix::net::UnixStream;
 use swayipc::reply as r;
 
 #[derive(Debug)]
@@ -106,16 +105,16 @@ impl<'a> fmt::Display for Window<'a> {
     }
 }
 
-fn build_windows(
-    root: &r::Node,
-    mut con_props: HashMap<i64, ipc::ExtraProps>,
-) -> Vec<Window> {
+fn build_windows<'a>(
+    root: &'a r::Node,
+    extra_props: Option<&HashMap<i64, ipc::ExtraProps>>,
+) -> Vec<Window<'a>> {
     let mut v = vec![];
     for workspace in root.workspaces() {
         for n in workspace.windows() {
             v.push(Window {
                 node: &n,
-                con_props: con_props.remove(&n.id),
+                con_props: extra_props.and_then(|m| m.get(&n.id).cloned()),
                 workspace: &workspace,
             })
         }
@@ -123,10 +122,10 @@ fn build_windows(
     v
 }
 
-fn build_workspaces(
-    root: &r::Node,
-    mut con_props: HashMap<i64, ipc::ExtraProps>,
-) -> Vec<Workspace> {
+fn build_workspaces<'a>(
+    root: &'a r::Node,
+    extra_props: Option<&HashMap<i64, ipc::ExtraProps>>,
+) -> Vec<Workspace<'a>> {
     let mut v = vec![];
     for workspace in root.workspaces() {
         let mut wins: Vec<Window> = workspace
@@ -134,14 +133,14 @@ fn build_workspaces(
             .iter()
             .map(|w| Window {
                 node: &w,
-                con_props: con_props.remove(&w.id),
+                con_props: extra_props.and_then(|m| m.get(&w.id).cloned()),
                 workspace: &workspace,
             })
             .collect();
         wins.sort();
         v.push(Workspace {
             node: &workspace,
-            con_props: con_props.remove(&workspace.id),
+            con_props: extra_props.and_then(|m| m.get(&workspace.id).cloned()),
             windows: wins,
         })
     }
@@ -149,49 +148,26 @@ fn build_workspaces(
     v
 }
 
-fn get_con_props() -> Result<HashMap<i64, ipc::ExtraProps>, serde_json::Error> {
-    if let Ok(sock) = UnixStream::connect(util::get_swayr_socket_path()) {
-        serde_json::from_reader(sock)
-    } else {
-        panic!("Could not connect to socket!")
-    }
-}
-
 /// Gets all application windows of the tree.
-pub fn get_windows(root: &r::Node, sort: bool) -> Vec<Window> {
-    let con_props = if sort {
-        match get_con_props() {
-            Ok(con_props) => Some(con_props),
-            Err(e) => {
-                eprintln!("Got no con_props: {:?}", e);
-                None
-            }
-        }
-    } else {
-        None
-    };
-
-    let mut wins = build_windows(root, con_props.unwrap_or_default());
-    if sort {
+pub fn get_windows<'a>(
+    root: &'a r::Node,
+    extra_props: Option<&HashMap<i64, ipc::ExtraProps>>,
+) -> Vec<Window<'a>> {
+    let extra_props_given = extra_props.is_some();
+    let mut wins = build_windows(root, extra_props);
+    if extra_props_given {
         wins.sort();
     }
     wins
 }
 
 /// Gets all application windows of the tree.
-pub fn get_workspaces(
-    root: &r::Node,
+pub fn get_workspaces<'a>(
+    root: &'a r::Node,
     include_scratchpad: bool,
-) -> Vec<Workspace> {
-    let con_props = match get_con_props() {
-        Ok(con_props) => Some(con_props),
-        Err(e) => {
-            eprintln!("Got no con_props: {:?}", e);
-            None
-        }
-    };
-
-    let workspaces = build_workspaces(root, con_props.unwrap_or_default());
+    con_props: Option<&HashMap<i64, ipc::ExtraProps>>,
+) -> Vec<Workspace<'a>> {
+    let workspaces = build_workspaces(root, con_props);
     let mut workspaces = if include_scratchpad {
         workspaces
     } else {

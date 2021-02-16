@@ -5,6 +5,7 @@ extern crate serde_json;
 extern crate swayipc;
 extern crate users;
 
+use clap::Clap;
 use serde::{Deserialize, Serialize};
 use swayipc::reply as r;
 
@@ -73,8 +74,32 @@ impl NodeMethods for r::Node {
     }
 }
 
+#[derive(Clap, Debug, Deserialize, Serialize)]
+pub enum SwayrCommand {
+    /// Switch to next urgent window (if any) or to last recently used window.
+    SwitchToUrgentOrLRUWindow,
+    /// Focus the selected window
+    SwitchWindow,
+    /// Focus the next window.
+    NextWindow,
+    /// Focus the previous window.
+    PrevWindow,
+    /// Quit the selected window
+    QuitWindow,
+    /// Switch to the selected workspace
+    SwitchWorkspace,
+    /// Switch to the selected workspace or focus the selected window
+    SwitchWorkspaceOrWindow,
+    /// Quit all windows of selected workspace or the selected window
+    QuitWorkspaceOrWindow,
+    /// Select and execute a swaymsg command
+    ExecuteSwaymsgCommand,
+    /// Select and execute a swayr command
+    ExecuteSwayrCommand,
+}
+
 /// Extra properties gathered by swayrd for windows and workspaces.
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct ExtraProps {
     /// Milliseconds since UNIX epoch.
     pub last_focus_time: u128,

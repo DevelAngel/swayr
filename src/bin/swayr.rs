@@ -4,6 +4,7 @@
 extern crate clap;
 use clap::Clap;
 use swayr::client;
+use swayr::ipc;
 
 /// Windows are sorted urgent first, then windows in LRU order, focused window
 /// last.  Licensed under the GPLv3 (or later).
@@ -15,10 +16,12 @@ use swayr::client;
 )]
 struct Opts {
     #[clap(subcommand)]
-    command: client::SwayrCommand,
+    command: ipc::SwayrCommand,
 }
 
 fn main() {
     let opts: Opts = Opts::parse();
-    client::exec_swayr_cmd(&opts.command);
+    if let Err(err) = client::send_swayr_cmd(opts.command) {
+        eprintln!("Could not send command: {}", err);
+    }
 }

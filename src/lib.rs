@@ -9,6 +9,7 @@
 //! IPC interface.  The client `swayr` offers subcommands, see `swayr --help`.
 
 pub mod client;
+pub mod cmds;
 pub mod con;
 pub mod demon;
 pub mod ipc;
