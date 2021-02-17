@@ -9,10 +9,23 @@ use std::io::Read;
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::sync::Arc;
 use std::sync::RwLock;
+use std::thread;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use swayipc as s;
 use swayipc::reply as r;
+
+pub fn run_demon() {
+    let con_props: Arc<RwLock<HashMap<i64, ipc::ExtraProps>>> =
+        Arc::new(RwLock::new(HashMap::new()));
+    let con_props_for_ev_handler = con_props.clone();
+
+    thread::spawn(move || {
+        monitor_sway_events(con_props_for_ev_handler);
+    });
+
+    serve_client_requests(con_props);
+}
 
 fn connect_and_subscribe() -> s::Fallible<s::EventIterator> {
     s::Connection::new()?
