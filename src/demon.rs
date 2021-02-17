@@ -17,35 +17,41 @@ use swayipc::reply as r;
 pub fn monitor_sway_events(
     extra_props: Arc<RwLock<HashMap<i64, ipc::ExtraProps>>>,
 ) {
-    let iter = s::Connection::new()
-        .expect("Could not connect!")
-        .subscribe(&[s::EventType::Window, s::EventType::Workspace])
-        .expect("Could not subscribe to window and workspace events.");
+    'reset: loop {
+        println!("Connecting to sway for subscribing to events...");
+        let iter = s::Connection::new()
+            .expect("Could not connect!")
+            .subscribe(&[s::EventType::Window, s::EventType::Workspace])
+            .expect("Could not subscribe to window and workspace events.");
 
-    for ev_result in iter {
-        let handled;
-        match ev_result {
-            Ok(ev) => match ev {
-                r::Event::Window(win_ev) => {
-                    let extra_props_clone = extra_props.clone();
-                    handled = handle_window_event(win_ev, extra_props_clone);
+        for ev_result in iter {
+            let handled;
+            match ev_result {
+                Ok(ev) => match ev {
+                    r::Event::Window(win_ev) => {
+                        let extra_props_clone = extra_props.clone();
+                        handled =
+                            handle_window_event(win_ev, extra_props_clone);
+                    }
+                    r::Event::Workspace(ws_ev) => {
+                        let extra_props_clone = extra_props.clone();
+                        handled =
+                            handle_workspace_event(ws_ev, extra_props_clone);
+                    }
+                    _ => handled = false,
+                },
+                Err(e) => {
+                    eprintln!("Error while receiving events: {}", e);
+                    eprintln!("Resetting!");
+                    break 'reset;
                 }
-                r::Event::Workspace(ws_ev) => {
-                    let extra_props_clone = extra_props.clone();
-                    handled = handle_workspace_event(ws_ev, extra_props_clone);
-                }
-                _ => handled = false,
-            },
-            Err(e) => {
-                eprintln!("Error while receiving events: {}", e);
-                handled = false;
             }
-        }
-        if handled {
-            println!(
-                "New extra_props state:\n{:#?}",
-                *extra_props.read().unwrap()
-            );
+            if handled {
+                println!(
+                    "New extra_props state:\n{:#?}",
+                    *extra_props.read().unwrap()
+                );
+            }
         }
     }
 }
