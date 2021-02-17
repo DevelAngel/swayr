@@ -12,7 +12,7 @@ use swayipc::reply as r;
 pub struct Window<'a> {
     node: &'a r::Node,
     workspace: &'a r::Node,
-    con_props: Option<ipc::ExtraProps>,
+    extra_props: Option<ipc::ExtraProps>,
 }
 
 impl Window<'_> {
@@ -70,9 +70,11 @@ impl Ord for Window<'_> {
             std::cmp::Ordering::Greater
         } else {
             let lru_a =
-                self.con_props.as_ref().map_or(0, |wp| wp.last_focus_time);
-            let lru_b =
-                other.con_props.as_ref().map_or(0, |wp| wp.last_focus_time);
+                self.extra_props.as_ref().map_or(0, |wp| wp.last_focus_time);
+            let lru_b = other
+                .extra_props
+                .as_ref()
+                .map_or(0, |wp| wp.last_focus_time);
             lru_a.cmp(&lru_b).reverse()
         }
     }
@@ -114,7 +116,7 @@ fn build_windows<'a>(
         for n in workspace.windows() {
             v.push(Window {
                 node: &n,
-                con_props: extra_props.and_then(|m| m.get(&n.id).cloned()),
+                extra_props: extra_props.and_then(|m| m.get(&n.id).cloned()),
                 workspace: &workspace,
             })
         }
@@ -133,7 +135,7 @@ fn build_workspaces<'a>(
             .iter()
             .map(|w| Window {
                 node: &w,
-                con_props: extra_props.and_then(|m| m.get(&w.id).cloned()),
+                extra_props: extra_props.and_then(|m| m.get(&w.id).cloned()),
                 workspace: &workspace,
             })
             .collect();

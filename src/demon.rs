@@ -16,15 +16,15 @@ use swayipc as s;
 use swayipc::reply as r;
 
 pub fn run_demon() {
-    let con_props: Arc<RwLock<HashMap<i64, ipc::ExtraProps>>> =
+    let extra_props: Arc<RwLock<HashMap<i64, ipc::ExtraProps>>> =
         Arc::new(RwLock::new(HashMap::new()));
-    let con_props_for_ev_handler = con_props.clone();
+    let extra_props_for_ev_handler = extra_props.clone();
 
     thread::spawn(move || {
-        monitor_sway_events(con_props_for_ev_handler);
+        monitor_sway_events(extra_props_for_ev_handler);
     });
 
-    serve_client_requests(con_props);
+    serve_client_requests(extra_props);
 }
 
 fn connect_and_subscribe() -> s::Fallible<s::EventIterator> {
