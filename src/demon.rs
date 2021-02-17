@@ -14,43 +14,59 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use swayipc as s;
 use swayipc::reply as r;
 
+fn connect_and_subscribe() -> s::Fallible<s::EventIterator> {
+    s::Connection::new()?
+        .subscribe(&[s::EventType::Window, s::EventType::Workspace])
+}
+
 pub fn monitor_sway_events(
     extra_props: Arc<RwLock<HashMap<i64, ipc::ExtraProps>>>,
 ) {
     'reset: loop {
         println!("Connecting to sway for subscribing to events...");
-        let iter = s::Connection::new()
-            .expect("Could not connect!")
-            .subscribe(&[s::EventType::Window, s::EventType::Workspace])
-            .expect("Could not subscribe to window and workspace events.");
-
-        for ev_result in iter {
-            let handled;
-            match ev_result {
-                Ok(ev) => match ev {
-                    r::Event::Window(win_ev) => {
-                        let extra_props_clone = extra_props.clone();
-                        handled =
-                            handle_window_event(win_ev, extra_props_clone);
-                    }
-                    r::Event::Workspace(ws_ev) => {
-                        let extra_props_clone = extra_props.clone();
-                        handled =
-                            handle_workspace_event(ws_ev, extra_props_clone);
-                    }
-                    _ => handled = false,
-                },
-                Err(e) => {
-                    eprintln!("Error while receiving events: {}", e);
-                    eprintln!("Resetting!");
-                    break 'reset;
-                }
+        match connect_and_subscribe() {
+            Err(err) => {
+                eprintln!("Could not connect and subscribe: {}", err);
+                std::thread::sleep(std::time::Duration::from_secs(3));
+                break 'reset;
             }
-            if handled {
-                println!(
-                    "New extra_props state:\n{:#?}",
-                    *extra_props.read().unwrap()
-                );
+            Ok(iter) => {
+                for ev_result in iter {
+                    let handled;
+                    match ev_result {
+                        Ok(ev) => match ev {
+                            r::Event::Window(win_ev) => {
+                                let extra_props_clone = extra_props.clone();
+                                handled = handle_window_event(
+                                    win_ev,
+                                    extra_props_clone,
+                                );
+                            }
+                            r::Event::Workspace(ws_ev) => {
+                                let extra_props_clone = extra_props.clone();
+                                handled = handle_workspace_event(
+                                    ws_ev,
+                                    extra_props_clone,
+                                );
+                            }
+                            _ => handled = false,
+                        },
+                        Err(e) => {
+                            eprintln!("Error while receiving events: {}", e);
+                            std::thread::sleep(std::time::Duration::from_secs(
+                                3,
+                            ));
+                            eprintln!("Resetting!");
+                            break 'reset;
+                        }
+                    }
+                    if handled {
+                        println!(
+                            "New extra_props state:\n{:#?}",
+                            *extra_props.read().unwrap()
+                        );
+                    }
+                }
             }
         }
     }
