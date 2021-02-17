@@ -142,7 +142,8 @@ fn build_workspaces<'a>(
         wins.sort();
         v.push(Workspace {
             node: &workspace,
-            con_props: extra_props.and_then(|m| m.get(&workspace.id).cloned()),
+            extra_props: extra_props
+                .and_then(|m| m.get(&workspace.id).cloned()),
             windows: wins,
         })
     }
@@ -167,9 +168,9 @@ pub fn get_windows<'a>(
 pub fn get_workspaces<'a>(
     root: &'a r::Node,
     include_scratchpad: bool,
-    con_props: Option<&HashMap<i64, ipc::ExtraProps>>,
+    extra_props: Option<&HashMap<i64, ipc::ExtraProps>>,
 ) -> Vec<Workspace<'a>> {
-    let workspaces = build_workspaces(root, con_props);
+    let workspaces = build_workspaces(root, extra_props);
     let mut workspaces = if include_scratchpad {
         workspaces
     } else {
@@ -237,7 +238,7 @@ pub fn select_workspace_or_window<'a>(
 
 pub struct Workspace<'a> {
     node: &'a r::Node,
-    con_props: Option<ipc::ExtraProps>,
+    extra_props: Option<ipc::ExtraProps>,
     pub windows: Vec<Window<'a>>,
 }
 
@@ -269,9 +270,11 @@ impl Ord for Workspace<'_> {
             cmp::Ordering::Equal
         } else {
             let lru_a =
-                self.con_props.as_ref().map_or(0, |wp| wp.last_focus_time);
-            let lru_b =
-                other.con_props.as_ref().map_or(0, |wp| wp.last_focus_time);
+                self.extra_props.as_ref().map_or(0, |wp| wp.last_focus_time);
+            let lru_b = other
+                .extra_props
+                .as_ref()
+                .map_or(0, |wp| wp.last_focus_time);
             lru_a.cmp(&lru_b).reverse()
         }
     }
