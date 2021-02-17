@@ -91,7 +91,7 @@ pub fn switch_to_urgent_or_lru_window(
     extra_props: Option<&HashMap<i64, ipc::ExtraProps>>,
 ) {
     let root = get_tree();
-    let windows = con::get_windows(&root, extra_props);
+    let windows = con::get_windows(&root, true, extra_props);
     if let Some(win) = windows
         .iter()
         .find(|w| w.is_urgent())
@@ -106,7 +106,7 @@ pub fn switch_to_urgent_or_lru_window(
 
 pub fn switch_window(extra_props: Option<&HashMap<i64, ipc::ExtraProps>>) {
     let root = get_tree();
-    let windows = con::get_windows(&root, extra_props);
+    let windows = con::get_windows(&root, true, extra_props);
 
     if let Some(window) = con::select_window("Switch to window", &windows) {
         focus_window_by_id(window.get_id())
@@ -123,7 +123,7 @@ pub fn focus_next_window_in_direction(
     extra_props: Option<&HashMap<i64, ipc::ExtraProps>>,
 ) {
     let root = get_tree();
-    let windows = con::get_windows(&root, None);
+    let windows = con::get_windows(&root, false, None);
 
     if windows.len() < 2 {
         return;
@@ -131,10 +131,11 @@ pub fn focus_next_window_in_direction(
 
     let pred: Box<dyn Fn(&con::Window) -> bool> =
         if windows.iter().find(|w| w.is_focused()).is_none() {
-            let last_focused_win_id = con::get_windows(&root, extra_props)
-                .get(0)
-                .unwrap()
-                .get_id();
+            let last_focused_win_id =
+                con::get_windows(&root, false, extra_props)
+                    .get(0)
+                    .unwrap()
+                    .get_id();
             Box::new(move |w| w.get_id() == last_focused_win_id)
         } else {
             Box::new(|w: &con::Window| w.is_focused())
@@ -187,7 +188,7 @@ pub fn switch_workspace_or_window(
 
 pub fn quit_window(extra_props: Option<&HashMap<i64, ipc::ExtraProps>>) {
     let root = get_tree();
-    let windows = con::get_windows(&root, extra_props);
+    let windows = con::get_windows(&root, true, extra_props);
 
     if let Some(window) = con::select_window("Quit window", &windows) {
         quit_window_by_id(window.get_id())

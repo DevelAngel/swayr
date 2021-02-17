@@ -50,6 +50,8 @@ pub trait NodeMethods {
 
     /// Returns all nodes being workspaces.
     fn workspaces(&self) -> Vec<&r::Node>;
+
+    fn is_scratchpad(&self) -> bool;
 }
 
 impl NodeMethods for r::Node {
@@ -71,6 +73,10 @@ impl NodeMethods for r::Node {
         self.iter()
             .filter(|n| n.node_type == r::NodeType::Workspace)
             .collect()
+    }
+
+    fn is_scratchpad(&self) -> bool {
+        self.name.is_some() && self.name.as_ref().unwrap().eq("__i3_scratch")
     }
 }
 

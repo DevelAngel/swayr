@@ -109,10 +109,15 @@ impl<'a> fmt::Display for Window<'a> {
 
 fn build_windows<'a>(
     root: &'a r::Node,
+    include_scratchpad_windows: bool,
     extra_props: Option<&HashMap<i64, ipc::ExtraProps>>,
 ) -> Vec<Window<'a>> {
     let mut v = vec![];
     for workspace in root.workspaces() {
+        if !include_scratchpad_windows && workspace.is_scratchpad() {
+            continue;
+        }
+
         for n in workspace.windows() {
             v.push(Window {
                 node: &n,
@@ -126,10 +131,15 @@ fn build_windows<'a>(
 
 fn build_workspaces<'a>(
     root: &'a r::Node,
+    include_scratchpad: bool,
     extra_props: Option<&HashMap<i64, ipc::ExtraProps>>,
 ) -> Vec<Workspace<'a>> {
     let mut v = vec![];
     for workspace in root.workspaces() {
+        if !include_scratchpad && workspace.is_scratchpad() {
+            continue;
+        }
+
         let mut wins: Vec<Window> = workspace
             .windows()
             .iter()
@@ -154,10 +164,11 @@ fn build_workspaces<'a>(
 /// Gets all application windows of the tree.
 pub fn get_windows<'a>(
     root: &'a r::Node,
+    include_scratchpad_windows: bool,
     extra_props: Option<&HashMap<i64, ipc::ExtraProps>>,
 ) -> Vec<Window<'a>> {
     let extra_props_given = extra_props.is_some();
-    let mut wins = build_windows(root, extra_props);
+    let mut wins = build_windows(root, include_scratchpad_windows, extra_props);
     if extra_props_given {
         wins.sort();
     }
@@ -170,15 +181,8 @@ pub fn get_workspaces<'a>(
     include_scratchpad: bool,
     extra_props: Option<&HashMap<i64, ipc::ExtraProps>>,
 ) -> Vec<Workspace<'a>> {
-    let workspaces = build_workspaces(root, extra_props);
-    let mut workspaces = if include_scratchpad {
-        workspaces
-    } else {
-        workspaces
-            .into_iter()
-            .filter(|ws| !ws.is_scratchpad())
-            .collect()
-    };
+    let mut workspaces =
+        build_workspaces(root, include_scratchpad, extra_props);
     workspaces.rotate_left(1);
     workspaces
 }
@@ -252,7 +256,7 @@ impl Workspace<'_> {
     }
 
     pub fn is_scratchpad(&self) -> bool {
-        self.get_name().eq("__i3_scratch")
+        self.node.is_scratchpad()
     }
 }
 
