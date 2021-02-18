@@ -13,42 +13,43 @@ use std::sync::RwLock;
 use swayipc as s;
 use swayipc::reply as r;
 
+pub struct ExecSwayrCmdArgs<'a> {
+    pub cmd: &'a SwayrCommand,
+    pub extra_props: Arc<RwLock<HashMap<i64, ipc::ExtraProps>>>,
+}
+
 impl fmt::Display for SwayrCommand {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         write!(f, "<b>{:?}</b>", self)
     }
 }
 
-pub fn exec_swayr_cmd(
-    cmd: &SwayrCommand,
-    extra_props: Arc<RwLock<HashMap<i64, ipc::ExtraProps>>>,
-) {
-    match cmd {
+pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
+    let props = args.extra_props;
+    match args.cmd {
         SwayrCommand::SwitchToUrgentOrLRUWindow => {
-            switch_to_urgent_or_lru_window(Some(&*extra_props.read().unwrap()))
+            switch_to_urgent_or_lru_window(Some(&*props.read().unwrap()))
         }
         SwayrCommand::SwitchWindow => {
-            switch_window(Some(&*extra_props.read().unwrap()))
+            switch_window(Some(&*props.read().unwrap()))
         }
         SwayrCommand::NextWindow => focus_next_window_in_direction(
             Direction::Forward,
-            Some(&*extra_props.read().unwrap()),
+            Some(&*props.read().unwrap()),
         ),
         SwayrCommand::PrevWindow => focus_next_window_in_direction(
             Direction::Backward,
-            Some(&*extra_props.read().unwrap()),
+            Some(&*props.read().unwrap()),
         ),
-        SwayrCommand::QuitWindow => {
-            quit_window(Some(&*extra_props.read().unwrap()))
-        }
+        SwayrCommand::QuitWindow => quit_window(Some(&*props.read().unwrap())),
         SwayrCommand::SwitchWorkspace => {
-            switch_workspace(Some(&*extra_props.read().unwrap()))
+            switch_workspace(Some(&*props.read().unwrap()))
         }
         SwayrCommand::SwitchWorkspaceOrWindow => {
-            switch_workspace_or_window(Some(&*extra_props.read().unwrap()))
+            switch_workspace_or_window(Some(&*props.read().unwrap()))
         }
         SwayrCommand::QuitWorkspaceOrWindow => {
-            quit_workspace_or_window(Some(&*extra_props.read().unwrap()))
+            quit_workspace_or_window(Some(&*props.read().unwrap()))
         }
         SwayrCommand::ExecuteSwaymsgCommand => exec_swaymsg_command(),
         SwayrCommand::ExecuteSwayrCommand => {
@@ -66,7 +67,10 @@ pub fn exec_swayr_cmd(
                     SwayrCommand::PrevWindow,
                 ],
             ) {
-                exec_swayr_cmd(c, extra_props);
+                exec_swayr_cmd(ExecSwayrCmdArgs {
+                    cmd: c,
+                    extra_props: props,
+                });
             }
         }
     }

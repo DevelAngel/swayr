@@ -203,7 +203,10 @@ fn handle_client_request(
     let mut cmd_str = String::new();
     if stream.read_to_string(&mut cmd_str).is_ok() {
         if let Ok(cmd) = serde_json::from_str::<ipc::SwayrCommand>(&cmd_str) {
-            cmds::exec_swayr_cmd(&cmd, extra_props);
+            cmds::exec_swayr_cmd(cmds::ExecSwayrCmdArgs {
+                cmd: &cmd,
+                extra_props,
+            });
         } else {
             eprintln!(
                 "Could not serialize following string to SwayrCommand.\n{}",
