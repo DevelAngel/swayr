@@ -93,10 +93,12 @@ fn handle_window_event(
     match change {
         r::WindowChange::New | r::WindowChange::Focus => {
             update_last_focus_time(container.id, extra_props);
+            println!("Handled window event type {:?}", change);
             true
         }
         r::WindowChange::Close => {
             remove_extra_props(container.id, extra_props);
+            println!("Handled window event type {:?}", change);
             true
         }
         _ => false,
@@ -120,6 +122,7 @@ fn handle_workspace_event(
                     .id,
                 extra_props,
             );
+            println!("Handled workspace event type {:?}", change);
             true
         }
         r::WorkspaceChange::Empty => {
@@ -127,7 +130,8 @@ fn handle_workspace_event(
                 current.expect("No current in Empty workspace event").id,
                 extra_props,
             );
-            false
+            println!("Handled workspace event type {:?}", change);
+            true
         }
         _ => false,
     }

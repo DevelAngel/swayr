@@ -73,11 +73,11 @@ pub fn exec_swayr_cmd(
 }
 
 fn focus_window_by_id(id: i64) {
-    util::swaymsg(&[format!("[con_id={}]", id).as_str(), "focus"]);
+    run_sway_command(&[format!("[con_id={}]", id).as_str(), "focus"]);
 }
 
 fn quit_window_by_id(id: i64) {
-    util::swaymsg(&[format!("[con_id={}]", id).as_str(), "kill"]);
+    run_sway_command(&[format!("[con_id={}]", id).as_str(), "kill"]);
 }
 
 fn get_tree() -> r::Node {
@@ -163,7 +163,7 @@ pub fn switch_workspace(extra_props: Option<&HashMap<i64, ipc::ExtraProps>>) {
     if let Some(workspace) =
         con::select_workspace("Switch to workspace", &workspaces)
     {
-        util::swaymsg(&["workspace", "number", workspace.get_name()]);
+        run_sway_command(&["workspace", "number", workspace.get_name()]);
     }
 }
 
@@ -179,7 +179,7 @@ pub fn switch_workspace_or_window(
     ) {
         match ws_or_win {
             con::WsOrWin::Ws { ws } => {
-                util::swaymsg(&["workspace", "number", ws.get_name()]);
+                run_sway_command(&["workspace", "number", ws.get_name()]);
             }
             con::WsOrWin::Win { win } => focus_window_by_id(win.get_id()),
         }
@@ -325,6 +325,19 @@ pub fn exec_swaymsg_command() {
     let cmds = get_swaymsg_commands();
     let cmd = util::wofi_select("Execute swaymsg command", &cmds);
     if let Some(cmd) = cmd {
-        util::swaymsg(&cmd.cmd);
+        run_sway_command(&cmd.cmd);
+    }
+}
+
+pub fn run_sway_command(args: &[&str]) {
+    let cmd = args.join(" ");
+    println!("Running sway command: {}", cmd);
+    match s::Connection::new() {
+        Ok(mut con) => {
+            if let Err(err) = con.run_command(cmd) {
+                eprintln!("Could not run sway command: {}", err)
+            }
+        }
+        Err(err) => panic!(err),
     }
 }

@@ -19,16 +19,6 @@ pub fn get_swayr_socket_path() -> String {
     )
 }
 
-pub fn swaymsg(args: &[&str]) -> String {
-    let mut cmd = proc::Command::new("swaymsg");
-    for a in args {
-        cmd.arg(a);
-    }
-
-    let output = cmd.output().expect("Error running swaymsg!");
-    String::from_utf8(output.stdout).unwrap()
-}
-
 pub fn wofi_select<'a, 'b, TS>(
     prompt: &'a str,
     choices: &'b [TS],
