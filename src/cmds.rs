@@ -95,7 +95,7 @@ pub fn switch_to_urgent_or_lru_window(
     extra_props: Option<&HashMap<i64, ipc::ExtraProps>>,
 ) {
     let root = get_tree();
-    let windows = con::get_windows(&root, true, extra_props);
+    let windows = con::get_windows(&root, false, extra_props);
     if let Some(win) = windows
         .iter()
         .find(|w| w.is_urgent())
@@ -175,7 +175,7 @@ pub fn switch_workspace_or_window(
     extra_props: Option<&HashMap<i64, ipc::ExtraProps>>,
 ) {
     let root = get_tree();
-    let workspaces = con::get_workspaces(&root, false, extra_props);
+    let workspaces = con::get_workspaces(&root, true, extra_props);
     let ws_or_wins = con::WsOrWin::from_workspaces(&workspaces);
     if let Some(ws_or_win) = con::select_workspace_or_window(
         "Select workspace or window",
@@ -203,7 +203,7 @@ pub fn quit_workspace_or_window(
     extra_props: Option<&HashMap<i64, ipc::ExtraProps>>,
 ) {
     let root = get_tree();
-    let workspaces = con::get_workspaces(&root, false, extra_props);
+    let workspaces = con::get_workspaces(&root, true, extra_props);
     let ws_or_wins = con::WsOrWin::from_workspaces(&workspaces);
     if let Some(ws_or_win) =
         con::select_workspace_or_window("Quit workspace or window", &ws_or_wins)

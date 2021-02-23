@@ -175,7 +175,7 @@ pub fn get_windows<'a>(
     wins
 }
 
-/// Gets all application windows of the tree.
+/// Gets all workspaces of the tree.
 pub fn get_workspaces<'a>(
     root: &'a r::Node,
     include_scratchpad: bool,
