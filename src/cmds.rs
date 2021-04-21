@@ -87,7 +87,7 @@ fn quit_window_by_id(id: i64) {
 fn get_tree() -> r::Node {
     match s::Connection::new() {
         Ok(mut con) => con.get_tree().expect("Got no root node"),
-        Err(err) => panic!(err),
+        Err(err) => panic!("{}", err),
     }
 }
 
@@ -342,6 +342,6 @@ pub fn run_sway_command(args: &[&str]) {
                 eprintln!("Could not run sway command: {}", err)
             }
         }
-        Err(err) => panic!(err),
+        Err(err) => panic!("{}", err),
     }
 }
