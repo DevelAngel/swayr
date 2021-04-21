@@ -247,7 +247,7 @@ fn get_swaymsg_commands<'a>() -> Vec<SwaymsgCmd<'a>> {
     cmds.push(vec!["reload"]);
 
     for e in &["enable", "disable"] {
-        cmds.push(vec!["shortcuts", "inhibitor", e])
+        cmds.push(vec!["shortcuts_inhibitor", e])
     }
 
     cmds.push(vec!["sticky", "toggle"]);
