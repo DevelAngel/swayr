@@ -221,15 +221,15 @@ pub fn quit_workspace_or_window(
 
 fn get_swaymsg_commands<'a>() -> Vec<SwaymsgCmd<'a>> {
     let mut cmds = vec![];
-    cmds.push(vec!["exit"]);
-    cmds.push(vec!["floating", "toggle"]);
-    cmds.push(vec!["focus", "child"]);
-    cmds.push(vec!["focus", "parent"]);
 
     for b in &["none", "normal", "csd", "pixel"] {
         cmds.push(vec!["border", b]);
     }
 
+    cmds.push(vec!["exit"]);
+    cmds.push(vec!["floating", "toggle"]);
+    cmds.push(vec!["focus", "child"]);
+    cmds.push(vec!["focus", "parent"]);
     cmds.push(vec!["focus", "tiling"]);
     cmds.push(vec!["focus", "floating"]);
     cmds.push(vec!["focus", "mode_toggle"]);
