@@ -1,10 +1,5 @@
 //! Extensions of swayipc types and IPC structs.
 
-extern crate serde;
-extern crate serde_json;
-extern crate swayipc;
-extern crate users;
-
 use clap::Clap;
 use serde::{Deserialize, Serialize};
 use swayipc::reply as r;

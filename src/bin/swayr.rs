@@ -1,8 +1,6 @@
 //! The `swayr` binary.
 
-#[macro_use]
-extern crate clap;
-use clap::Clap;
+use clap::{crate_version, Clap};
 use swayr::client;
 use swayr::ipc;
 

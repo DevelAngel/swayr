@@ -1,5 +1,3 @@
-extern crate serde_json;
-
 use crate::ipc;
 use crate::util;
 use std::io::Write;
