@@ -79,6 +79,20 @@ bindsym $mod+Shift+c exec env RUST_BACKTRACE=1 \
 Of course, configure the keys to your liking.  Again, enabling rust backtraces
 and logging are optional.
 
+## Configuration
+
+Swayr can be configured using the `~/.config/swayr/config.toml` config file.
+If it doesn't exist, a simple default configuration will be created on the
+first invocation for use with the [wofi](https://todo.sr.ht/~scoopta/wofi)
+launcher.  It should be easy to adapt that default config for usage with other
+launchers such as [dmenu](https://tools.suckless.org/dmenu/),
+[bemenu](https://github.com/Cloudef/bemenu),
+[rofi](https://github.com/davatorium/rofi), a script spawning a terminal with
+[fzf](https://github.com/junegunn/fzf), or whatever.  The only requirement is
+that the launcher needs to be able to read the items to choose from from stdin.
+
+TODO: Show default config and describe it.
+
 ## Questions & Patches
 
 For asking questions, sending feedback, or patches, refer to [my public inbox

@@ -1,5 +1,7 @@
 //! Utility functions including wofi-selection.
 
+use crate::con::DisplayFormat;
+use crate::config as cfg;
 use std::collections::HashMap;
 use std::io::Write;
 use std::process as proc;
@@ -24,29 +26,48 @@ pub fn wofi_select<'a, 'b, TS>(
     choices: &'b [TS],
 ) -> Option<&'b TS>
 where
-    TS: std::fmt::Display + Sized,
+    TS: DisplayFormat + Sized,
 {
     let mut map: HashMap<String, &TS> = HashMap::new();
     let mut strs: Vec<String> = vec![];
+    let cfg = cfg::load_config();
     for c in choices {
-        let s = format!("{}", c);
-        strs.push(String::from(s.as_str()));
+        let s = c.format_for_display(&cfg);
+        strs.push(s.clone());
         map.insert(s, c);
     }
 
-    let mut wofi = proc::Command::new("wofi")
-        .arg("--show=dmenu")
-        .arg("--allow-markup")
-        .arg("--allow-images")
-        .arg("--insensitive")
-        .arg("--cache-file=/dev/null")
-        .arg("--parse-search")
-        .arg("--prompt")
-        .arg(prompt)
+    let default = cfg::Config::default();
+    let launcher = cfg
+        .launcher
+        .as_ref()
+        .and_then(|l| l.executable.as_ref())
+        .unwrap_or_else(|| {
+            default
+                .launcher
+                .as_ref()
+                .unwrap()
+                .executable
+                .as_ref()
+                .unwrap()
+        });
+    let args: Vec<String> = cfg
+        .launcher
+        .as_ref()
+        .and_then(|l| l.args.as_ref())
+        .unwrap_or_else(|| {
+            default.launcher.as_ref().unwrap().args.as_ref().unwrap()
+        })
+        .iter()
+        .map(|a| a.replace("{prompt}", prompt))
+        .collect();
+
+    let mut wofi = proc::Command::new(launcher)
+        .args(args)
         .stdin(proc::Stdio::piped())
         .stdout(proc::Stdio::piped())
         .spawn()
-        .expect("Error running wofi!");
+        .expect(&("Error running ".to_owned() + launcher));
 
     {
         let stdin = wofi.stdin.as_mut().expect("Failed to open wofi stdin");
@@ -62,13 +83,4 @@ where
     let mut choice = String::from(choice);
     choice.pop(); // Remove trailing \n from choice.
     map.get(&choice).copied()
-}
-
-#[test]
-#[ignore = "interactive test requiring user input"]
-fn test_wofi_select() {
-    let choices = vec!["a", "b", "c"];
-    let choice = wofi_select("Choose wisely", &choices);
-    assert!(choice.is_some());
-    assert!(choices.contains(choice.unwrap()));
 }

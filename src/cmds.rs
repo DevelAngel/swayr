@@ -1,6 +1,8 @@
 //! Functions and data structures of the swayr client.
 
 use crate::con;
+use crate::con::DisplayFormat;
+use crate::config as cfg;
 use crate::ipc;
 use crate::ipc::SwayrCommand;
 use crate::util;
@@ -20,7 +22,14 @@ pub struct ExecSwayrCmdArgs<'a> {
 
 impl fmt::Display for SwayrCommand {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
-        write!(f, "<b>{:?}</b>", self)
+        write!(f, "{:?}", self)
+    }
+}
+
+impl DisplayFormat for SwayrCommand {
+    fn format_for_display(&self, _: &cfg::Config) -> std::string::String {
+        // TODO: Add a format to Config
+        format!("{}", self)
     }
 }
 
@@ -134,7 +143,7 @@ pub fn focus_next_window_in_direction(
     }
 
     let pred: Box<dyn Fn(&con::Window) -> bool> =
-        if windows.iter().find(|w| w.is_focused()).is_none() {
+        if !windows.iter().any(|w| w.is_focused()) {
             let last_focused_win_id =
                 con::get_windows(&root, false, extra_props)
                     .get(0)
@@ -321,7 +330,14 @@ struct SwaymsgCmd<'a> {
 
 impl<'a> fmt::Display for SwaymsgCmd<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
-        write!(f, "<b>{}</b>", self.cmd.join(" "))
+        write!(f, "{}", self.cmd.join(" "))
+    }
+}
+
+impl DisplayFormat for SwaymsgCmd<'_> {
+    fn format_for_display(&self, _: &cfg::Config) -> std::string::String {
+        // TODO: Add a format to Config
+        format!("{}", self)
     }
 }
 

@@ -7,8 +7,8 @@ use std::path::Path;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Config {
-    launcher: Option<Launcher>,
-    format: Option<Format>,
+    pub launcher: Option<Launcher>,
+    pub format: Option<Format>,
 }
 
 impl Default for Config {
@@ -32,6 +32,8 @@ impl Default for Config {
                         .to_string(),
                 ),
                 workspace_format: Some("Workspace {name}\t({id})".to_string()),
+                urgency_start: Some(String::new()),
+                urgency_end: Some(String::new())
             }),
         }
     }
@@ -39,14 +41,16 @@ impl Default for Config {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Launcher {
-    executable: Option<String>,
-    args: Option<Vec<String>>,
+    pub executable: Option<String>,
+    pub args: Option<Vec<String>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Format {
-    window_format: Option<String>,
-    workspace_format: Option<String>,
+    pub window_format: Option<String>,
+    pub workspace_format: Option<String>,
+    pub urgency_start: Option<String>,
+    pub urgency_end: Option<String>,
 }
 
 fn get_config_file_path() -> Box<Path> {
@@ -78,6 +82,19 @@ pub fn load_config() -> Config {
     let path = get_config_file_path();
     if !path.exists() {
         save_config(Config::default());
+        // Tell the user that a fresh default config has been created.
+        std::process::Command::new("swaynag")
+            .arg("--message")
+            .arg(
+                "Welcome to swayr. ".to_owned()
+                    + "I've created a fresh (but boring) config for you in "
+                    + &path.to_string_lossy()
+                    + ".",
+            )
+            .arg("--dismiss-button")
+            .arg("Thanks!")
+            .spawn()
+            .ok();
     }
     let mut file = OpenOptions::new()
         .read(true)

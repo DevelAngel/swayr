@@ -1,12 +1,17 @@
 //! Convenience data structures built from the IPC structs.
 
+use crate::config as cfg;
 use crate::ipc;
+use crate::ipc::NodeMethods;
 use crate::util;
-use ipc::NodeMethods;
 use std::cmp;
 use std::collections::HashMap;
 use std::fmt;
 use swayipc::reply as r;
+
+pub trait DisplayFormat {
+    fn format_for_display(&self, config: &cfg::Config) -> String;
+}
 
 #[derive(Debug)]
 pub struct Window<'a> {
@@ -90,20 +95,68 @@ impl<'a> fmt::Display for Window<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         write!(
             f,
-            "<span font_weight=\"bold\" {}>“{}”</span>   \
-             <i>{}</i>   \
-             on workspace <b>{}</b>   \
-             <span alpha=\"20000\">id {}</span>", // Almost hide ID!
-            if self.node.urgent {
-                " background=\"darkred\" foreground=\"white\""
-            } else {
-                ""
-            },
+            "“{}” — {} on workspace {} (id: {}, urgent: {})",
             self.get_title(),
             self.get_app_name(),
             self.workspace.name.as_ref().unwrap(),
-            self.get_id()
+            self.get_id(),
+            self.node.urgent
         )
+    }
+}
+
+impl<'a> DisplayFormat for Window<'a> {
+    fn format_for_display(&self, cfg: &cfg::Config) -> String {
+        let default = cfg::Config::default();
+        let fmt = cfg
+            .format
+            .as_ref()
+            .and_then(|f| f.window_format.as_ref())
+            .unwrap_or_else(|| {
+                default
+                    .format
+                    .as_ref()
+                    .unwrap()
+                    .window_format
+                    .as_ref()
+                    .unwrap()
+            });
+        let urgency_start = cfg
+            .format
+            .as_ref()
+            .and_then(|f| f.urgency_start.as_ref())
+            .unwrap_or_else(|| {
+                default
+                    .format
+                    .as_ref()
+                    .unwrap()
+                    .urgency_start
+                    .as_ref()
+                    .unwrap()
+            });
+        let urgency_end = cfg
+            .format
+            .as_ref()
+            .and_then(|f| f.urgency_end.as_ref())
+            .unwrap_or_else(|| {
+                default
+                    .format
+                    .as_ref()
+                    .unwrap()
+                    .urgency_end
+                    .as_ref()
+                    .unwrap()
+            });
+
+        fmt.replace("{id}", format!("{}", self.get_id()).as_str())
+            .replace("{urgency_start}", urgency_start.as_str())
+            .replace("{urgency_end}", urgency_end.as_str())
+            .replace("{app_name}", self.get_app_name())
+            .replace(
+                "{workspace_name}",
+                self.workspace.name.as_ref().unwrap().as_str(),
+            )
+            .replace("{title}", self.get_title())
     }
 }
 
@@ -218,6 +271,17 @@ impl<'a> fmt::Display for WsOrWin<'a> {
     }
 }
 
+impl DisplayFormat for WsOrWin<'_> {
+    fn format_for_display(&self, cfg: &cfg::Config) -> String {
+        match self {
+            WsOrWin::Ws { ws } => ws.format_for_display(cfg),
+            WsOrWin::Win { win } => {
+                "\t".to_owned() + &win.format_for_display(cfg)
+            }
+        }
+    }
+}
+
 impl WsOrWin<'_> {
     pub fn from_workspaces<'a>(
         workspaces: &'a [Workspace],
@@ -292,12 +356,28 @@ impl PartialOrd for Workspace<'_> {
 
 impl<'a> fmt::Display for Workspace<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
-        write!(
-            f,
-            "<span font_weight=\"bold\">“Workspace {}”</span>   \
-             <span alpha=\"20000\">id {}</span>", // Almost hide ID!
-            self.get_name(),
-            self.get_id()
-        )
+        write!(f, "“Workspace {}” (id: {})", self.get_name(), self.get_id())
+    }
+}
+
+impl<'a> DisplayFormat for Workspace<'a> {
+    fn format_for_display(&self, cfg: &cfg::Config) -> String {
+        let default = cfg::Config::default();
+        let fmt = cfg
+            .format
+            .as_ref()
+            .and_then(|f| f.workspace_format.as_ref())
+            .unwrap_or_else(|| {
+                default
+                    .format
+                    .as_ref()
+                    .unwrap()
+                    .workspace_format
+                    .as_ref()
+                    .unwrap()
+            });
+
+        fmt.replace("{id}", format!("{}", self.get_id()).as_str())
+            .replace("{name}", self.get_name())
     }
 }
