@@ -28,12 +28,12 @@ impl Default for Config {
             }),
             format: Some(Format {
                 window_format: Some(
-                    "\"{title}\"\t{app_name} on workspace {workspace_name}\t({id})"
+                    "{urgency_start}<b>“{title}”</b>{urgency_end}\t<i>{app_name}</i> on workspace {workspace_name}\t<span alpha=\"20000\">({id})</span>"
                         .to_string(),
                 ),
-                workspace_format: Some("Workspace {name}\t({id})".to_string()),
-                urgency_start: Some(String::new()),
-                urgency_end: Some(String::new())
+                workspace_format: Some("<b>Workspace {name}</b>\t<span alpha=\"20000\">({id})</span>".to_string()),
+                urgency_start: Some("<span background=\"darkred\" foreground=\"yellow\">".to_string()),
+                urgency_end: Some("</span>".to_string())
             }),
         }
     }
@@ -84,13 +84,19 @@ pub fn load_config() -> Config {
         save_config(Config::default());
         // Tell the user that a fresh default config has been created.
         std::process::Command::new("swaynag")
+            .arg("--background")
+            .arg("00FF44")
+            .arg("--text")
+            .arg("0000CC")
             .arg("--message")
             .arg(
-                "Welcome to swayr. ".to_owned()
-                    + "I've created a fresh (but boring) config for you in "
+                "Welcome to swayr! ".to_owned()
+                    + "I've created a fresh config for use with wofi for you in "
                     + &path.to_string_lossy()
-                    + ".",
+                    + ". Adapt it to your needs.",
             )
+            .arg("--type")
+            .arg("warning")
             .arg("--dismiss-button")
             .arg("Thanks!")
             .spawn()

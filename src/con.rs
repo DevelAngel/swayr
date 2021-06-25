@@ -149,8 +149,22 @@ impl<'a> DisplayFormat for Window<'a> {
             });
 
         fmt.replace("{id}", format!("{}", self.get_id()).as_str())
-            .replace("{urgency_start}", urgency_start.as_str())
-            .replace("{urgency_end}", urgency_end.as_str())
+            .replace(
+                "{urgency_start}",
+                if self.is_urgent() {
+                    urgency_start.as_str()
+                } else {
+                    ""
+                },
+            )
+            .replace(
+                "{urgency_end}",
+                if self.is_urgent() {
+                    urgency_end.as_str()
+                } else {
+                    ""
+                },
+            )
             .replace("{app_name}", self.get_app_name())
             .replace(
                 "{workspace_name}",
