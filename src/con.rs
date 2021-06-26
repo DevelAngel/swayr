@@ -22,7 +22,7 @@ use crate::util;
 use std::cmp;
 use std::collections::HashMap;
 use std::fmt;
-use swayipc::reply as r;
+use swayipc as s;
 
 pub trait DisplayFormat {
     fn format_for_display(&self, config: &cfg::Config) -> String;
@@ -30,8 +30,8 @@ pub trait DisplayFormat {
 
 #[derive(Debug)]
 pub struct Window<'a> {
-    node: &'a r::Node,
-    workspace: &'a r::Node,
+    node: &'a s::Node,
+    workspace: &'a s::Node,
     extra_props: Option<ipc::ExtraProps>,
 }
 
@@ -110,7 +110,7 @@ impl<'a> fmt::Display for Window<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         write!(
             f,
-            "“{}” — {} on workspace {} (id: {}, urgent: {})",
+            "\"{}\" — {} on workspace {} (id: {}, urgent: {})",
             self.get_title(),
             self.get_app_name(),
             self.workspace.name.as_ref().unwrap(),
@@ -166,7 +166,7 @@ impl<'a> DisplayFormat for Window<'a> {
 }
 
 fn build_windows<'a>(
-    root: &'a r::Node,
+    root: &'a s::Node,
     include_scratchpad_windows: bool,
     extra_props: Option<&HashMap<i64, ipc::ExtraProps>>,
 ) -> Vec<Window<'a>> {
@@ -188,7 +188,7 @@ fn build_windows<'a>(
 }
 
 fn build_workspaces<'a>(
-    root: &'a r::Node,
+    root: &'a s::Node,
     include_scratchpad: bool,
     extra_props: Option<&HashMap<i64, ipc::ExtraProps>>,
 ) -> Vec<Workspace<'a>> {
@@ -221,7 +221,7 @@ fn build_workspaces<'a>(
 
 /// Gets all application windows of the tree.
 pub fn get_windows<'a>(
-    root: &'a r::Node,
+    root: &'a s::Node,
     include_scratchpad_windows: bool,
     extra_props: Option<&HashMap<i64, ipc::ExtraProps>>,
 ) -> Vec<Window<'a>> {
@@ -235,7 +235,7 @@ pub fn get_windows<'a>(
 
 /// Gets all workspaces of the tree.
 pub fn get_workspaces<'a>(
-    root: &'a r::Node,
+    root: &'a s::Node,
     include_scratchpad: bool,
     extra_props: Option<&HashMap<i64, ipc::ExtraProps>>,
 ) -> Vec<Workspace<'a>> {
@@ -310,7 +310,7 @@ pub fn select_workspace_or_window<'a>(
 }
 
 pub struct Workspace<'a> {
-    node: &'a r::Node,
+    node: &'a s::Node,
     extra_props: Option<ipc::ExtraProps>,
     pub windows: Vec<Window<'a>>,
 }

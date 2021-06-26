@@ -28,7 +28,6 @@ use std::thread;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use swayipc as s;
-use swayipc::reply as r;
 
 pub fn run_demon() {
     let extra_props: Arc<RwLock<HashMap<i64, ipc::ExtraProps>>> =
@@ -42,7 +41,7 @@ pub fn run_demon() {
     serve_client_requests(extra_props);
 }
 
-fn connect_and_subscribe() -> s::Fallible<s::EventIterator> {
+fn connect_and_subscribe() -> s::Fallible<s::EventStream> {
     s::Connection::new()?
         .subscribe(&[s::EventType::Window, s::EventType::Workspace])
 }
@@ -63,14 +62,14 @@ pub fn monitor_sway_events(
                     let handled;
                     match ev_result {
                         Ok(ev) => match ev {
-                            r::Event::Window(win_ev) => {
+                            s::Event::Window(win_ev) => {
                                 let extra_props_clone = extra_props.clone();
                                 handled = handle_window_event(
                                     win_ev,
                                     extra_props_clone,
                                 );
                             }
-                            r::Event::Workspace(ws_ev) => {
+                            s::Event::Workspace(ws_ev) => {
                                 let extra_props_clone = extra_props.clone();
                                 handled = handle_workspace_event(
                                     ws_ev,
@@ -101,17 +100,19 @@ pub fn monitor_sway_events(
 }
 
 fn handle_window_event(
-    ev: Box<r::WindowEvent>,
+    ev: Box<s::WindowEvent>,
     extra_props: Arc<RwLock<HashMap<i64, ipc::ExtraProps>>>,
 ) -> bool {
-    let r::WindowEvent { change, container } = *ev;
+    let s::WindowEvent {
+        change, container, ..
+    } = *ev;
     match change {
-        r::WindowChange::New | r::WindowChange::Focus => {
+        s::WindowChange::New | s::WindowChange::Focus => {
             update_last_focus_time(container.id, extra_props);
             println!("Handled window event type {:?}", change);
             true
         }
-        r::WindowChange::Close => {
+        s::WindowChange::Close => {
             remove_extra_props(container.id, extra_props);
             println!("Handled window event type {:?}", change);
             true
@@ -121,16 +122,17 @@ fn handle_window_event(
 }
 
 fn handle_workspace_event(
-    ev: Box<r::WorkspaceEvent>,
+    ev: Box<s::WorkspaceEvent>,
     extra_props: Arc<RwLock<HashMap<i64, ipc::ExtraProps>>>,
 ) -> bool {
-    let r::WorkspaceEvent {
+    let s::WorkspaceEvent {
         change,
         current,
         old: _,
+        ..
     } = *ev;
     match change {
-        r::WorkspaceChange::Init | r::WorkspaceChange::Focus => {
+        s::WorkspaceChange::Init | s::WorkspaceChange::Focus => {
             update_last_focus_time(
                 current
                     .expect("No current in Init or Focus workspace event")
@@ -140,7 +142,7 @@ fn handle_workspace_event(
             println!("Handled workspace event type {:?}", change);
             true
         }
-        r::WorkspaceChange::Empty => {
+        s::WorkspaceChange::Empty => {
             remove_extra_props(
                 current.expect("No current in Empty workspace event").id,
                 extra_props,

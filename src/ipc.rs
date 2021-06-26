@@ -17,23 +17,23 @@
 
 use clap::Clap;
 use serde::{Deserialize, Serialize};
-use swayipc::reply as r;
+use swayipc as s;
 
 /// Immutable Node Iterator
 ///
 /// Iterates nodes in depth-first order, tiled nodes before floating nodes.
 pub struct NodeIter<'a> {
-    stack: Vec<&'a r::Node>,
+    stack: Vec<&'a s::Node>,
 }
 
 impl<'a> NodeIter<'a> {
-    pub fn new(node: &'a r::Node) -> NodeIter {
+    pub fn new(node: &'a s::Node) -> NodeIter {
         NodeIter { stack: vec![node] }
     }
 }
 
 impl<'a> Iterator for NodeIter<'a> {
-    type Item = &'a r::Node;
+    type Item = &'a s::Node;
 
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(node) = self.stack.pop() {
@@ -56,32 +56,32 @@ pub trait NodeMethods {
     fn iter(&self) -> NodeIter;
 
     /// Returns all nodes being application windows.
-    fn windows(&self) -> Vec<&r::Node>;
+    fn windows(&self) -> Vec<&s::Node>;
 
     /// Returns all nodes being workspaces.
-    fn workspaces(&self) -> Vec<&r::Node>;
+    fn workspaces(&self) -> Vec<&s::Node>;
 
     fn is_scratchpad(&self) -> bool;
 }
 
-impl NodeMethods for r::Node {
+impl NodeMethods for s::Node {
     fn iter(&self) -> NodeIter {
         NodeIter::new(self)
     }
 
-    fn windows(&self) -> Vec<&r::Node> {
+    fn windows(&self) -> Vec<&s::Node> {
         self.iter()
             .filter(|n| {
-                (n.node_type == r::NodeType::Con
-                    || n.node_type == r::NodeType::FloatingCon)
+                (n.node_type == s::NodeType::Con
+                    || n.node_type == s::NodeType::FloatingCon)
                     && n.name.is_some()
             })
             .collect()
     }
 
-    fn workspaces(&self) -> Vec<&r::Node> {
+    fn workspaces(&self) -> Vec<&s::Node> {
         self.iter()
-            .filter(|n| n.node_type == r::NodeType::Workspace)
+            .filter(|n| n.node_type == s::NodeType::Workspace)
             .collect()
     }
 

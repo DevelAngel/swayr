@@ -28,7 +28,6 @@ use std::sync::Arc;
 use std::sync::RwLock;
 
 use swayipc as s;
-use swayipc::reply as r;
 
 pub struct ExecSwayrCmdArgs<'a> {
     pub cmd: &'a SwayrCommand,
@@ -108,7 +107,7 @@ fn quit_window_by_id(id: i64) {
     run_sway_command(&[format!("[con_id={}]", id).as_str(), "kill"]);
 }
 
-fn get_tree() -> r::Node {
+fn get_tree() -> s::Node {
     match s::Connection::new() {
         Ok(mut con) => con.get_tree().expect("Got no root node"),
         Err(err) => panic!("{}", err),
