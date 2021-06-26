@@ -28,30 +28,51 @@ pub struct Config {
     pub format: Option<Format>,
 }
 
+impl Default for Launcher {
+    fn default() -> Self {
+        Launcher {
+            executable: Some("wofi".to_string()),
+            args: Some(vec![
+                "--show=dmenu".to_string(),
+                "--allow-markup".to_string(),
+                "--allow-images".to_string(),
+                "--insensitive".to_string(),
+                "--cache-file=/dev/null".to_string(),
+                "--parse-search".to_string(),
+                "--prompt={prompt}".to_string(),
+            ]),
+        }
+    }
+}
+
+impl Default for Format {
+    fn default() -> Self {
+        Format {
+            window_format: Some(
+                "{urgency_start}<b>“{title}”</b>{urgency_end} \
+                 — <i>{app_name}</i> on workspace {workspace_name}   \
+                 <span alpha=\"20000\">({id})</span>"
+                    .to_string(),
+            ),
+            workspace_format: Some(
+                "<b>Workspace {name}</b>   \
+                 <span alpha=\"20000\">({id})</span>"
+                    .to_string(),
+            ),
+            urgency_start: Some(
+                "<span background=\"darkred\" foreground=\"yellow\">"
+                    .to_string(),
+            ),
+            urgency_end: Some("</span>".to_string()),
+        }
+    }
+}
+
 impl Default for Config {
     fn default() -> Self {
         Config {
-            launcher: Some(Launcher {
-                executable: Some("wofi".to_string()),
-                args: Some(vec![
-                    "--show=dmenu".to_string(),
-                    "--allow-markup".to_string(),
-                    "--allow-images".to_string(),
-                    "--insensitive".to_string(),
-                    "--cache-file=/dev/null".to_string(),
-                    "--parse-search".to_string(),
-                    "--prompt={prompt}".to_string(),
-                ]),
-            }),
-            format: Some(Format {
-                window_format: Some(
-                    "{urgency_start}<b>“{title}”</b>{urgency_end} — <i>{app_name}</i> on workspace {workspace_name}   <span alpha=\"20000\">({id})</span>"
-                        .to_string(),
-                ),
-                workspace_format: Some("<b>Workspace {name}</b>   <span alpha=\"20000\">({id})</span>".to_string()),
-                urgency_start: Some("<span background=\"darkred\" foreground=\"yellow\">".to_string()),
-                urgency_end: Some("</span>".to_string())
-            }),
+            launcher: Some(Launcher::default()),
+            format: Some(Format::default()),
         }
     }
 }

@@ -6,7 +6,8 @@
 
 Swayr consists of a demon, and a client.  The demon `swayrd` records
 window/workspace creations, deletions, and focus changes using sway's JSON IPC
-interface.  The client `swayr` offers subcommands, see `swayr --help`.
+interface.  The client `swayr` offers subcommands, see `swayr --help`, and
+sends them to the demon which executes them.
 
 Right now, there are these subcommands:
 * `next-window` focuses the next window in depth-first iteration order of the
@@ -82,16 +83,72 @@ and logging are optional.
 ## Configuration
 
 Swayr can be configured using the `~/.config/swayr/config.toml` config file.
+
 If it doesn't exist, a simple default configuration will be created on the
 first invocation for use with the [wofi](https://todo.sr.ht/~scoopta/wofi)
-launcher.  It should be easy to adapt that default config for usage with other
-launchers such as [dmenu](https://tools.suckless.org/dmenu/),
+launcher.
+
+It should be easy to adapt that default config for usage with other launchers
+such as [dmenu](https://tools.suckless.org/dmenu/),
 [bemenu](https://github.com/Cloudef/bemenu),
 [rofi](https://github.com/davatorium/rofi), a script spawning a terminal with
 [fzf](https://github.com/junegunn/fzf), or whatever.  The only requirement is
-that the launcher needs to be able to read the items to choose from from stdin.
+that the launcher needs to be able to read the items to choose from from stdin,
+and spit out the selected item to stdout.
 
-TODO: Show default config and describe it.
+The default config looks like this:
+
+```toml
+[launcher]
+executable = 'wofi'
+args = [
+    '--show=dmenu',
+    '--allow-markup',
+    '--allow-images',
+    '--insensitive',
+    '--cache-file=/dev/null',
+    '--parse-search',
+    '--prompt={prompt}',
+]
+
+[format]
+window_format = '{urgency_start}<b>“{title}”</b>{urgency_end} — <i>{app_name}</i> on workspace {workspace_name}   <span alpha="20000">({id})</span>'
+workspace_format = '<b>Workspace {name}</b>   <span alpha="20000">({id})</span>'
+urgency_start = '<span background="darkred" foreground="yellow">'
+urgency_end = '</span>'
+```
+
+In the `[launcher]` section, you can specify the launchen/menu program using
+the `executable` name or full path, and the `args` (flags and options) it
+should get passed.  If some argument contains the placeholder `{prompt}`, it is
+replaced with a prompt such as "Switch to window" depending on context.
+
+In the `[format]` section, format strings are specified defining how selection
+choises are to be layed out.  `wofi` supports [pango
+markup](https://docs.gtk.org/Pango/pango_markup.html) which makes it possible
+to style the text using HTML and CSS.  The following formats are supported
+right now.
+* `window_format` defines how windows are displayed.  The placeholder `{title}`
+  is replaced with the window's title, `{app_name}` with the application name,
+  `{workspace_name}` with the name or number of the workspace the window is
+  shown, and `{id}` is the window's sway-internal con id.  There are also the
+  placeholders `{urcency_start}` and `{urgency_end}` which get replaced by the
+  empty string if the window has no urgency flag, and with the values of the
+  same-named formats if the window has the urgency flag set.  That makes it
+  possible to highlight urgent windows as shown in the default config.
+* `workspace_format` defines how workspaces are displayed.  There are the
+  placeholders `{name}` which gets replaced by the workspace's number or name,
+  and `{id}` which gets replaced by the sway-internal con id of the workspace.
+* `urgency_start` is a string which replaces the `{urgency_start}` placeholder
+  in `window_format`.
+* `urgency_end` is a string which replaces the `{urgency_end}` placeholder in
+  `window_format`.
+
+It is crucial that during selection (using wofi or some other launcher) each
+window has a different display string.  Therefore, it is highly recommended to
+include the `{id}` placeholder at least in `window_format`.  Otherwise, e.g.,
+two terminals (of the same terminal app) with the same working directory (and
+therefore, the same title) wouldn't be distinguishable.
 
 ## Questions & Patches
 

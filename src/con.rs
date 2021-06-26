@@ -122,46 +122,22 @@ impl<'a> fmt::Display for Window<'a> {
 
 impl<'a> DisplayFormat for Window<'a> {
     fn format_for_display(&self, cfg: &cfg::Config) -> String {
-        let default = cfg::Config::default();
+        let default_format = cfg::Format::default();
         let fmt = cfg
             .format
             .as_ref()
             .and_then(|f| f.window_format.as_ref())
-            .unwrap_or_else(|| {
-                default
-                    .format
-                    .as_ref()
-                    .unwrap()
-                    .window_format
-                    .as_ref()
-                    .unwrap()
-            });
+            .unwrap_or_else(|| default_format.window_format.as_ref().unwrap());
         let urgency_start = cfg
             .format
             .as_ref()
             .and_then(|f| f.urgency_start.as_ref())
-            .unwrap_or_else(|| {
-                default
-                    .format
-                    .as_ref()
-                    .unwrap()
-                    .urgency_start
-                    .as_ref()
-                    .unwrap()
-            });
+            .unwrap_or_else(|| default_format.urgency_start.as_ref().unwrap());
         let urgency_end = cfg
             .format
             .as_ref()
             .and_then(|f| f.urgency_end.as_ref())
-            .unwrap_or_else(|| {
-                default
-                    .format
-                    .as_ref()
-                    .unwrap()
-                    .urgency_end
-                    .as_ref()
-                    .unwrap()
-            });
+            .unwrap_or_else(|| default_format.urgency_end.as_ref().unwrap());
 
         fmt.replace("{id}", format!("{}", self.get_id()).as_str())
             .replace(
@@ -391,19 +367,13 @@ impl<'a> fmt::Display for Workspace<'a> {
 
 impl<'a> DisplayFormat for Workspace<'a> {
     fn format_for_display(&self, cfg: &cfg::Config) -> String {
-        let default = cfg::Config::default();
+        let default_format = cfg::Format::default();
         let fmt = cfg
             .format
             .as_ref()
             .and_then(|f| f.workspace_format.as_ref())
             .unwrap_or_else(|| {
-                default
-                    .format
-                    .as_ref()
-                    .unwrap()
-                    .workspace_format
-                    .as_ref()
-                    .unwrap()
+                default_format.workspace_format.as_ref().unwrap()
             });
 
         fmt.replace("{id}", format!("{}", self.get_id()).as_str())

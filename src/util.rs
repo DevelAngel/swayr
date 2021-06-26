@@ -52,27 +52,17 @@ where
         map.insert(s, c);
     }
 
-    let default = cfg::Config::default();
+    let launcher_default = cfg::Launcher::default();
     let launcher_exec = cfg
         .launcher
         .as_ref()
         .and_then(|l| l.executable.as_ref())
-        .unwrap_or_else(|| {
-            default
-                .launcher
-                .as_ref()
-                .unwrap()
-                .executable
-                .as_ref()
-                .unwrap()
-        });
+        .unwrap_or_else(|| launcher_default.executable.as_ref().unwrap());
     let args: Vec<String> = cfg
         .launcher
         .as_ref()
         .and_then(|l| l.args.as_ref())
-        .unwrap_or_else(|| {
-            default.launcher.as_ref().unwrap().args.as_ref().unwrap()
-        })
+        .unwrap_or_else(|| launcher_default.args.as_ref().unwrap())
         .iter()
         .map(|a| a.replace("{prompt}", prompt))
         .collect();
