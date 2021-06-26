@@ -1,3 +1,20 @@
+// Copyright (C) 2021  Tassilo Horn <tsdh@gnu.org>
+//
+// This program is free software: you can redistribute it and/or modify it
+// under the terms of the GNU General Public License as published by the Free
+// Software Foundation, either version 3 of the License, or (at your option)
+// any later version.
+//
+// This program is distributed in the hope that it will be useful, but WITHOUT
+// ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+// FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+// more details.
+//
+// You should have received a copy of the GNU General Public License along with
+// this program.  If not, see <https://www.gnu.org/licenses/>.
+
+//! TOML configuration for swayr.
+
 use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
 use std::fs::DirBuilder;
@@ -28,10 +45,10 @@ impl Default for Config {
             }),
             format: Some(Format {
                 window_format: Some(
-                    "{urgency_start}<b>“{title}”</b>{urgency_end}\t<i>{app_name}</i> on workspace {workspace_name}\t<span alpha=\"20000\">({id})</span>"
+                    "{urgency_start}<b>“{title}”</b>{urgency_end} — <i>{app_name}</i> on workspace {workspace_name}   <span alpha=\"20000\">({id})</span>"
                         .to_string(),
                 ),
-                workspace_format: Some("<b>Workspace {name}</b>\t<span alpha=\"20000\">({id})</span>".to_string()),
+                workspace_format: Some("<b>Workspace {name}</b>   <span alpha=\"20000\">({id})</span>".to_string()),
                 urgency_start: Some("<span background=\"darkred\" foreground=\"yellow\">".to_string()),
                 urgency_end: Some("</span>".to_string())
             }),

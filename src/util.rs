@@ -1,4 +1,19 @@
-//! Utility functions including wofi-selection.
+// Copyright (C) 2021  Tassilo Horn <tsdh@gnu.org>
+//
+// This program is free software: you can redistribute it and/or modify it
+// under the terms of the GNU General Public License as published by the Free
+// Software Foundation, either version 3 of the License, or (at your option)
+// any later version.
+//
+// This program is distributed in the hope that it will be useful, but WITHOUT
+// ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+// FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+// more details.
+//
+// You should have received a copy of the GNU General Public License along with
+// this program.  If not, see <https://www.gnu.org/licenses/>.
+
+//! Utility functions including selection between choices using a launcher.
 
 use crate::con::DisplayFormat;
 use crate::config as cfg;
@@ -21,7 +36,7 @@ pub fn get_swayr_socket_path() -> String {
     )
 }
 
-pub fn wofi_select<'a, 'b, TS>(
+pub fn select_from_choices<'a, 'b, TS>(
     prompt: &'a str,
     choices: &'b [TS],
 ) -> Option<&'b TS>
@@ -38,7 +53,7 @@ where
     }
 
     let default = cfg::Config::default();
-    let launcher = cfg
+    let launcher_exec = cfg
         .launcher
         .as_ref()
         .and_then(|l| l.executable.as_ref())
@@ -62,23 +77,26 @@ where
         .map(|a| a.replace("{prompt}", prompt))
         .collect();
 
-    let mut wofi = proc::Command::new(launcher)
+    let mut launcher = proc::Command::new(launcher_exec)
         .args(args)
         .stdin(proc::Stdio::piped())
         .stdout(proc::Stdio::piped())
         .spawn()
-        .expect(&("Error running ".to_owned() + launcher));
+        .expect(&("Error running ".to_owned() + launcher_exec));
 
     {
-        let stdin = wofi.stdin.as_mut().expect("Failed to open wofi stdin");
-        let wofi_input = strs.join("\n");
-        println!("Wofi input:\n{}", wofi_input);
+        let stdin = launcher
+            .stdin
+            .as_mut()
+            .expect("Failed to open the launcher's stdin");
+        let input = strs.join("\n");
+        println!("Launcher {} input:\n{}", launcher_exec, input);
         stdin
-            .write_all(wofi_input.as_bytes())
-            .expect("Failed to write to wofi stdin");
+            .write_all(input.as_bytes())
+            .expect("Failed to write to the launcher's stdin");
     }
 
-    let output = wofi.wait_with_output().expect("Failed to read stdout");
+    let output = launcher.wait_with_output().expect("Failed to read stdout");
     let choice = String::from_utf8_lossy(&output.stdout);
     let mut choice = String::from(choice);
     choice.pop(); // Remove trailing \n from choice.

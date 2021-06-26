@@ -1,10 +1,25 @@
+// Copyright (C) 2021  Tassilo Horn <tsdh@gnu.org>
+//
+// This program is free software: you can redistribute it and/or modify it
+// under the terms of the GNU General Public License as published by the Free
+// Software Foundation, either version 3 of the License, or (at your option)
+// any later version.
+//
+// This program is distributed in the hope that it will be useful, but WITHOUT
+// ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+// FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+// more details.
+//
+// You should have received a copy of the GNU General Public License along with
+// this program.  If not, see <https://www.gnu.org/licenses/>.
+
 // TODO: Possibly just include README.md when this feature is in the release
 // channel.
 //
 // #![doc(include = "../README.md")]
 
-//! **Swayr** is a wofi-based LRU window-switcher and more for the sway window
-//! manager.  It consists of a demon, and a client.  The demon `swayrd` records
+//! **Swayr** is a LRU window-switcher and more for the sway window manager.
+//! It consists of a demon, and a client.  The demon `swayrd` records
 //! window/workspace creations, deletions, and focus changes using sway's JSON
 //! IPC interface.  The client `swayr` offers subcommands, see `swayr --help`.
 

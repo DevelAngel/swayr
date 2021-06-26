@@ -1,3 +1,18 @@
+// Copyright (C) 2021  Tassilo Horn <tsdh@gnu.org>
+//
+// This program is free software: you can redistribute it and/or modify it
+// under the terms of the GNU General Public License as published by the Free
+// Software Foundation, either version 3 of the License, or (at your option)
+// any later version.
+//
+// This program is distributed in the hope that it will be useful, but WITHOUT
+// ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+// FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+// more details.
+//
+// You should have received a copy of the GNU General Public License along with
+// this program.  If not, see <https://www.gnu.org/licenses/>.
+
 //! Functions and data structures of the swayr client.
 
 use crate::con;
@@ -62,7 +77,7 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
         }
         SwayrCommand::ExecuteSwaymsgCommand => exec_swaymsg_command(),
         SwayrCommand::ExecuteSwayrCommand => {
-            if let Some(c) = util::wofi_select(
+            if let Some(c) = util::select_from_choices(
                 "Select swayr command",
                 &[
                     SwayrCommand::ExecuteSwaymsgCommand,
@@ -343,7 +358,7 @@ impl DisplayFormat for SwaymsgCmd<'_> {
 
 pub fn exec_swaymsg_command() {
     let cmds = get_swaymsg_commands();
-    let cmd = util::wofi_select("Execute swaymsg command", &cmds);
+    let cmd = util::select_from_choices("Execute swaymsg command", &cmds);
     if let Some(cmd) = cmd {
         run_sway_command(&cmd.cmd);
     }
