@@ -33,6 +33,29 @@ Right now, there are these subcommands:
   one.  (This is useful for accessing swayr commands which are not bound to a
   key.)
 
+## Installation
+
+You'll need to install the current stable rust toolchain using the one-liner
+shown at the [official rust installation
+page](https://www.rust-lang.org/tools/install).
+
+Then you can install swayr like so:
+```sh
+cargo install swayr
+```
+
+For getting updates easily, I recommend the cargo `install-update` plugin.
+```sh
+# Install it once.
+cargo install install-update
+
+# Then you can update all installed rust binary crates including swayr using:
+cargo install-update --all
+
+# If you only want to update swayr, you can do so using:
+cargo install-update -- swayr
+```
+
 ## Usage
 
 You need to start the swayr demon `swayrd` in your sway config
