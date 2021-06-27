@@ -24,13 +24,27 @@ use std::path::Path;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Config {
-    pub launcher: Option<Launcher>,
+    pub menu: Option<Menu>,
     pub format: Option<Format>,
 }
 
-impl Default for Launcher {
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Menu {
+    pub executable: Option<String>,
+    pub args: Option<Vec<String>>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Format {
+    pub window_format: Option<String>,
+    pub workspace_format: Option<String>,
+    pub urgency_start: Option<String>,
+    pub urgency_end: Option<String>,
+}
+
+impl Default for Menu {
     fn default() -> Self {
-        Launcher {
+        Menu {
             executable: Some("wofi".to_string()),
             args: Some(vec![
                 "--show=dmenu".to_string(),
@@ -71,24 +85,10 @@ impl Default for Format {
 impl Default for Config {
     fn default() -> Self {
         Config {
-            launcher: Some(Launcher::default()),
+            menu: Some(Menu::default()),
             format: Some(Format::default()),
         }
     }
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Launcher {
-    pub executable: Option<String>,
-    pub args: Option<Vec<String>>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Format {
-    pub window_format: Option<String>,
-    pub workspace_format: Option<String>,
-    pub urgency_start: Option<String>,
-    pub urgency_end: Option<String>,
 }
 
 fn get_config_file_path() -> Box<Path> {

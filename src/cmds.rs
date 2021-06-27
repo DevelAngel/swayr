@@ -76,7 +76,7 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
         }
         SwayrCommand::ExecuteSwaymsgCommand => exec_swaymsg_command(),
         SwayrCommand::ExecuteSwayrCommand => {
-            if let Some(c) = util::select_from_choices(
+            if let Some(c) = util::select_from_menu(
                 "Select swayr command",
                 &[
                     SwayrCommand::ExecuteSwaymsgCommand,
@@ -357,7 +357,7 @@ impl DisplayFormat for SwaymsgCmd<'_> {
 
 pub fn exec_swaymsg_command() {
     let cmds = get_swaymsg_commands();
-    let cmd = util::select_from_choices("Execute swaymsg command", &cmds);
+    let cmd = util::select_from_menu("Execute swaymsg command", &cmds);
     if let Some(cmd) = cmd {
         run_sway_command(&cmd.cmd);
     }

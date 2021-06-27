@@ -86,10 +86,10 @@ Swayr can be configured using the `~/.config/swayr/config.toml` config file.
 
 If it doesn't exist, a simple default configuration will be created on the
 first invocation for use with the [wofi](https://todo.sr.ht/~scoopta/wofi)
-launcher.
+menu program.
 
-It should be easy to adapt that default config for usage with other launchers
-such as [dmenu](https://tools.suckless.org/dmenu/),
+It should be easy to adapt that default config for usage with other menu
+programs such as [dmenu](https://tools.suckless.org/dmenu/),
 [bemenu](https://github.com/Cloudef/bemenu),
 [rofi](https://github.com/davatorium/rofi), a script spawning a terminal with
 [fzf](https://github.com/junegunn/fzf), or whatever.  The only requirement is
@@ -99,7 +99,7 @@ and spit out the selected item to stdout.
 The default config looks like this:
 
 ```toml
-[launcher]
+[menu]
 executable = 'wofi'
 args = [
     '--show=dmenu',
@@ -118,9 +118,9 @@ urgency_start = '<span background="darkred" foreground="yellow">'
 urgency_end = '</span>'
 ```
 
-In the `[launcher]` section, you can specify the launchen/menu program using
-the `executable` name or full path, and the `args` (flags and options) it
-should get passed.  If some argument contains the placeholder `{prompt}`, it is
+In the `[menu]` section, you can specify the menu program using the
+`executable` name or full path, and the `args` (flags and options) it should
+get passed.  If some argument contains the placeholder `{prompt}`, it is
 replaced with a prompt such as "Switch to window" depending on context.
 
 In the `[format]` section, format strings are specified defining how selection
@@ -144,11 +144,11 @@ right now.
 * `urgency_end` is a string which replaces the `{urgency_end}` placeholder in
   `window_format`.
 
-It is crucial that during selection (using wofi or some other launcher) each
-window has a different display string.  Therefore, it is highly recommended to
-include the `{id}` placeholder at least in `window_format`.  Otherwise, e.g.,
-two terminals (of the same terminal app) with the same working directory (and
-therefore, the same title) wouldn't be distinguishable.
+It is crucial that during selection (using wofi or some other menu program)
+each window has a different display string.  Therefore, it is highly
+recommended to include the `{id}` placeholder at least in `window_format`.
+Otherwise, e.g., two terminals (of the same terminal app) with the same working
+directory (and therefore, the same title) wouldn't be distinguishable.
 
 ## Questions & Patches
 

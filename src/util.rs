@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU General Public License along with
 // this program.  If not, see <https://www.gnu.org/licenses/>.
 
-//! Utility functions including selection between choices using a launcher.
+//! Utility functions including selection between choices using a menu program.
 
 use crate::con::DisplayFormat;
 use crate::config as cfg;
@@ -36,7 +36,7 @@ pub fn get_swayr_socket_path() -> String {
     )
 }
 
-pub fn select_from_choices<'a, 'b, TS>(
+pub fn select_from_menu<'a, 'b, TS>(
     prompt: &'a str,
     choices: &'b [TS],
 ) -> Option<&'b TS>
@@ -52,41 +52,41 @@ where
         map.insert(s, c);
     }
 
-    let launcher_default = cfg::Launcher::default();
-    let launcher_exec = cfg
-        .launcher
+    let menu_default = cfg::Menu::default();
+    let menu_exec = cfg
+        .menu
         .as_ref()
         .and_then(|l| l.executable.as_ref())
-        .unwrap_or_else(|| launcher_default.executable.as_ref().unwrap());
+        .unwrap_or_else(|| menu_default.executable.as_ref().unwrap());
     let args: Vec<String> = cfg
-        .launcher
+        .menu
         .as_ref()
         .and_then(|l| l.args.as_ref())
-        .unwrap_or_else(|| launcher_default.args.as_ref().unwrap())
+        .unwrap_or_else(|| menu_default.args.as_ref().unwrap())
         .iter()
         .map(|a| a.replace("{prompt}", prompt))
         .collect();
 
-    let mut launcher = proc::Command::new(launcher_exec)
+    let mut menu = proc::Command::new(menu_exec)
         .args(args)
         .stdin(proc::Stdio::piped())
         .stdout(proc::Stdio::piped())
         .spawn()
-        .expect(&("Error running ".to_owned() + launcher_exec));
+        .expect(&("Error running ".to_owned() + menu_exec));
 
     {
-        let stdin = launcher
+        let stdin = menu
             .stdin
             .as_mut()
-            .expect("Failed to open the launcher's stdin");
+            .expect("Failed to open the menu program's stdin");
         let input = strs.join("\n");
-        println!("Launcher {} input:\n{}", launcher_exec, input);
+        println!("Menu program {} input:\n{}", menu_exec, input);
         stdin
             .write_all(input.as_bytes())
-            .expect("Failed to write to the launcher's stdin");
+            .expect("Failed to write to the menu program's stdin");
     }
 
-    let output = launcher.wait_with_output().expect("Failed to read stdout");
+    let output = menu.wait_with_output().expect("Failed to read stdout");
     let choice = String::from_utf8_lossy(&output.stdout);
     let mut choice = String::from(choice);
     choice.pop(); // Remove trailing \n from choice.
