@@ -97,7 +97,7 @@ bindsym $mod+c exec env RUST_BACKTRACE=1 \
     swayr execute-swaymsg-command >> /tmp/swayr.log 2>&1
 
 bindsym $mod+Shift+c exec env RUST_BACKTRACE=1 \
-    swayr execute-swayr-command >> /tmp/swa
+    swayr execute-swayr-command >> /tmp/swayr.log 2>&1
 ```
 
 Of course, configure the keys to your liking.  Again, enabling rust backtraces
