@@ -33,6 +33,15 @@ Right now, there are these subcommands:
   one.  (This is useful for accessing swayr commands which are not bound to a
   key.)
 
+## Screenshots
+
+![A screenshot of swayr switch-window](misc/switch-window.png "swayr
+switch-window")
+
+![A screenshot of swayr
+switch-workspace-or-window](misc/switch-workspace-or-window.png "swayr
+switch-workspace-or-window")
+
 ## Installation
 
 You'll need to install the current stable rust toolchain using the one-liner
