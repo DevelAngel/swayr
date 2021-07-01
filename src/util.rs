@@ -23,9 +23,16 @@ use std::process as proc;
 
 pub fn get_swayr_socket_path() -> String {
     let wayland_display = std::env::var("WAYLAND_DISPLAY");
+    let xdg_runtime_dir = std::env::var("XDG_RUNTIME_DIR");
     format!(
-        "/run/user/{}/swayr-{}.sock",
-        users::get_current_uid(),
+        "{}/swayr-{}.sock",
+        match xdg_runtime_dir {
+            Ok(val) => val,
+            Err(_e) => {
+                eprintln!("Couldn't get XDG_RUNTIME_DIR!");
+                String::from("/tmp")
+            }
+        },
         match wayland_display {
             Ok(val) => val,
             Err(_e) => {
