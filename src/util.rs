@@ -22,8 +22,8 @@ use std::io::Write;
 use std::process as proc;
 
 pub fn get_swayr_socket_path() -> String {
-    let wayland_display = std::env::var("WAYLAND_DISPLAY");
     let xdg_runtime_dir = std::env::var("XDG_RUNTIME_DIR");
+    let wayland_display = std::env::var("WAYLAND_DISPLAY");
     format!(
         "{}/swayr-{}.sock",
         match xdg_runtime_dir {
