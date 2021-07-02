@@ -40,6 +40,8 @@ pub struct Format {
     pub workspace_format: Option<String>,
     pub urgency_start: Option<String>,
     pub urgency_end: Option<String>,
+    pub icon_dirs: Option<Vec<String>>,
+    pub fallback_icon: Option<String>,
 }
 
 impl Default for Menu {
@@ -78,6 +80,11 @@ impl Default for Format {
                     .to_string(),
             ),
             urgency_end: Some("</span>".to_string()),
+            icon_dirs: Some(vec![
+                "/usr/share/icons/hicolor/48x48/apps".to_string(),
+                "/usr/share/pixmaps".to_string(),
+            ]),
+            fallback_icon: None,
         }
     }
 }

@@ -17,8 +17,9 @@
 
 use crate::con::DisplayFormat;
 use crate::config as cfg;
+use lazy_static::lazy_static;
 use std::collections::HashMap;
-use std::io::Write;
+use std::io::{BufRead, Write};
 use std::process as proc;
 
 pub fn get_swayr_socket_path() -> String {
@@ -41,6 +42,137 @@ pub fn get_swayr_socket_path() -> String {
             }
         }
     )
+}
+
+fn desktop_entries() -> Vec<String> {
+    let mut dirs = vec![];
+    if let Some(dd) = directories::BaseDirs::new()
+        .map(|b| b.data_local_dir().to_string_lossy().to_string())
+    {
+        dirs.push(dd);
+    }
+    dirs.push(String::from("/usr/share/applications/"));
+
+    let mut entries = vec![];
+    for dir in dirs {
+        if let Ok(readdir) = std::fs::read_dir(dir) {
+            for entry in readdir.flatten() {
+                let path = entry.path();
+                if path.is_file()
+                    && path.extension().map(|ext| ext == "desktop")
+                        == Some(true)
+                {
+                    entries.push(path.as_path().to_string_lossy().to_string());
+                }
+            }
+        }
+    }
+    entries
+}
+
+fn find_icon(icon_name: &str, icon_dirs: &[String]) -> Option<String> {
+    if std::path::Path::new(icon_name).is_file() {
+        return Some(String::from(icon_name));
+    }
+
+    for dir in icon_dirs {
+        for ext in &["png", "svg"] {
+            let mut pb = std::path::PathBuf::from(dir);
+            pb.push(icon_name);
+            pb.set_extension(ext);
+            let icon_file = pb.as_path();
+            if icon_file.is_file() {
+                return Some(String::from(icon_file.to_str().unwrap()));
+            }
+        }
+    }
+
+    None
+}
+
+lazy_static! {
+    static ref WM_CLASS_OR_ICON_RX: regex::Regex =
+        regex::Regex::new("(StartupWMClass|Icon)=(.+)").unwrap();
+}
+
+fn get_app_id_to_icon_map(icon_dirs: &[String]) -> HashMap<String, String> {
+    let mut map = HashMap::new();
+
+    for e in desktop_entries() {
+        if let Ok(f) = std::fs::File::open(&e) {
+            let buf = std::io::BufReader::new(f);
+            let mut wm_class: Option<String> = None;
+            let mut icon: Option<String> = None;
+
+            // Get App-Id and Icon from desktop file.
+            for line in buf.lines() {
+                if wm_class.is_some() && icon.is_some() {
+                    break;
+                }
+                if let Ok(line) = line {
+                    if let Some(cap) = WM_CLASS_OR_ICON_RX.captures(&line) {
+                        if "StartupWMClass" == cap.get(1).unwrap().as_str() {
+                            wm_class.replace(
+                                cap.get(2).unwrap().as_str().to_string(),
+                            );
+                        } else if let Some(icon_file) =
+                            find_icon(cap.get(2).unwrap().as_str(), icon_dirs)
+                        {
+                            icon.replace(icon_file);
+                        }
+                    }
+                }
+            }
+
+            if let Some(icon) = icon {
+                if let Some(wm_class) = wm_class {
+                    map.insert(wm_class, icon.clone());
+                }
+                map.insert(
+                    String::from(
+                        std::path::Path::new(&e)
+                            .with_extension("")
+                            .file_name()
+                            .unwrap()
+                            .to_string_lossy(),
+                    ),
+                    icon,
+                );
+            }
+        }
+    }
+
+    map
+}
+
+lazy_static! {
+    static ref APP_ID_TO_ICON_MAP: std::sync::Mutex<Option<HashMap<String, String>>> =
+        std::sync::Mutex::new(None);
+}
+
+pub fn get_icon(app_id: &str, icon_dirs: &[String]) -> Option<String> {
+    let mut opt = APP_ID_TO_ICON_MAP.lock().unwrap();
+
+    if opt.is_none() {
+        opt.replace(get_app_id_to_icon_map(icon_dirs));
+    }
+
+    opt.as_ref().unwrap().get(app_id).map(String::from)
+}
+
+#[test]
+fn test_desktop_entries() {
+    let icon_dirs = vec![
+        String::from("/usr/share/icons/hicolor/48x48/apps"),
+        String::from("/usr/share/pixmaps"),
+    ];
+    let m = get_app_id_to_icon_map(&icon_dirs);
+    println!("Found {} icon entries:\n{:#?}", m.len(), m);
+
+    let apps = vec!["Emacs", "Alacritty", "firefoxdeveloperedition", "gimp"];
+    for app in apps {
+        println!("Icon for {}: {:?}", app, get_icon(app, &icon_dirs))
+    }
 }
 
 pub fn select_from_menu<'a, 'b, TS>(

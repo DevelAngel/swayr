@@ -148,6 +148,8 @@ window_format = '{urgency_start}<b>“{title}”</b>{urgency_end} — <i>{app_na
 workspace_format = '<b>Workspace {name}</b>   <span alpha="20000">({id})</span>'
 urgency_start = '<span background="darkred" foreground="yellow">'
 urgency_end = '</span>'
+icon_dirs = ['/usr/share/icons/Adwaita/48x48/apps', '/usr/share/icons/hicolor/48x48/apps', '/usr/share/pixmaps']
+fallback_icon = '/usr/share/icons/gnome/48x48/apps/kwin.png'
 ```
 
 In the `[menu]` section, you can specify the menu program using the
@@ -162,6 +164,7 @@ to style the text using HTML and CSS.  The following formats are supported
 right now.
 * `window_format` defines how windows are displayed.  The placeholder `{title}`
   is replaced with the window's title, `{app_name}` with the application name,
+  `{app_icon}` with the application's icon (a path to a PNG or SVG file),
   `{workspace_name}` with the name or number of the workspace the window is
   shown, and `{id}` is the window's sway-internal con id.  There are also the
   placeholders `{urcency_start}` and `{urgency_end}` which get replaced by the
@@ -175,12 +178,20 @@ right now.
   in `window_format`.
 * `urgency_end` is a string which replaces the `{urgency_end}` placeholder in
   `window_format`.
+* `icon_dirs` is a vector of directories in which to look for application icons
+  in order to compute the `{app_icon}` replacement.
+* `fallback_icon` is a path to some PNG/SVG icon which will be used as
+  `{app_icon}` if no application-specific icon can be determined.
 
 It is crucial that during selection (using wofi or some other menu program)
 each window has a different display string.  Therefore, it is highly
 recommended to include the `{id}` placeholder at least in `window_format`.
 Otherwise, e.g., two terminals (of the same terminal app) with the same working
 directory (and therefore, the same title) wouldn't be distinguishable.
+
+Hint: `wofi` supports icons with the syntax `img:<image-file>:text:<text>`, so
+a suitable `window_format` with application icon should start with
+`img:{app_icon}:text:`.
 
 ## Questions & Patches
 

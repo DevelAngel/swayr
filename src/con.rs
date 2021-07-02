@@ -19,6 +19,7 @@ use crate::config as cfg;
 use crate::ipc;
 use crate::ipc::NodeMethods;
 use crate::util;
+use lazy_static::lazy_static;
 use std::cmp;
 use std::collections::HashMap;
 use std::fmt;
@@ -120,6 +121,11 @@ impl<'a> fmt::Display for Window<'a> {
     }
 }
 
+lazy_static! {
+    static ref APP_NAME_AND_VERSION_RX: regex::Regex =
+        regex::Regex::new("(.+)(-[0-9.]+)").unwrap();
+}
+
 impl<'a> DisplayFormat for Window<'a> {
     fn format_for_display(&self, cfg: &cfg::Config) -> String {
         let default_format = cfg::Format::default();
@@ -138,6 +144,19 @@ impl<'a> DisplayFormat for Window<'a> {
             .as_ref()
             .and_then(|f| f.urgency_end.as_ref())
             .unwrap_or_else(|| default_format.urgency_end.as_ref().unwrap());
+        let icon_dirs = cfg
+            .format
+            .as_ref()
+            .and_then(|f| f.icon_dirs.as_ref())
+            .unwrap_or_else(|| default_format.icon_dirs.as_ref().unwrap());
+        // fallback_icon has no default value.
+        let fallback_icon: Option<&String> =
+            cfg.format.as_ref().and_then(|f| f.fallback_icon.as_ref());
+
+        // Some apps report, e.g., Gimp-2.10 but the icon is still named
+        // gimp.png.
+        let app_name_no_version =
+            APP_NAME_AND_VERSION_RX.replace(self.get_app_name(), "$1");
 
         fmt.replace("{id}", format!("{}", self.get_id()).as_str())
             .replace(
@@ -160,6 +179,20 @@ impl<'a> DisplayFormat for Window<'a> {
             .replace(
                 "{workspace_name}",
                 self.workspace.name.as_ref().unwrap().as_str(),
+            )
+            .replace(
+                "{app_icon}",
+                util::get_icon(self.get_app_name(), icon_dirs)
+                    .or_else(|| util::get_icon(&app_name_no_version, icon_dirs))
+                    .or_else(|| {
+                        util::get_icon(
+                            &app_name_no_version.to_lowercase(),
+                            icon_dirs,
+                        )
+                    })
+                    .or_else(|| fallback_icon.map(|f| f.to_string()))
+                    .unwrap_or_else(String::new)
+                    .as_str(),
             )
             .replace("{title}", self.get_title())
     }
@@ -280,9 +313,7 @@ impl DisplayFormat for WsOrWin<'_> {
     fn format_for_display(&self, cfg: &cfg::Config) -> String {
         match self {
             WsOrWin::Ws { ws } => ws.format_for_display(cfg),
-            WsOrWin::Win { win } => {
-                "\t".to_owned() + &win.format_for_display(cfg)
-            }
+            WsOrWin::Win { win } => win.format_for_display(cfg),
         }
     }
 }
