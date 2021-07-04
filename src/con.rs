@@ -19,15 +19,11 @@ use crate::config as cfg;
 use crate::ipc;
 use crate::ipc::NodeMethods;
 use crate::util;
+use crate::util::DisplayFormat;
 use lazy_static::lazy_static;
 use std::cmp;
 use std::collections::HashMap;
-use std::fmt;
 use swayipc as s;
-
-pub trait DisplayFormat {
-    fn format_for_display(&self, config: &cfg::Config) -> String;
-}
 
 #[derive(Debug)]
 pub struct Window<'a> {
@@ -104,20 +100,6 @@ impl Ord for Window<'_> {
 impl PartialOrd for Window<'_> {
     fn partial_cmp(&self, other: &Window) -> Option<cmp::Ordering> {
         Some(self.cmp(other))
-    }
-}
-
-impl<'a> fmt::Display for Window<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
-        write!(
-            f,
-            "\"{}\" — {} on workspace {} (id: {}, urgent: {})",
-            self.get_title(),
-            self.get_app_name(),
-            self.workspace.name.as_ref().unwrap(),
-            self.get_id(),
-            self.node.urgent
-        )
     }
 }
 
@@ -227,7 +209,9 @@ fn build_workspaces<'a>(
 ) -> Vec<Workspace<'a>> {
     let mut v = vec![];
     for workspace in root.workspaces() {
-        if !include_scratchpad && workspace.is_scratchpad() {
+        if workspace.windows().is_empty()
+            || workspace.is_scratchpad() && !include_scratchpad
+        {
             continue;
         }
 
@@ -295,18 +279,6 @@ pub fn select_workspace<'a>(
 pub enum WsOrWin<'a> {
     Ws { ws: &'a Workspace<'a> },
     Win { win: &'a Window<'a> },
-}
-
-impl<'a> fmt::Display for WsOrWin<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
-        match self {
-            WsOrWin::Ws { ws } => ws.fmt(f),
-            WsOrWin::Win { win } => match f.write_str("\t") {
-                Ok(()) => win.fmt(f),
-                Err(e) => Err(e),
-            },
-        }
-    }
 }
 
 impl DisplayFormat for WsOrWin<'_> {
@@ -387,12 +359,6 @@ impl Ord for Workspace<'_> {
 impl PartialOrd for Workspace<'_> {
     fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
         Some(self.cmp(other))
-    }
-}
-
-impl<'a> fmt::Display for Workspace<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
-        write!(f, "“Workspace {}” (id: {})", self.get_name(), self.get_id())
     }
 }
 

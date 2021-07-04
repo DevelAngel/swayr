@@ -16,17 +16,14 @@
 //! Functions and data structures of the swayr client.
 
 use crate::con;
-use crate::con::DisplayFormat;
 use crate::config as cfg;
 use crate::ipc;
 use crate::ipc::SwayrCommand;
 use crate::util;
-
+use crate::util::DisplayFormat;
 use std::collections::HashMap;
-use std::fmt;
 use std::sync::Arc;
 use std::sync::RwLock;
-
 use swayipc as s;
 
 pub struct ExecSwayrCmdArgs<'a> {
@@ -34,16 +31,10 @@ pub struct ExecSwayrCmdArgs<'a> {
     pub extra_props: Arc<RwLock<HashMap<i64, ipc::ExtraProps>>>,
 }
 
-impl fmt::Display for SwayrCommand {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
-        write!(f, "{:?}", self)
-    }
-}
-
 impl DisplayFormat for SwayrCommand {
     fn format_for_display(&self, _: &cfg::Config) -> std::string::String {
         // TODO: Add a format to Config
-        format!("{}", self)
+        format!("{:?}", self)
     }
 }
 
@@ -124,7 +115,7 @@ pub fn switch_to_urgent_or_lru_window(
         .find(|w| w.is_urgent())
         .or_else(|| windows.get(0))
     {
-        println!("Switching to {}", win);
+        println!("Switching to {}, id: {}", win.get_app_name(), win.get_id());
         focus_window_by_id(win.get_id())
     } else {
         println!("No window to switch to.")
@@ -342,16 +333,9 @@ struct SwaymsgCmd<'a> {
     cmd: Vec<&'a str>,
 }
 
-impl<'a> fmt::Display for SwaymsgCmd<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
-        write!(f, "{}", self.cmd.join(" "))
-    }
-}
-
 impl DisplayFormat for SwaymsgCmd<'_> {
     fn format_for_display(&self, _: &cfg::Config) -> std::string::String {
-        // TODO: Add a format to Config
-        format!("{}", self)
+        format!("{}", self.cmd.join(" "))
     }
 }
 

@@ -15,7 +15,6 @@
 
 //! Utility functions including selection between choices using a menu program.
 
-use crate::con::DisplayFormat;
 use crate::config as cfg;
 use lazy_static::lazy_static;
 use std::collections::HashMap;
@@ -173,6 +172,10 @@ fn test_desktop_entries() {
     for app in apps {
         println!("Icon for {}: {:?}", app, get_icon(app, &icon_dirs))
     }
+}
+
+pub trait DisplayFormat {
+    fn format_for_display(&self, config: &cfg::Config) -> String;
 }
 
 pub fn select_from_menu<'a, 'b, TS>(
