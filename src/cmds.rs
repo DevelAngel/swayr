@@ -335,7 +335,7 @@ struct SwaymsgCmd<'a> {
 
 impl DisplayFormat for SwaymsgCmd<'_> {
     fn format_for_display(&self, _: &cfg::Config) -> std::string::String {
-        format!("{}", self.cmd.join(" "))
+        self.cmd.join(" ").to_string()
     }
 }
 
