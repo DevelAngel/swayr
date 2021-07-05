@@ -77,8 +77,7 @@ fn find_icon(icon_name: &str, icon_dirs: &[String]) -> Option<String> {
     for dir in icon_dirs {
         for ext in &["png", "svg"] {
             let mut pb = std::path::PathBuf::from(dir);
-            pb.push(icon_name);
-            pb.set_extension(ext);
+            pb.push(icon_name.to_owned() + "." + ext);
             let icon_file = pb.as_path();
             if icon_file.is_file() {
                 return Some(String::from(icon_file.to_str().unwrap()));
@@ -92,6 +91,8 @@ fn find_icon(icon_name: &str, icon_dirs: &[String]) -> Option<String> {
 lazy_static! {
     static ref WM_CLASS_OR_ICON_RX: regex::Regex =
         regex::Regex::new("(StartupWMClass|Icon)=(.+)").unwrap();
+    static ref REV_DOMAIN_NAME_RX: regex::Regex =
+        regex::Regex::new(r"^(?:[a-zA-Z0-9-]+\.)+([a-zA-Z0-9-]+)$").unwrap();
 }
 
 fn get_app_id_to_icon_map(icon_dirs: &[String]) -> HashMap<String, String> {
@@ -124,19 +125,34 @@ fn get_app_id_to_icon_map(icon_dirs: &[String]) -> HashMap<String, String> {
             }
 
             if let Some(icon) = icon {
+                // Sometimes the StartupWMClass is the app_id, e.g. FF Dev
+                // Edition has StartupWMClass firefoxdeveloperedition although
+                // the desktop file is named firefox-developer-edition.
                 if let Some(wm_class) = wm_class {
                     map.insert(wm_class, icon.clone());
                 }
-                map.insert(
-                    String::from(
-                        std::path::Path::new(&e)
-                            .with_extension("")
-                            .file_name()
-                            .unwrap()
-                            .to_string_lossy(),
-                    ),
-                    icon,
+
+                // Some apps have a reverse domain name desktop file, e.g.,
+                // org.gnome.eog.desktop but reports as just eog.
+                let desktop_file_name = String::from(
+                    std::path::Path::new(&e)
+                        .with_extension("")
+                        .file_name()
+                        .unwrap()
+                        .to_string_lossy(),
                 );
+                if let Some(caps) =
+                    REV_DOMAIN_NAME_RX.captures(&desktop_file_name)
+                {
+                    map.insert(
+                        caps.get(1).unwrap().as_str().to_string(),
+                        icon.clone(),
+                    );
+                }
+
+                // The usual case is that the app with foo.desktop also has the
+                // app_id foo.
+                map.insert(desktop_file_name.clone(), icon);
             }
         }
     }
@@ -160,9 +176,11 @@ pub fn get_icon(app_id: &str, icon_dirs: &[String]) -> Option<String> {
 }
 
 #[test]
-fn test_desktop_entries() {
+fn test_icon_stuff() {
     let icon_dirs = vec![
+        String::from("/usr/share/icons/hicolor/scalable/apps"),
         String::from("/usr/share/icons/hicolor/48x48/apps"),
+        String::from("/usr/share/icons/Adwaita/48x48/apps"),
         String::from("/usr/share/pixmaps"),
     ];
     let m = get_app_id_to_icon_map(&icon_dirs);
