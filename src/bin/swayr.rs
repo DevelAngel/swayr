@@ -27,7 +27,7 @@ use clap::{crate_version, Clap};
 )]
 struct Opts {
     #[clap(subcommand)]
-    command: swayr::ipc::SwayrCommand,
+    command: swayr::cmds::SwayrCommand,
 }
 
 fn main() {

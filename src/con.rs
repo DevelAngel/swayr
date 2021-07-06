@@ -16,20 +16,110 @@
 //! Convenience data structures built from the IPC structs.
 
 use crate::config as cfg;
-use crate::ipc;
-use crate::ipc::NodeMethods;
 use crate::util;
 use crate::util::DisplayFormat;
 use lazy_static::lazy_static;
+use serde::{Deserialize, Serialize};
 use std::cmp;
 use std::collections::HashMap;
 use swayipc as s;
+
+/// Immutable Node Iterator
+///
+/// Iterates nodes in depth-first order, tiled nodes before floating nodes.
+pub struct NodeIter<'a> {
+    stack: Vec<&'a s::Node>,
+}
+
+impl<'a> NodeIter<'a> {
+    pub fn new(node: &'a s::Node) -> NodeIter {
+        NodeIter { stack: vec![node] }
+    }
+}
+
+impl<'a> Iterator for NodeIter<'a> {
+    type Item = &'a s::Node;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(node) = self.stack.pop() {
+            for n in &node.floating_nodes {
+                self.stack.push(&n);
+            }
+            for n in &node.nodes {
+                self.stack.push(&n);
+            }
+            Some(node)
+        } else {
+            None
+        }
+    }
+}
+
+/// Extension methods for [`swayipc::Node`].
+pub trait NodeMethods {
+    /// Returns an iterator for this [`swayipc::Node`] and its childres.
+    fn iter(&self) -> NodeIter;
+
+    fn is_window(&self) -> bool;
+
+    /// Either a workspace or a con holding windows, e.g. a vertical split side
+    /// in a horizontally split workspace.
+    fn is_container(&self) -> bool;
+
+    /// Returns all nodes being application windows.
+    fn windows(&self) -> Vec<&s::Node>;
+
+    /// Returns all nodes being workspaces.
+    fn workspaces(&self) -> Vec<&s::Node>;
+
+    fn is_scratchpad(&self) -> bool;
+}
+
+impl NodeMethods for s::Node {
+    fn iter(&self) -> NodeIter {
+        NodeIter::new(self)
+    }
+
+    fn is_window(&self) -> bool {
+        (self.node_type == s::NodeType::Con
+            || self.node_type == s::NodeType::FloatingCon)
+            && self.name.is_some()
+    }
+
+    fn is_container(&self) -> bool {
+        self.node_type == s::NodeType::Workspace
+            || self.node_type == s::NodeType::Con
+                && self.name.is_none()
+                && self.layout != s::NodeLayout::None
+    }
+
+    fn windows(&self) -> Vec<&s::Node> {
+        self.iter().filter(|n| n.is_window()).collect()
+    }
+
+    fn workspaces(&self) -> Vec<&s::Node> {
+        self.iter()
+            .filter(|n| n.node_type == s::NodeType::Workspace)
+            .collect()
+    }
+
+    fn is_scratchpad(&self) -> bool {
+        self.name.is_some() && self.name.as_ref().unwrap().eq("__i3_scratch")
+    }
+}
+
+/// Extra properties gathered by swayrd for windows and workspaces.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct ExtraProps {
+    /// Milliseconds since UNIX epoch.
+    pub last_focus_time: u128,
+}
 
 #[derive(Debug)]
 pub struct Window<'a> {
     node: &'a s::Node,
     workspace: &'a s::Node,
-    extra_props: Option<ipc::ExtraProps>,
+    extra_props: Option<ExtraProps>,
 }
 
 impl Window<'_> {
@@ -183,7 +273,7 @@ impl<'a> DisplayFormat for Window<'a> {
 fn build_windows<'a>(
     root: &'a s::Node,
     include_scratchpad_windows: bool,
-    extra_props: Option<&HashMap<i64, ipc::ExtraProps>>,
+    extra_props: Option<&HashMap<i64, ExtraProps>>,
 ) -> Vec<Window<'a>> {
     let mut v = vec![];
     for workspace in root.workspaces() {
@@ -205,7 +295,7 @@ fn build_windows<'a>(
 fn build_workspaces<'a>(
     root: &'a s::Node,
     include_scratchpad: bool,
-    extra_props: Option<&HashMap<i64, ipc::ExtraProps>>,
+    extra_props: Option<&HashMap<i64, ExtraProps>>,
 ) -> Vec<Workspace<'a>> {
     let mut v = vec![];
     for workspace in root.workspaces() {
@@ -240,7 +330,7 @@ fn build_workspaces<'a>(
 pub fn get_windows<'a>(
     root: &'a s::Node,
     include_scratchpad_windows: bool,
-    extra_props: Option<&HashMap<i64, ipc::ExtraProps>>,
+    extra_props: Option<&HashMap<i64, ExtraProps>>,
 ) -> Vec<Window<'a>> {
     let extra_props_given = extra_props.is_some();
     let mut wins = build_windows(root, include_scratchpad_windows, extra_props);
@@ -254,7 +344,7 @@ pub fn get_windows<'a>(
 pub fn get_workspaces<'a>(
     root: &'a s::Node,
     include_scratchpad: bool,
-    extra_props: Option<&HashMap<i64, ipc::ExtraProps>>,
+    extra_props: Option<&HashMap<i64, ExtraProps>>,
 ) -> Vec<Workspace<'a>> {
     let mut workspaces =
         build_workspaces(root, include_scratchpad, extra_props);
@@ -314,7 +404,7 @@ pub fn select_workspace_or_window<'a>(
 
 pub struct Workspace<'a> {
     node: &'a s::Node,
-    extra_props: Option<ipc::ExtraProps>,
+    extra_props: Option<ExtraProps>,
     pub windows: Vec<Window<'a>>,
 }
 

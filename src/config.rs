@@ -17,6 +17,7 @@
 
 use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::fs::DirBuilder;
 use std::fs::OpenOptions;
 use std::io::{Read, Write};
@@ -26,6 +27,7 @@ use std::path::Path;
 pub struct Config {
     pub menu: Option<Menu>,
     pub format: Option<Format>,
+    pub layout: Option<Layout>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -42,6 +44,28 @@ pub struct Format {
     pub urgency_end: Option<String>,
     pub icon_dirs: Option<Vec<String>>,
     pub fallback_icon: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Layout {
+    pub auto_tile: Option<bool>,
+    pub auto_tile_min_window_width_per_output_width: Option<Vec<[i32; 2]>>,
+}
+
+impl Layout {
+    pub fn auto_tile_min_window_width_per_output_width_as_map(
+        &self,
+    ) -> Option<HashMap<i32, i32>> {
+        if let Some(vec) = &self.auto_tile_min_window_width_per_output_width {
+            let mut map = HashMap::new();
+            for tup in vec {
+                map.insert(tup[0], tup[1]);
+            }
+            Some(map)
+        } else {
+            None
+        }
+    }
 }
 
 impl Default for Menu {
@@ -90,11 +114,35 @@ impl Default for Format {
     }
 }
 
+impl Default for Layout {
+    fn default() -> Layout {
+        let resolution_min_width_vec = vec![
+            [1024, 500],
+            [1280, 600],
+            [1400, 680],
+            [1440, 700],
+            [1600, 780],
+            [1920, 920],
+            [2560, 1000],
+            [3440, 1000],
+            [4096, 1200],
+        ];
+
+        Layout {
+            auto_tile: Some(false),
+            auto_tile_min_window_width_per_output_width: Some(
+                resolution_min_width_vec,
+            ),
+        }
+    }
+}
+
 impl Default for Config {
     fn default() -> Self {
         Config {
             menu: Some(Menu::default()),
             format: Some(Format::default()),
+            layout: Some(Layout::default()),
         }
     }
 }

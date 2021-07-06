@@ -17,18 +17,43 @@
 
 use crate::con;
 use crate::config as cfg;
-use crate::ipc;
-use crate::ipc::SwayrCommand;
 use crate::util;
 use crate::util::DisplayFormat;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::RwLock;
 use swayipc as s;
 
+use clap::Clap;
+
+#[derive(Clap, Debug, Deserialize, Serialize)]
+pub enum SwayrCommand {
+    /// Switch to next urgent window (if any) or to last recently used window.
+    SwitchToUrgentOrLRUWindow,
+    /// Focus the selected window
+    SwitchWindow,
+    /// Focus the next window.
+    NextWindow,
+    /// Focus the previous window.
+    PrevWindow,
+    /// Quit the selected window
+    QuitWindow,
+    /// Switch to the selected workspace
+    SwitchWorkspace,
+    /// Switch to the selected workspace or focus the selected window
+    SwitchWorkspaceOrWindow,
+    /// Quit all windows of selected workspace or the selected window
+    QuitWorkspaceOrWindow,
+    /// Select and execute a swaymsg command
+    ExecuteSwaymsgCommand,
+    /// Select and execute a swayr command
+    ExecuteSwayrCommand,
+}
+
 pub struct ExecSwayrCmdArgs<'a> {
     pub cmd: &'a SwayrCommand,
-    pub extra_props: Arc<RwLock<HashMap<i64, ipc::ExtraProps>>>,
+    pub extra_props: Arc<RwLock<HashMap<i64, con::ExtraProps>>>,
 }
 
 impl DisplayFormat for SwayrCommand {
@@ -98,7 +123,7 @@ fn quit_window_by_id(id: i64) {
     run_sway_command(&[format!("[con_id={}]", id).as_str(), "kill"]);
 }
 
-fn get_tree() -> s::Node {
+pub fn get_tree() -> s::Node {
     match s::Connection::new() {
         Ok(mut con) => con.get_tree().expect("Got no root node"),
         Err(err) => panic!("{}", err),
@@ -106,7 +131,7 @@ fn get_tree() -> s::Node {
 }
 
 pub fn switch_to_urgent_or_lru_window(
-    extra_props: Option<&HashMap<i64, ipc::ExtraProps>>,
+    extra_props: Option<&HashMap<i64, con::ExtraProps>>,
 ) {
     let root = get_tree();
     let windows = con::get_windows(&root, false, extra_props);
@@ -122,7 +147,7 @@ pub fn switch_to_urgent_or_lru_window(
     }
 }
 
-pub fn switch_window(extra_props: Option<&HashMap<i64, ipc::ExtraProps>>) {
+pub fn switch_window(extra_props: Option<&HashMap<i64, con::ExtraProps>>) {
     let root = get_tree();
     let windows = con::get_windows(&root, true, extra_props);
 
@@ -138,7 +163,7 @@ pub enum Direction {
 
 pub fn focus_next_window_in_direction(
     dir: Direction,
-    extra_props: Option<&HashMap<i64, ipc::ExtraProps>>,
+    extra_props: Option<&HashMap<i64, con::ExtraProps>>,
 ) {
     let root = get_tree();
     let windows = con::get_windows(&root, false, None);
@@ -174,7 +199,7 @@ pub fn focus_next_window_in_direction(
     }
 }
 
-pub fn switch_workspace(extra_props: Option<&HashMap<i64, ipc::ExtraProps>>) {
+pub fn switch_workspace(extra_props: Option<&HashMap<i64, con::ExtraProps>>) {
     let root = get_tree();
     let workspaces = con::get_workspaces(&root, false, extra_props);
 
@@ -186,7 +211,7 @@ pub fn switch_workspace(extra_props: Option<&HashMap<i64, ipc::ExtraProps>>) {
 }
 
 pub fn switch_workspace_or_window(
-    extra_props: Option<&HashMap<i64, ipc::ExtraProps>>,
+    extra_props: Option<&HashMap<i64, con::ExtraProps>>,
 ) {
     let root = get_tree();
     let workspaces = con::get_workspaces(&root, true, extra_props);
@@ -204,7 +229,7 @@ pub fn switch_workspace_or_window(
     }
 }
 
-pub fn quit_window(extra_props: Option<&HashMap<i64, ipc::ExtraProps>>) {
+pub fn quit_window(extra_props: Option<&HashMap<i64, con::ExtraProps>>) {
     let root = get_tree();
     let windows = con::get_windows(&root, true, extra_props);
 
@@ -214,7 +239,7 @@ pub fn quit_window(extra_props: Option<&HashMap<i64, ipc::ExtraProps>>) {
 }
 
 pub fn quit_workspace_or_window(
-    extra_props: Option<&HashMap<i64, ipc::ExtraProps>>,
+    extra_props: Option<&HashMap<i64, con::ExtraProps>>,
 ) {
     let root = get_tree();
     let workspaces = con::get_workspaces(&root, true, extra_props);

@@ -16,9 +16,10 @@
 //! Functions and data structures of the swayrd demon.
 
 use crate::cmds;
-use crate::ipc;
+use crate::con;
+use crate::config;
+use crate::layout;
 use crate::util;
-
 use std::collections::HashMap;
 use std::io::Read;
 use std::os::unix::net::{UnixListener, UnixStream};
@@ -26,11 +27,10 @@ use std::sync::Arc;
 use std::sync::RwLock;
 use std::thread;
 use std::time::{SystemTime, UNIX_EPOCH};
-
 use swayipc as s;
 
 pub fn run_demon() {
-    let extra_props: Arc<RwLock<HashMap<i64, ipc::ExtraProps>>> =
+    let extra_props: Arc<RwLock<HashMap<i64, con::ExtraProps>>> =
         Arc::new(RwLock::new(HashMap::new()));
     let extra_props_for_ev_handler = extra_props.clone();
 
@@ -47,8 +47,11 @@ fn connect_and_subscribe() -> s::Fallible<s::EventStream> {
 }
 
 pub fn monitor_sway_events(
-    extra_props: Arc<RwLock<HashMap<i64, ipc::ExtraProps>>>,
+    extra_props: Arc<RwLock<HashMap<i64, con::ExtraProps>>>,
 ) {
+    let config = config::load_config();
+    let layout = config.layout.unwrap_or_else(config::Layout::default);
+
     'reset: loop {
         println!("Connecting to sway for subscribing to events...");
         match connect_and_subscribe() {
@@ -67,6 +70,7 @@ pub fn monitor_sway_events(
                                 handled = handle_window_event(
                                     win_ev,
                                     extra_props_clone,
+                                    &layout,
                                 );
                             }
                             s::Event::Workspace(ws_ev) => {
@@ -99,31 +103,55 @@ pub fn monitor_sway_events(
     }
 }
 
+fn maybe_auto_tile(layout: &config::Layout) {
+    if layout.auto_tile == Some(true) {
+        println!("\nauto_tile: start");
+        layout::auto_tile(layout);
+        println!("auto_tile: end\n");
+    }
+}
+
 fn handle_window_event(
     ev: Box<s::WindowEvent>,
-    extra_props: Arc<RwLock<HashMap<i64, ipc::ExtraProps>>>,
+    extra_props: Arc<RwLock<HashMap<i64, con::ExtraProps>>>,
+    layout: &config::Layout,
 ) -> bool {
     let s::WindowEvent {
         change, container, ..
     } = *ev;
     match change {
-        s::WindowChange::New | s::WindowChange::Focus => {
+        s::WindowChange::Focus => {
+            update_last_focus_time(container.id, extra_props);
+            println!("Handled window event type {:?}", change);
+            true
+        }
+        s::WindowChange::New => {
+            maybe_auto_tile(layout);
             update_last_focus_time(container.id, extra_props);
             println!("Handled window event type {:?}", change);
             true
         }
         s::WindowChange::Close => {
             remove_extra_props(container.id, extra_props);
+            maybe_auto_tile(layout);
             println!("Handled window event type {:?}", change);
             true
         }
-        _ => false,
+        s::WindowChange::Move | s::WindowChange::Floating => {
+            maybe_auto_tile(layout);
+            println!("Handled window event type {:?}", change);
+            false // We don't affect the extra_props state here.
+        }
+        _ => {
+            println!("Unhandled window event type {:?}", change);
+            false
+        }
     }
 }
 
 fn handle_workspace_event(
     ev: Box<s::WorkspaceEvent>,
-    extra_props: Arc<RwLock<HashMap<i64, ipc::ExtraProps>>>,
+    extra_props: Arc<RwLock<HashMap<i64, con::ExtraProps>>>,
 ) -> bool {
     let s::WorkspaceEvent {
         change,
@@ -156,7 +184,7 @@ fn handle_workspace_event(
 
 fn update_last_focus_time(
     id: i64,
-    extra_props: Arc<RwLock<HashMap<i64, ipc::ExtraProps>>>,
+    extra_props: Arc<RwLock<HashMap<i64, con::ExtraProps>>>,
 ) {
     let mut write_lock = extra_props.write().unwrap();
     if let Some(wp) = write_lock.get_mut(&id) {
@@ -164,7 +192,7 @@ fn update_last_focus_time(
     } else {
         write_lock.insert(
             id,
-            ipc::ExtraProps {
+            con::ExtraProps {
                 last_focus_time: get_epoch_time_as_millis(),
             },
         );
@@ -173,7 +201,7 @@ fn update_last_focus_time(
 
 fn remove_extra_props(
     id: i64,
-    extra_props: Arc<RwLock<HashMap<i64, ipc::ExtraProps>>>,
+    extra_props: Arc<RwLock<HashMap<i64, con::ExtraProps>>>,
 ) {
     extra_props.write().unwrap().remove(&id);
 }
@@ -186,7 +214,7 @@ fn get_epoch_time_as_millis() -> u128 {
 }
 
 pub fn serve_client_requests(
-    extra_props: Arc<RwLock<HashMap<i64, ipc::ExtraProps>>>,
+    extra_props: Arc<RwLock<HashMap<i64, con::ExtraProps>>>,
 ) {
     match std::fs::remove_file(util::get_swayr_socket_path()) {
         Ok(()) => println!("Deleted stale socket from previous run."),
@@ -215,11 +243,11 @@ pub fn serve_client_requests(
 
 fn handle_client_request(
     mut stream: UnixStream,
-    extra_props: Arc<RwLock<HashMap<i64, ipc::ExtraProps>>>,
+    extra_props: Arc<RwLock<HashMap<i64, con::ExtraProps>>>,
 ) {
     let mut cmd_str = String::new();
     if stream.read_to_string(&mut cmd_str).is_ok() {
-        if let Ok(cmd) = serde_json::from_str::<ipc::SwayrCommand>(&cmd_str) {
+        if let Ok(cmd) = serde_json::from_str::<cmds::SwayrCommand>(&cmd_str) {
             cmds::exec_swayr_cmd(cmds::ExecSwayrCmdArgs {
                 cmd: &cmd,
                 extra_props,

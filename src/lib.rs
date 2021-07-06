@@ -28,5 +28,5 @@ pub mod cmds;
 pub mod con;
 pub mod config;
 pub mod demon;
-pub mod ipc;
+pub mod layout;
 pub mod util;
