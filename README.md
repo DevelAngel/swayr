@@ -148,7 +148,12 @@ window_format = '{urgency_start}<b>“{title}”</b>{urgency_end} — <i>{app_na
 workspace_format = '<b>Workspace {name}</b>   <span alpha="20000">({id})</span>'
 urgency_start = '<span background="darkred" foreground="yellow">'
 urgency_end = '</span>'
-icon_dirs = ['/usr/share/icons/Adwaita/48x48/apps', '/usr/share/icons/hicolor/48x48/apps', '/usr/share/pixmaps']
+icon_dirs = [
+    '/usr/share/icons/hicolor/scalable/apps',
+    '/usr/share/icons/Adwaita/48x48/apps',
+    '/usr/share/icons/hicolor/48x48/apps',
+    '/usr/share/pixmaps',
+]
 fallback_icon = '/usr/share/icons/gnome/48x48/apps/kwin.png'
 ```
 
