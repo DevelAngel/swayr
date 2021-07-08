@@ -30,6 +30,16 @@ pub fn auto_tile(layout: &config::Layout) {
                 .unwrap();
             for output in &tree.nodes {
                 println!("output: {:?}", output.name);
+
+                // Assert our assumption that all children of the tree's root
+                // must be outputs.
+                if output.node_type != s::NodeType::Output {
+                    panic!(
+                        "Child of Root is no Output but a {:?}",
+                        output.node_type
+                    );
+                }
+
                 let output_width = output.rect.width;
                 let min_window_width = &config_map
                     .as_ref()
