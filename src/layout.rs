@@ -51,18 +51,21 @@ pub fn auto_tile(layout: &config::Layout) {
                         con::NodeIter::new(output).filter(|n| n.is_container())
                     {
                         println!(
-                            "  container: {:?}, {} nodes",
+                            "  container: {:?}, layout {:?}, {} nodes",
                             container.node_type,
-                            container.nodes.len()
+                            container.layout,
+                            container.nodes.len(),
                         );
                         for child_win in
                             container.nodes.iter().filter(|n| n.is_window())
                         {
-                            println!("    child_win: {:?}", child_win.app_id);
                             // Width if we'd split once more.
                             let estimated_width =
                                 child_win.rect.width as f32 / 2.0;
-                            println!("estimated_width = {}", estimated_width);
+                            println!(
+                                "    child_win: {:?}, estimated_width {} px",
+                                child_win.app_id, estimated_width
+                            );
                             let split = if container.layout
                                 == s::NodeLayout::SplitH
                                 && estimated_width <= **min_window_width as f32
