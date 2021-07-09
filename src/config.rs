@@ -42,6 +42,7 @@ pub struct Format {
     pub workspace_format: Option<String>,
     pub urgency_start: Option<String>,
     pub urgency_end: Option<String>,
+    pub html_escape: Option<bool>,
     pub icon_dirs: Option<Vec<String>>,
     pub fallback_icon: Option<String>,
 }
@@ -99,6 +100,7 @@ impl Default for Format {
                  <span alpha=\"20000\">({id})</span>"
                     .to_string(),
             ),
+            html_escape: Some(true),
             urgency_start: Some(
                 "<span background=\"darkred\" foreground=\"yellow\">"
                     .to_string(),

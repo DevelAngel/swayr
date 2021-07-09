@@ -146,6 +146,7 @@ args = [
 [format]
 window_format = '{urgency_start}<b>“{title}”</b>{urgency_end} — <i>{app_name}</i> on workspace {workspace_name}   <span alpha="20000">({id})</span>'
 workspace_format = '<b>Workspace {name}</b>   <span alpha="20000">({id})</span>'
+html_escape = true
 urgency_start = '<span background="darkred" foreground="yellow">'
 urgency_end = '</span>'
 icon_dirs = [
@@ -154,7 +155,7 @@ icon_dirs = [
     '/usr/share/icons/hicolor/48x48/apps',
     '/usr/share/pixmaps',
 ]
-fallback_icon = '/usr/share/icons/gnome/48x48/apps/kwin.png'
+fallback_icon = '/usr/share/pixmaps/archlinux-logo.png'
 ```
 
 In the `[menu]` section, you can specify the menu program using the
@@ -169,16 +170,19 @@ to style the text using HTML and CSS.  The following formats are supported
 right now.
 * `window_format` defines how windows are displayed.  The placeholder `{title}`
   is replaced with the window's title, `{app_name}` with the application name,
-  `{app_icon}` with the application's icon (a path to a PNG or SVG file),
-  `{workspace_name}` with the name or number of the workspace the window is
-  shown, and `{id}` is the window's sway-internal con id.  There are also the
-  placeholders `{urcency_start}` and `{urgency_end}` which get replaced by the
-  empty string if the window has no urgency flag, and with the values of the
-  same-named formats if the window has the urgency flag set.  That makes it
-  possible to highlight urgent windows as shown in the default config.
+  `{marks}` with a comma-separated list of the window's marks, `{app_icon}`
+  with the application's icon (a path to a PNG or SVG file), `{workspace_name}`
+  with the name or number of the workspace the window is shown, and `{id}` is
+  the window's sway-internal con id.  There are also the placeholders
+  `{urcency_start}` and `{urgency_end}` which get replaced by the empty string
+  if the window has no urgency flag, and with the values of the same-named
+  formats if the window has the urgency flag set.  That makes it possible to
+  highlight urgent windows as shown in the default config.
 * `workspace_format` defines how workspaces are displayed.  There are the
   placeholders `{name}` which gets replaced by the workspace's number or name,
   and `{id}` which gets replaced by the sway-internal con id of the workspace.
+* `html_escape` defines if the strings replacing the placeholders above (except
+  for `{urgency_start}` and `{urgency_end}`) should be HTML-escaped.
 * `urgency_start` is a string which replaces the `{urgency_start}` placeholder
   in `window_format`.
 * `urgency_end` is a string which replaces the `{urgency_end}` placeholder in

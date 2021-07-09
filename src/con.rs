@@ -198,6 +198,14 @@ lazy_static! {
         regex::Regex::new("(.+)(-[0-9.]+)").unwrap();
 }
 
+fn maybe_html_escape(do_it: bool, text: &str) -> String {
+    if do_it {
+        text.replace("<", "&lt;").replace(">", "&gt;")
+    } else {
+        text.to_string()
+    }
+}
+
 impl<'a> DisplayFormat for Window<'a> {
     fn format_for_display(&self, cfg: &cfg::Config) -> String {
         let default_format = cfg::Format::default();
@@ -216,6 +224,11 @@ impl<'a> DisplayFormat for Window<'a> {
             .as_ref()
             .and_then(|f| f.urgency_end.as_ref())
             .unwrap_or_else(|| default_format.urgency_end.as_ref().unwrap());
+        let html_escape = cfg
+            .format
+            .as_ref()
+            .and_then(|f| f.html_escape)
+            .unwrap_or_else(|| default_format.html_escape.unwrap());
         let icon_dirs = cfg
             .format
             .as_ref()
@@ -247,10 +260,20 @@ impl<'a> DisplayFormat for Window<'a> {
                     ""
                 },
             )
-            .replace("{app_name}", self.get_app_name())
+            .replace(
+                "{app_name}",
+                &maybe_html_escape(html_escape, self.get_app_name()),
+            )
             .replace(
                 "{workspace_name}",
-                self.workspace.name.as_ref().unwrap().as_str(),
+                &maybe_html_escape(
+                    html_escape,
+                    self.workspace.name.as_ref().unwrap().as_str(),
+                ),
+            )
+            .replace(
+                "{marks}",
+                &maybe_html_escape(html_escape, &self.node.marks.join(", ")),
             )
             .replace(
                 "{app_icon}",
@@ -266,7 +289,10 @@ impl<'a> DisplayFormat for Window<'a> {
                     .unwrap_or_else(String::new)
                     .as_str(),
             )
-            .replace("{title}", self.get_title())
+            .replace(
+                "{title}",
+                &maybe_html_escape(html_escape, self.get_title()),
+            )
     }
 }
 
@@ -462,8 +488,13 @@ impl<'a> DisplayFormat for Workspace<'a> {
             .unwrap_or_else(|| {
                 default_format.workspace_format.as_ref().unwrap()
             });
+        let html_escape = cfg
+            .format
+            .as_ref()
+            .and_then(|f| f.html_escape)
+            .unwrap_or_else(|| default_format.html_escape.unwrap());
 
         fmt.replace("{id}", format!("{}", self.get_id()).as_str())
-            .replace("{name}", self.get_name())
+            .replace("{name}", &maybe_html_escape(html_escape, self.get_name()))
     }
 }
