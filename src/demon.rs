@@ -121,6 +121,7 @@ fn handle_window_event(
     } = *ev;
     match change {
         s::WindowChange::Focus => {
+            maybe_auto_tile(layout);
             update_last_focus_time(container.id, extra_props);
             println!("Handled window event type {:?}", change);
             true
