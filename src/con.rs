@@ -200,7 +200,9 @@ lazy_static! {
 
 fn maybe_html_escape(do_it: bool, text: &str) -> String {
     if do_it {
-        text.replace("<", "&lt;").replace(">", "&gt;")
+        text.replace("<", "&lt;")
+            .replace(">", "&gt;")
+            .replace("&", "&amp;")
     } else {
         text.to_string()
     }
