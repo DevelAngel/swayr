@@ -210,42 +210,21 @@ fn maybe_html_escape(do_it: bool, text: &str) -> String {
 
 impl<'a> DisplayFormat for Window<'a> {
     fn format_for_display(&self, cfg: &cfg::Config) -> String {
-        let default_format = cfg::Format::default();
-        let fmt = cfg
-            .format
-            .as_ref()
-            .and_then(|f| f.window_format.as_ref())
-            .unwrap_or_else(|| default_format.window_format.as_ref().unwrap());
-        let urgency_start = cfg
-            .format
-            .as_ref()
-            .and_then(|f| f.urgency_start.as_ref())
-            .unwrap_or_else(|| default_format.urgency_start.as_ref().unwrap());
-        let urgency_end = cfg
-            .format
-            .as_ref()
-            .and_then(|f| f.urgency_end.as_ref())
-            .unwrap_or_else(|| default_format.urgency_end.as_ref().unwrap());
-        let html_escape = cfg
-            .format
-            .as_ref()
-            .and_then(|f| f.html_escape)
-            .unwrap_or_else(|| default_format.html_escape.unwrap());
-        let icon_dirs = cfg
-            .format
-            .as_ref()
-            .and_then(|f| f.icon_dirs.as_ref())
-            .unwrap_or_else(|| default_format.icon_dirs.as_ref().unwrap());
+        let window_format = cfg.get_format_window_format();
+        let urgency_start = cfg.get_format_urgency_start();
+        let urgency_end = cfg.get_format_urgency_end();
+        let html_escape = cfg.get_format_html_escape();
+        let icon_dirs = cfg.get_format_icon_dirs();
         // fallback_icon has no default value.
-        let fallback_icon: Option<&String> =
-            cfg.format.as_ref().and_then(|f| f.fallback_icon.as_ref());
+        let fallback_icon = cfg.get_format_fallback_icon();
 
         // Some apps report, e.g., Gimp-2.10 but the icon is still named
         // gimp.png.
         let app_name_no_version =
             APP_NAME_AND_VERSION_RX.replace(self.get_app_name(), "$1");
 
-        fmt.replace("{id}", format!("{}", self.get_id()).as_str())
+        window_format
+            .replace("{id}", format!("{}", self.get_id()).as_str())
             .replace(
                 "{urgency_start}",
                 if self.is_urgent() {
@@ -279,15 +258,17 @@ impl<'a> DisplayFormat for Window<'a> {
             )
             .replace(
                 "{app_icon}",
-                util::get_icon(self.get_app_name(), icon_dirs)
-                    .or_else(|| util::get_icon(&app_name_no_version, icon_dirs))
+                util::get_icon(self.get_app_name(), &icon_dirs)
+                    .or_else(|| {
+                        util::get_icon(&app_name_no_version, &icon_dirs)
+                    })
                     .or_else(|| {
                         util::get_icon(
                             &app_name_no_version.to_lowercase(),
-                            icon_dirs,
+                            &icon_dirs,
                         )
                     })
-                    .or_else(|| fallback_icon.map(|f| f.to_string()))
+                    .or(fallback_icon)
                     .unwrap_or_else(String::new)
                     .as_str(),
             )
@@ -482,19 +463,8 @@ impl PartialOrd for Workspace<'_> {
 
 impl<'a> DisplayFormat for Workspace<'a> {
     fn format_for_display(&self, cfg: &cfg::Config) -> String {
-        let default_format = cfg::Format::default();
-        let fmt = cfg
-            .format
-            .as_ref()
-            .and_then(|f| f.workspace_format.as_ref())
-            .unwrap_or_else(|| {
-                default_format.workspace_format.as_ref().unwrap()
-            });
-        let html_escape = cfg
-            .format
-            .as_ref()
-            .and_then(|f| f.html_escape)
-            .unwrap_or_else(|| default_format.html_escape.unwrap());
+        let fmt = cfg.get_format_workspace_format();
+        let html_escape = cfg.get_format_html_escape();
 
         fmt.replace("{id}", format!("{}", self.get_id()).as_str())
             .replace("{name}", &maybe_html_escape(html_escape, self.get_name()))

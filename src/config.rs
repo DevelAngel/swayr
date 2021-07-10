@@ -25,32 +25,122 @@ use std::path::Path;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Config {
-    pub menu: Option<Menu>,
-    pub format: Option<Format>,
-    pub layout: Option<Layout>,
+    menu: Option<Menu>,
+    format: Option<Format>,
+    layout: Option<Layout>,
+}
+
+impl Config {
+    pub fn get_menu_executable(&self) -> String {
+        self.menu
+            .as_ref()
+            .and_then(|m| m.executable.clone())
+            .or_else(|| Menu::default().executable)
+            .expect("No menu.executable defined!")
+    }
+
+    pub fn get_menu_args(&self) -> Vec<String> {
+        self.menu
+            .as_ref()
+            .and_then(|m| m.args.clone())
+            .or_else(|| Menu::default().args)
+            .expect("No menu.args defined.")
+    }
+
+    pub fn get_format_window_format(&self) -> String {
+        self.format
+            .as_ref()
+            .and_then(|f| f.window_format.clone())
+            .or_else(|| Format::default().window_format)
+            .expect("No format.window_format defined.")
+    }
+
+    pub fn get_format_workspace_format(&self) -> String {
+        self.format
+            .as_ref()
+            .and_then(|f| f.workspace_format.clone())
+            .or_else(|| Format::default().workspace_format)
+            .expect("No format.workspace_format defined.")
+    }
+
+    pub fn get_format_urgency_start(&self) -> String {
+        self.format
+            .as_ref()
+            .and_then(|f| f.urgency_start.clone())
+            .or_else(|| Format::default().urgency_start)
+            .expect("No format.urgency_start defined.")
+    }
+
+    pub fn get_format_urgency_end(&self) -> String {
+        self.format
+            .as_ref()
+            .and_then(|f| f.urgency_end.clone())
+            .or_else(|| Format::default().urgency_end)
+            .expect("No format.urgency_end defined.")
+    }
+
+    pub fn get_format_html_escape(&self) -> bool {
+        self.format
+            .as_ref()
+            .and_then(|f| f.html_escape)
+            .or_else(|| Format::default().html_escape)
+            .expect("No format.html_escape defined.")
+    }
+
+    pub fn get_format_icon_dirs(&self) -> Vec<String> {
+        self.format
+            .as_ref()
+            .and_then(|f| f.icon_dirs.clone())
+            .or_else(|| Format::default().icon_dirs)
+            .expect("No format.icon_dirs defined.")
+    }
+
+    pub fn get_format_fallback_icon(&self) -> Option<String> {
+        self.format
+            .as_ref()
+            .and_then(|f| f.fallback_icon.clone())
+            .or_else(|| Format::default().fallback_icon)
+    }
+
+    pub fn is_layout_auto_tile(&self) -> bool {
+        self.layout
+            .as_ref()
+            .and_then(|l| l.auto_tile)
+            .or_else(|| Layout::default().auto_tile)
+            .expect("No layout.auto_tile defined.")
+    }
+
+    pub fn get_layout_auto_tile_min_window_width_per_output_width_as_map(
+        &self,
+    ) -> HashMap<i32, i32> {
+        self.layout.as_ref()
+            .and_then(|l|l.auto_tile_min_window_width_per_output_width_as_map())
+            .or_else(|| Layout::default().auto_tile_min_window_width_per_output_width_as_map())
+            .expect("No layout.auto_tile_min_window_width_per_output_width defined.")
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Menu {
-    pub executable: Option<String>,
-    pub args: Option<Vec<String>>,
+    executable: Option<String>,
+    args: Option<Vec<String>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Format {
-    pub window_format: Option<String>,
-    pub workspace_format: Option<String>,
-    pub urgency_start: Option<String>,
-    pub urgency_end: Option<String>,
-    pub html_escape: Option<bool>,
-    pub icon_dirs: Option<Vec<String>>,
-    pub fallback_icon: Option<String>,
+    window_format: Option<String>,
+    workspace_format: Option<String>,
+    urgency_start: Option<String>,
+    urgency_end: Option<String>,
+    html_escape: Option<bool>,
+    icon_dirs: Option<Vec<String>>,
+    fallback_icon: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Layout {
-    pub auto_tile: Option<bool>,
-    pub auto_tile_min_window_width_per_output_width: Option<Vec<[i32; 2]>>,
+    auto_tile: Option<bool>,
+    auto_tile_min_window_width_per_output_width: Option<Vec<[i32; 2]>>,
 }
 
 impl Layout {

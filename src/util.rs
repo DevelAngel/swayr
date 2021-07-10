@@ -212,27 +212,19 @@ where
         map.insert(s, c);
     }
 
-    let menu_default = cfg::Menu::default();
-    let menu_exec = cfg
-        .menu
-        .as_ref()
-        .and_then(|l| l.executable.as_ref())
-        .unwrap_or_else(|| menu_default.executable.as_ref().unwrap());
+    let menu_exec = cfg.get_menu_executable();
     let args: Vec<String> = cfg
-        .menu
-        .as_ref()
-        .and_then(|l| l.args.as_ref())
-        .unwrap_or_else(|| menu_default.args.as_ref().unwrap())
+        .get_menu_args()
         .iter()
         .map(|a| a.replace("{prompt}", prompt))
         .collect();
 
-    let mut menu = proc::Command::new(menu_exec)
+    let mut menu = proc::Command::new(&menu_exec)
         .args(args)
         .stdin(proc::Stdio::piped())
         .stdout(proc::Stdio::piped())
         .spawn()
-        .expect(&("Error running ".to_owned() + menu_exec));
+        .expect(&("Error running ".to_owned() + &menu_exec));
 
     {
         let stdin = menu

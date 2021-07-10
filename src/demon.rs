@@ -50,7 +50,6 @@ pub fn monitor_sway_events(
     extra_props: Arc<RwLock<HashMap<i64, con::ExtraProps>>>,
 ) {
     let config = config::load_config();
-    let layout = config.layout.unwrap_or_else(config::Layout::default);
 
     'reset: loop {
         println!("Connecting to sway for subscribing to events...");
@@ -70,7 +69,7 @@ pub fn monitor_sway_events(
                                 handled = handle_window_event(
                                     win_ev,
                                     extra_props_clone,
-                                    &layout,
+                                    &config,
                                 );
                             }
                             s::Event::Workspace(ws_ev) => {
@@ -103,43 +102,35 @@ pub fn monitor_sway_events(
     }
 }
 
-fn maybe_auto_tile(layout: &config::Layout) {
-    if layout.auto_tile == Some(true) {
-        println!("\nauto_tile: start");
-        layout::auto_tile(layout);
-        println!("auto_tile: end\n");
-    }
-}
-
 fn handle_window_event(
     ev: Box<s::WindowEvent>,
     extra_props: Arc<RwLock<HashMap<i64, con::ExtraProps>>>,
-    layout: &config::Layout,
+    config: &config::Config,
 ) -> bool {
     let s::WindowEvent {
         change, container, ..
     } = *ev;
     match change {
         s::WindowChange::Focus => {
-            maybe_auto_tile(layout);
+            layout::maybe_auto_tile(config);
             update_last_focus_time(container.id, extra_props);
             println!("Handled window event type {:?}", change);
             true
         }
         s::WindowChange::New => {
-            maybe_auto_tile(layout);
+            layout::maybe_auto_tile(config);
             update_last_focus_time(container.id, extra_props);
             println!("Handled window event type {:?}", change);
             true
         }
         s::WindowChange::Close => {
             remove_extra_props(container.id, extra_props);
-            maybe_auto_tile(layout);
+            layout::maybe_auto_tile(config);
             println!("Handled window event type {:?}", change);
             true
         }
         s::WindowChange::Move | s::WindowChange::Floating => {
-            maybe_auto_tile(layout);
+            layout::maybe_auto_tile(config);
             println!("Handled window event type {:?}", change);
             false // We don't affect the extra_props state here.
         }

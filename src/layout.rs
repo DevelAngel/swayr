@@ -20,14 +20,12 @@ use crate::con::NodeMethods;
 use crate::config;
 use swayipc as s;
 
-pub fn auto_tile(layout: &config::Layout) {
+pub fn auto_tile(cfg: &config::Config) {
     if let Ok(mut con) = s::Connection::new() {
         if let Ok(tree) = con.get_tree() {
-            let config_map =
-                layout.auto_tile_min_window_width_per_output_width_as_map();
-            let default_map = config::Layout::default()
-                .auto_tile_min_window_width_per_output_width_as_map()
-                .unwrap();
+            let config_map = cfg
+                .get_layout_auto_tile_min_window_width_per_output_width_as_map(
+                );
             for output in &tree.nodes {
                 println!("output: {:?}", output.name);
 
@@ -41,10 +39,7 @@ pub fn auto_tile(layout: &config::Layout) {
                 }
 
                 let output_width = output.rect.width;
-                let min_window_width = &config_map
-                    .as_ref()
-                    .unwrap_or(&default_map)
-                    .get(&output_width);
+                let min_window_width = &config_map.get(&output_width);
 
                 if let Some(min_window_width) = min_window_width {
                     for container in
@@ -113,5 +108,13 @@ pub fn auto_tile(layout: &config::Layout) {
         }
     } else {
         eprintln!("Couldn't get connection for auto_tile");
+    }
+}
+
+pub fn maybe_auto_tile(config: &config::Config) {
+    if config.is_layout_auto_tile() {
+        println!("\nauto_tile: start");
+        auto_tile(config);
+        println!("auto_tile: end\n");
     }
 }
