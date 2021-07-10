@@ -18,14 +18,12 @@
 use crate::con;
 use crate::con::NodeMethods;
 use crate::config;
+use std::collections::HashMap;
 use swayipc as s;
 
-pub fn auto_tile(cfg: &config::Config) {
+pub fn auto_tile(res_to_min_width: &HashMap<i32, i32>) {
     if let Ok(mut con) = s::Connection::new() {
         if let Ok(tree) = con.get_tree() {
-            let config_map = cfg
-                .get_layout_auto_tile_min_window_width_per_output_width_as_map(
-                );
             for output in &tree.nodes {
                 println!("output: {:?}", output.name);
 
@@ -39,12 +37,15 @@ pub fn auto_tile(cfg: &config::Config) {
                 }
 
                 let output_width = output.rect.width;
-                let min_window_width = &config_map.get(&output_width);
+                let min_window_width = &res_to_min_width.get(&output_width);
 
                 if let Some(min_window_width) = min_window_width {
                     for container in
                         con::NodeIter::new(output).filter(|n| n.is_container())
                     {
+                        if container.is_scratchpad() {
+                            continue;
+                        }
                         println!(
                             "  container: {:?}, layout {:?}, {} nodes",
                             container.node_type,
@@ -58,7 +59,7 @@ pub fn auto_tile(cfg: &config::Config) {
                             let estimated_width =
                                 child_win.rect.width as f32 / 2.0;
                             println!(
-                                "    child_win: {:?}, estimated_width {} px",
+                                "    child_win: {:?}, estimated width after splith {} px",
                                 child_win.app_id, estimated_width
                             );
                             let split = if container.layout
@@ -114,7 +115,11 @@ pub fn auto_tile(cfg: &config::Config) {
 pub fn maybe_auto_tile(config: &config::Config) {
     if config.is_layout_auto_tile() {
         println!("\nauto_tile: start");
-        auto_tile(config);
+        auto_tile(
+            &config
+                .get_layout_auto_tile_min_window_width_per_output_width_as_map(
+                ),
+        );
         println!("auto_tile: end\n");
     }
 }
