@@ -216,7 +216,10 @@ impl<'a> DisplayFormat for Window<'a> {
         let html_escape = cfg.get_format_html_escape();
         let icon_dirs = cfg.get_format_icon_dirs();
         // fallback_icon has no default value.
-        let fallback_icon = cfg.get_format_fallback_icon();
+        let fallback_icon: Option<Box<std::path::Path>> = cfg
+            .get_format_fallback_icon()
+            .as_ref()
+            .map(|i| std::path::Path::new(i).to_owned().into_boxed_path());
 
         // Some apps report, e.g., Gimp-2.10 but the icon is still named
         // gimp.png.
@@ -269,6 +272,7 @@ impl<'a> DisplayFormat for Window<'a> {
                         )
                     })
                     .or(fallback_icon)
+                    .map(|i| i.to_string_lossy().into_owned())
                     .unwrap_or_else(String::new)
                     .as_str(),
             )

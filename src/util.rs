@@ -19,6 +19,7 @@ use crate::config as cfg;
 use lazy_static::lazy_static;
 use std::collections::HashMap;
 use std::io::{BufRead, Write};
+use std::path as p;
 use std::process as proc;
 
 pub fn get_swayr_socket_path() -> String {
@@ -43,25 +44,40 @@ pub fn get_swayr_socket_path() -> String {
     )
 }
 
-fn desktop_entries() -> Vec<String> {
-    let mut dirs = vec![];
-    if let Some(dd) = directories::BaseDirs::new()
-        .map(|b| b.data_local_dir().to_string_lossy().to_string())
-    {
-        dirs.push(dd);
+fn desktop_entry_folders() -> Vec<Box<p::Path>> {
+    let mut dirs: Vec<Box<p::Path>> = vec![];
+    if let Some(dd) = directories::BaseDirs::new() {
+        dirs.push(dd.data_local_dir().to_path_buf().into_boxed_path());
     }
-    dirs.push(String::from("/usr/share/applications/"));
+    dirs.push(
+        p::Path::new("/usr/share/applications/")
+            .to_path_buf()
+            .into_boxed_path(),
+    );
+    if let Ok(xdg_data_dirs) = std::env::var("XDG_DATA_DIRS") {
+        for mut dir in std::env::split_paths(&xdg_data_dirs) {
+            dir.push("applications/");
+            dirs.push(dir.into_boxed_path());
+        }
+    }
 
+    dirs.sort();
+    dirs.dedup();
+
+    dirs
+}
+
+fn desktop_entries() -> Vec<Box<p::Path>> {
     let mut entries = vec![];
-    for dir in dirs {
-        if let Ok(readdir) = std::fs::read_dir(dir) {
+    for dir in desktop_entry_folders() {
+        if let Ok(readdir) = dir.read_dir() {
             for entry in readdir.flatten() {
                 let path = entry.path();
                 if path.is_file()
                     && path.extension().map(|ext| ext == "desktop")
                         == Some(true)
                 {
-                    entries.push(path.as_path().to_string_lossy().to_string());
+                    entries.push(path.to_path_buf().into_boxed_path());
                 }
             }
         }
@@ -69,22 +85,30 @@ fn desktop_entries() -> Vec<String> {
     entries
 }
 
-fn find_icon(icon_name: &str, icon_dirs: &[String]) -> Option<String> {
-    if std::path::Path::new(icon_name).is_file() {
-        return Some(String::from(icon_name));
+fn find_icon(icon_name: &str, icon_dirs: &[String]) -> Option<Box<p::Path>> {
+    let p = p::Path::new(icon_name);
+    if p.is_file() {
+        println!("(1) Icon name '{}' -> {}", icon_name, p.display());
+        return Some(p.to_path_buf().into_boxed_path());
     }
 
     for dir in icon_dirs {
         for ext in &["png", "svg"] {
-            let mut pb = std::path::PathBuf::from(dir);
+            let mut pb = p::PathBuf::from(dir);
             pb.push(icon_name.to_owned() + "." + ext);
             let icon_file = pb.as_path();
             if icon_file.is_file() {
-                return Some(String::from(icon_file.to_str().unwrap()));
+                println!(
+                    "(2) Icon name '{}' -> {}",
+                    icon_name,
+                    icon_file.display()
+                );
+                return Some(icon_file.to_path_buf().into_boxed_path());
             }
         }
     }
 
+    println!("(3) No icon for name {}", icon_name);
     None
 }
 
@@ -95,14 +119,16 @@ lazy_static! {
         regex::Regex::new(r"^(?:[a-zA-Z0-9-]+\.)+([a-zA-Z0-9-]+)$").unwrap();
 }
 
-fn get_app_id_to_icon_map(icon_dirs: &[String]) -> HashMap<String, String> {
-    let mut map = HashMap::new();
+fn get_app_id_to_icon_map(
+    icon_dirs: &[String],
+) -> HashMap<String, Box<p::Path>> {
+    let mut map: HashMap<String, Box<p::Path>> = HashMap::new();
 
     for e in desktop_entries() {
         if let Ok(f) = std::fs::File::open(&e) {
             let buf = std::io::BufReader::new(f);
             let mut wm_class: Option<String> = None;
-            let mut icon: Option<String> = None;
+            let mut icon: Option<Box<p::Path>> = None;
 
             // Get App-Id and Icon from desktop file.
             for line in buf.lines() {
@@ -135,11 +161,7 @@ fn get_app_id_to_icon_map(icon_dirs: &[String]) -> HashMap<String, String> {
                 // Some apps have a reverse domain name desktop file, e.g.,
                 // org.gnome.eog.desktop but reports as just eog.
                 let desktop_file_name = String::from(
-                    std::path::Path::new(&e)
-                        .with_extension("")
-                        .file_name()
-                        .unwrap()
-                        .to_string_lossy(),
+                    e.with_extension("").file_name().unwrap().to_string_lossy(),
                 );
                 if let Some(caps) =
                     REV_DOMAIN_NAME_RX.captures(&desktop_file_name)
@@ -157,22 +179,27 @@ fn get_app_id_to_icon_map(icon_dirs: &[String]) -> HashMap<String, String> {
         }
     }
 
+    println!(
+        "Desktop entries to icon files ({} entries):\n{:#?}",
+        map.len(),
+        map
+    );
     map
 }
 
 lazy_static! {
-    static ref APP_ID_TO_ICON_MAP: std::sync::Mutex<Option<HashMap<String, String>>> =
+    static ref APP_ID_TO_ICON_MAP: std::sync::Mutex<Option<HashMap<String, Box<p::Path>>>> =
         std::sync::Mutex::new(None);
 }
 
-pub fn get_icon(app_id: &str, icon_dirs: &[String]) -> Option<String> {
+pub fn get_icon(app_id: &str, icon_dirs: &[String]) -> Option<Box<p::Path>> {
     let mut opt = APP_ID_TO_ICON_MAP.lock().unwrap();
 
     if opt.is_none() {
         opt.replace(get_app_id_to_icon_map(icon_dirs));
     }
 
-    opt.as_ref().unwrap().get(app_id).map(String::from)
+    opt.as_ref().unwrap().get(app_id).map(|i| i.to_owned())
 }
 
 #[test]
