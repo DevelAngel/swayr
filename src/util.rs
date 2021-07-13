@@ -46,14 +46,18 @@ pub fn get_swayr_socket_path() -> String {
 
 fn desktop_entry_folders() -> Vec<Box<p::Path>> {
     let mut dirs: Vec<Box<p::Path>> = vec![];
+
+    // XDG_DATA_HOME/applications
     if let Some(dd) = directories::BaseDirs::new() {
         dirs.push(dd.data_local_dir().to_path_buf().into_boxed_path());
     }
-    dirs.push(
-        p::Path::new("/usr/share/applications/")
-            .to_path_buf()
-            .into_boxed_path(),
-    );
+
+    let default_dirs =
+        ["/usr/local/share/applications/", "/usr/share/applications/"];
+    for dir in default_dirs {
+        dirs.push(p::Path::new(dir).to_path_buf().into_boxed_path());
+    }
+
     if let Ok(xdg_data_dirs) = std::env::var("XDG_DATA_DIRS") {
         for mut dir in std::env::split_paths(&xdg_data_dirs) {
             dir.push("applications/");
