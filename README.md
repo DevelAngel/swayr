@@ -247,16 +247,16 @@ exact width.
 If `auto_tile` is enabled, swayr will automatically split either vertically or
 horizontally according to this algorithm:
 - For all outputs:
-  - For all (nested) containers on that output (except the scratchpad):
+  + For all (nested) containers on that output (except the scratchpad):
     - For all child windows of that container:
-      - If the container is split horizontally and creating another window
+      + If the container is split horizontally and creating another window
         would make the current child window smaller than the minimum width,
         execute `split vertical` (the `swaymsg` command over IPC) on the child.
-      - Else if the container is split vertically and now there is enough space
+      + Else if the container is split vertically and now there is enough space
         so that creating another window would still leave the current child
         window above or equal to the minimum width, call `split horizontal` on
         the child.
-      - Otherwise, do nothing for this container.  This means that stacked or
+      + Otherwise, do nothing for this container.  This means that stacked or
         tabbed containers will never be affected by auto-tiling.
         
 There is one caveat: it would be nice to also trigger auto-tiling when windows
