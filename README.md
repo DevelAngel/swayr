@@ -156,12 +156,32 @@ icon_dirs = [
     '/usr/share/pixmaps',
 ]
 fallback_icon = '/usr/share/pixmaps/archlinux-logo.png'
+
+[layout]
+auto_tile = false
+auto_tile_min_window_width_per_output_width = [
+    [1024, 500],
+    [1280, 600],
+    [1400, 680],
+    [1440, 700],
+    [1600, 780],
+    [1920, 920],
+    [2560, 1000],
+    [3440, 1000],
+    [4096, 1200],
+]
 ```
+
+In the following, all sections are explained.
+
+### The menu section
 
 In the `[menu]` section, you can specify the menu program using the
 `executable` name or full path, and the `args` (flags and options) it should
 get passed.  If some argument contains the placeholder `{prompt}`, it is
 replaced with a prompt such as "Switch to window" depending on context.
+
+### The format section
 
 In the `[format]` section, format strings are specified defining how selection
 choises are to be layed out.  `wofi` supports [pango
@@ -198,9 +218,52 @@ recommended to include the `{id}` placeholder at least in `window_format`.
 Otherwise, e.g., two terminals (of the same terminal app) with the same working
 directory (and therefore, the same title) wouldn't be distinguishable.
 
-Hint: `wofi` supports icons with the syntax `img:<image-file>:text:<text>`, so
-a suitable `window_format` with application icon should start with
-`img:{app_icon}:text:`.
+**Hint for wofi**: `wofi` supports icons with the syntax
+`'img:<image-file>:text:<text>'`, so a suitable `window_format` with
+application icon should start with `img:{app_icon}:text:`.
+
+**Hint for rofi**: `rofi` supports icons with the syntax
+`"<text>\u0000icon\u00001f<image-file>"`, so a suitable `window_format` with
+application icon should end with `"\u0000icon\u001f<image-file>"`.  Also note
+that you must enclose your `window_format` value with double-quotes and not
+with single-quotes.  Singe-quote strings are literal strings in
+[TOML](https://toml.io/en/v1.0.0#string) where no escape-sequences are
+processed whereas for double-quoted strings (so-called basic strings)
+escape-sequences are processed.  `rofi` requires a null character and a
+PARAGRAPH SEPARATOR for image sequences.
+
+### The layout section
+
+In the `[layout]` section, you can enable auto-tiling by setting `auto_tile` to
+`true` (the default is `false`).  The option
+`auto_tile_min_window_width_per_output_width` defines the minimum width in
+pixels which your windows should have per output width.  For example, the
+example setting above says that on an output which is 1600 pixels wide, each
+window should have at least a width of 780 pixels, thus there may be at most
+two side-by-side windows (Caution, include your borders and gaps in your
+calculation!).  There will be no auto-tiling doesn't include your output's
+exact width.
+
+If `auto_tile` is enabled, swayr will automatically split either vertically or
+horizontally according to this algorithm:
+- For all outputs:
+  - For all (nested) containers on that output (except the scratchpad):
+    - For all child windows of that container:
+      - If the container is split horizontally and creating another window
+        would make the current child window smaller than the minimum width,
+        execute `split vertical` (the `swaymsg` command over IPC) on the child.
+      - Else if the container is split vertically and now there is enough space
+        so that creating another window would still leave the current child
+        window above or equal to the minimum width, call `split horizontal` on
+        the child.
+      - Otherwise, do nothing for this container.  This means that stacked or
+        tabbed containers will never be affected by auto-tiling.
+        
+There is one caveat: it would be nice to also trigger auto-tiling when windows
+or containers are resized but unfortunately, resizing doesn't issue any events
+over IPC.  Therefore, auto-tiling is triggered by new-window events,
+close-events, move-events, floating-events, and also focus-events.  The latter
+are a workaround and wouldn't be required if there were resize-events.
 
 ## Questions & Patches
 
