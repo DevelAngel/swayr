@@ -258,7 +258,7 @@ horizontally according to this algorithm:
         the child.
       + Otherwise, do nothing for this container.  This means that stacked or
         tabbed containers will never be affected by auto-tiling.
-        
+
 There is one caveat: it would be nice to also trigger auto-tiling when windows
 or containers are resized but unfortunately, resizing doesn't issue any events
 over IPC.  Therefore, auto-tiling is triggered by new-window events,
