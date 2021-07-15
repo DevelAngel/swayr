@@ -30,6 +30,22 @@ pub struct Config {
     layout: Option<Layout>,
 }
 
+fn tilde_expand_file_names(file_names: Vec<String>) -> Vec<String> {
+    let mut ret = vec![];
+    for file_name in file_names {
+        if file_name.starts_with('~') {
+            ret.push(file_name.replacen(
+                "~",
+                &std::env::var("HOME").expect("$HOME not defined"),
+                1,
+            ));
+        } else {
+            ret.push(file_name)
+        }
+    }
+    ret
+}
+
 impl Config {
     pub fn get_menu_executable(&self) -> String {
         self.menu
@@ -92,6 +108,7 @@ impl Config {
             .as_ref()
             .and_then(|f| f.icon_dirs.clone())
             .or_else(|| Format::default().icon_dirs)
+            .map(tilde_expand_file_names)
             .expect("No format.icon_dirs defined.")
     }
 
