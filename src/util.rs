@@ -240,6 +240,16 @@ where
     for c in choices {
         let s = c.format_for_display(&cfg);
         strs.push(s.clone());
+
+        // Workaround: rofi has "\u0000icon\u001f/path/to/icon.png" as image
+        // escape sequence which comes after the actual text but returns only
+        // the text, not the escape sequence.
+        if s.contains('\0') {
+            if let Some(prefix) = s.split('\0').next() {
+                map.insert(prefix.to_string(), c);
+            }
+        }
+
         map.insert(s, c);
     }
 
