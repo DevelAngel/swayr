@@ -16,38 +16,73 @@
 //! Functions and data structures of the swayr client.
 
 use crate::con;
+use crate::con::NodeMethods;
 use crate::config as cfg;
+use crate::layout;
 use crate::util;
 use crate::util::DisplayFormat;
+use clap::Clap;
+use rand;
+use rand::prelude::SliceRandom;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::RwLock;
 use swayipc as s;
 
-use clap::Clap;
+#[derive(Clap, Debug, Deserialize, Serialize, PartialEq)]
+pub enum ConsiderFloating {
+    /// Include floating windows.
+    IncludeFloating,
+    /// Exclude floating windows.
+    ExcludeFloating,
+}
 
 #[derive(Clap, Debug, Deserialize, Serialize)]
 pub enum SwayrCommand {
     /// Switch to next urgent window (if any) or to last recently used window.
     SwitchToUrgentOrLRUWindow,
-    /// Focus the selected window
+    /// Focus the selected window.
     SwitchWindow,
     /// Focus the next window.
     NextWindow,
     /// Focus the previous window.
     PrevWindow,
-    /// Quit the selected window
+    /// Quit the selected window.
     QuitWindow,
-    /// Switch to the selected workspace
+    /// Switch to the selected workspace.
     SwitchWorkspace,
-    /// Switch to the selected workspace or focus the selected window
+    /// Switch to the selected workspace or focus the selected window.
     SwitchWorkspaceOrWindow,
-    /// Quit all windows of selected workspace or the selected window
+    /// Quit all windows of selected workspace or the selected window.
     QuitWorkspaceOrWindow,
-    /// Select and execute a swaymsg command
+    /// Tab or shuffle-and-tile the windows on the current workspace, including
+    /// or excluding floating windows.
+    ToggleTabShuffleTileWorkspace {
+        #[clap(subcommand)]
+        floating: ConsiderFloating,
+    },
+    /// Tiles the windows on the current workspace, including or excluding
+    /// floating windows.
+    TileWorkspace {
+        #[clap(subcommand)]
+        floating: ConsiderFloating,
+    },
+    /// Tabs the windows on the current workspace, including or excluding
+    /// floating windows.
+    TabWorkspace {
+        #[clap(subcommand)]
+        floating: ConsiderFloating,
+    },
+    /// Shuffles and tiles the windows on the current workspace, including or
+    /// excluding floating windows.
+    ShuffleTileWorkspace {
+        #[clap(subcommand)]
+        floating: ConsiderFloating,
+    },
+    /// Select and execute a swaymsg command.
     ExecuteSwaymsgCommand,
-    /// Select and execute a swayr command
+    /// Select and execute a swayr command.
     ExecuteSwayrCommand,
 }
 
@@ -90,6 +125,24 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
         SwayrCommand::QuitWorkspaceOrWindow => {
             quit_workspace_or_window(Some(&*props.read().unwrap()))
         }
+        SwayrCommand::TileWorkspace { floating } => tile_current_workspace(
+            floating == &ConsiderFloating::IncludeFloating,
+            false,
+        ),
+        SwayrCommand::TabWorkspace { floating } => tab_current_workspace(
+            floating == &ConsiderFloating::IncludeFloating,
+        ),
+        SwayrCommand::ShuffleTileWorkspace { floating } => {
+            tile_current_workspace(
+                floating == &ConsiderFloating::IncludeFloating,
+                true,
+            )
+        }
+        SwayrCommand::ToggleTabShuffleTileWorkspace { floating } => {
+            toggle_tab_tile_current_workspace(
+                floating == &ConsiderFloating::IncludeFloating,
+            )
+        }
         SwayrCommand::ExecuteSwaymsgCommand => exec_swaymsg_command(),
         SwayrCommand::ExecuteSwayrCommand => {
             if let Some(c) = util::select_from_menu(
@@ -102,6 +155,30 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
                     SwayrCommand::SwitchWorkspace,
                     SwayrCommand::SwitchWorkspaceOrWindow,
                     SwayrCommand::SwitchToUrgentOrLRUWindow,
+                    SwayrCommand::ToggleTabShuffleTileWorkspace {
+                        floating: ConsiderFloating::ExcludeFloating,
+                    },
+                    SwayrCommand::ToggleTabShuffleTileWorkspace {
+                        floating: ConsiderFloating::IncludeFloating,
+                    },
+                    SwayrCommand::TileWorkspace {
+                        floating: ConsiderFloating::ExcludeFloating,
+                    },
+                    SwayrCommand::TileWorkspace {
+                        floating: ConsiderFloating::IncludeFloating,
+                    },
+                    SwayrCommand::TabWorkspace {
+                        floating: ConsiderFloating::ExcludeFloating,
+                    },
+                    SwayrCommand::TabWorkspace {
+                        floating: ConsiderFloating::IncludeFloating,
+                    },
+                    SwayrCommand::ShuffleTileWorkspace {
+                        floating: ConsiderFloating::ExcludeFloating,
+                    },
+                    SwayrCommand::ShuffleTileWorkspace {
+                        floating: ConsiderFloating::IncludeFloating,
+                    },
                     SwayrCommand::NextWindow,
                     SwayrCommand::PrevWindow,
                 ],
@@ -255,6 +332,94 @@ pub fn quit_workspace_or_window(
             }
             con::WsOrWin::Win { win } => quit_window_by_id(win.get_id()),
         }
+    }
+}
+
+fn tile_current_workspace(include_floating: bool, shuffle: bool) {
+    match layout::relayout_current_workspace(
+        include_floating,
+        Box::new(move |wins, con: &mut s::Connection| {
+            con.run_command("focus parent".to_string())?;
+            con.run_command("layout splith".to_string())?;
+
+            let mut placed_wins = vec![];
+            let mut rng = rand::thread_rng();
+            if shuffle {
+                wins.shuffle(&mut rng);
+            } else {
+                wins.reverse()
+            }
+            for win in wins {
+                std::thread::sleep(std::time::Duration::from_millis(25));
+                con.run_command(format!(
+                    "[con_id={}] move to workspace current",
+                    win.get_id()
+                ))?;
+                std::thread::sleep(std::time::Duration::from_millis(25));
+                con.run_command(format!(
+                    "[con_id={}] floating disable",
+                    win.get_id()
+                ))?;
+                placed_wins.push(win);
+                if shuffle {
+                    std::thread::sleep(std::time::Duration::from_millis(25));
+                    if let Some(win) = placed_wins.choose(&mut rng) {
+                        con.run_command(format!(
+                            "[con_id={}] focus",
+                            win.get_id()
+                        ))?;
+                    }
+                }
+            }
+            Ok(())
+        }),
+    ) {
+        Ok(_) => (),
+        Err(err) => eprintln!("Error retiling workspace: {:?}", err),
+    }
+}
+
+fn tab_current_workspace(include_floating: bool) {
+    match layout::relayout_current_workspace(
+        include_floating,
+        Box::new(move |wins, con: &mut s::Connection| {
+            con.run_command("focus parent".to_string())?;
+            con.run_command("layout tabbed".to_string())?;
+
+            let mut placed_wins = vec![];
+            wins.reverse();
+            for win in wins {
+                std::thread::sleep(std::time::Duration::from_millis(25));
+                con.run_command(format!(
+                    "[con_id={}] move to workspace current",
+                    win.get_id()
+                ))?;
+                std::thread::sleep(std::time::Duration::from_millis(25));
+                con.run_command(format!(
+                    "[con_id={}] floating disable",
+                    win.get_id()
+                ))?;
+                placed_wins.push(win);
+            }
+            Ok(())
+        }),
+    ) {
+        Ok(_) => (),
+        Err(err) => eprintln!("Error retiling workspace: {:?}", err),
+    }
+}
+
+fn toggle_tab_tile_current_workspace(include_floating: bool) {
+    let tree = get_tree();
+    let workspaces = tree.workspaces();
+    let cur_ws = workspaces
+        .iter()
+        .find(|w| con::is_current_container(w))
+        .unwrap();
+    if cur_ws.layout == s::NodeLayout::Tabbed {
+        tile_current_workspace(include_floating, true);
+    } else {
+        tab_current_workspace(include_floating);
     }
 }
 

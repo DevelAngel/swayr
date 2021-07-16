@@ -153,6 +153,10 @@ impl Window<'_> {
     pub fn is_focused(&self) -> bool {
         self.node.focused
     }
+
+    pub fn is_floating(&self) -> bool {
+        self.node.node_type == s::NodeType::FloatingCon
+    }
 }
 
 impl PartialEq for Window<'_> {
@@ -433,6 +437,14 @@ impl Workspace<'_> {
     pub fn is_scratchpad(&self) -> bool {
         self.node.is_scratchpad()
     }
+
+    pub fn is_current(&self) -> bool {
+        is_current_container(self.node)
+    }
+}
+
+pub fn is_current_container(node: &s::Node) -> bool {
+    node.focused || NodeIter::new(node).any(|c| c.focused)
 }
 
 impl PartialEq for Workspace<'_> {

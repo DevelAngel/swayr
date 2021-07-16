@@ -15,6 +15,7 @@
 
 //! Functions and data structures of the swayrd demon.
 
+use crate::cmds;
 use crate::con;
 use crate::con::NodeMethods;
 use crate::config;
@@ -121,5 +122,50 @@ pub fn maybe_auto_tile(config: &config::Config) {
                 ),
         );
         println!("auto_tile: end\n");
+    }
+}
+
+pub fn relayout_current_workspace(
+    include_floating: bool,
+    insert_win_fn: Box<
+        dyn Fn(&mut [&con::Window], &mut s::Connection) -> s::Fallible<()>,
+    >,
+) -> s::Fallible<()> {
+    let root = cmds::get_tree();
+    let workspaces = con::get_workspaces(&root, false, None);
+    if let Some(cur_ws) = workspaces.iter().find(|ws| ws.is_current()) {
+        if let Ok(mut con) = s::Connection::new() {
+            let mut moved_wins: Vec<&con::Window> = vec![];
+            let mut focused_win = None;
+            for win in &cur_ws.windows {
+                if win.is_focused() {
+                    focused_win.insert(win);
+                }
+                if !include_floating && win.is_floating() {
+                    continue;
+                }
+                moved_wins.push(win);
+                con.run_command(format!(
+                    "[con_id={}] move to scratchpad",
+                    win.get_id()
+                ))?;
+            }
+
+            insert_win_fn(moved_wins.as_mut_slice(), &mut con)?;
+            std::thread::sleep(std::time::Duration::from_millis(25));
+
+            if let Some(win) = focused_win {
+                con.run_command(format!("[con_id={}] focus", win.get_id()))?;
+            }
+            Ok(())
+        } else {
+            Err(s::Error::CommandFailed(
+                "Cannot create connection.".to_string(),
+            ))
+        }
+    } else {
+        Err(s::Error::CommandFailed(
+            "No workspace is focused.".to_string(),
+        ))
     }
 }
