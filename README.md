@@ -44,6 +44,20 @@ switch-workspace-or-window")
 
 ## Installation
 
+Some distros have packaged swayr so that you can install it using your distro's
+package manager.  Alternatively, it's easy to build and install it yourself
+using `cargo`.
+
+### Distro packages
+
+The following GNU/Linux and BSD distros package swayr.  Thanks a lot to the
+respective package maintainers!  Refer to the [repology
+site](https://repology.org/project/swayr/versions) for details.
+
+[![Packaging status](https://repology.org/badge/vertical-allrepos/swayr.svg)](https://repology.org/project/swayr/versions)
+
+### Building with cargo
+
 You'll need to install the current stable rust toolchain using the one-liner
 shown at the [official rust installation
 page](https://www.rust-lang.org/tools/install).
