@@ -43,10 +43,10 @@ impl<'a> Iterator for NodeIter<'a> {
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(node) = self.stack.pop() {
             for n in &node.floating_nodes {
-                self.stack.push(&n);
+                self.stack.push(n);
             }
             for n in &node.nodes {
-                self.stack.push(&n);
+                self.stack.push(n);
             }
             Some(node)
         } else {
@@ -296,9 +296,9 @@ fn build_windows<'a>(
 
         for n in workspace.windows() {
             v.push(Window {
-                node: &n,
+                node: n,
                 extra_props: extra_props.and_then(|m| m.get(&n.id).cloned()),
-                workspace: &workspace,
+                workspace,
             })
         }
     }
@@ -322,14 +322,14 @@ fn build_workspaces<'a>(
             .windows()
             .iter()
             .map(|w| Window {
-                node: &w,
+                node: w,
                 extra_props: extra_props.and_then(|m| m.get(&w.id).cloned()),
-                workspace: &workspace,
+                workspace,
             })
             .collect();
         wins.sort();
         v.push(Workspace {
-            node: &workspace,
+            node: workspace,
             extra_props: extra_props
                 .and_then(|m| m.get(&workspace.id).cloned()),
             windows: wins,
@@ -401,7 +401,7 @@ impl WsOrWin<'_> {
         for ws in workspaces {
             v.push(WsOrWin::Ws { ws });
             for win in &ws.windows {
-                v.push(WsOrWin::Win { win: &win });
+                v.push(WsOrWin::Win { win });
             }
         }
         v
