@@ -32,6 +32,29 @@ Right now, there are these subcommands:
 * `execute-swayr-command` displays all commands above and executes the selected
   one.  (This is useful for accessing swayr commands which are not bound to a
   key.)
+* `tile-workspace exclude-floating|include-floating` tiles all windows on the
+  current workspace (excluding or including floating ones).  That's done by
+  moving all windows to the scratchpad, setting the workspace to `splith`
+  layout, and then moving the windows back.  If the `auto_tile` feature is
+  used, see the Configuration section below, it'll change from splitting
+  horizontally to vertically during re-insertion.
+* `shuffle-tile-workspace exclude-floating|include-floating` shuffles & tiles
+  all windows on the current workspace.  The shuffle part means that (a) the
+  windows are shuffled before re-insertion, and (b) a randomly chosen already
+  re-inserted window is focused before re-inserting another window.  So while
+  `tile-workspace` on a typical horizontally oriented screen and 5 windows will
+  usually result in a layout with one window on the left and all four others
+  tiled vertially on the right, `shuffle-tile-workspace` in combination with
+  `auto_tile` usually results in a more balanced layout, i.e., 2 windows tiled
+  vertically on the right and the other 4 tiled vertially on the left.  If you
+  have less than a handful of windows, just repeat `shuffle-tile-workspace` a
+  few times until happenstance creates the layout you wanted.
+* `tab-workspace exclude-floating|include-floating` puts all windows of the
+  current workspace into a tabbed container.
+* `toggle-tab-shuffle-tile-workspace exclude-floating|include-floating` toggles
+  between a tabbed and tiled layout, i.e., it calls `shuffle-tile-workspace` if
+  it is currently tabbed, and calls `shuffle-tile-workspace` if it is currently
+  tiled.
 
 ## Screenshots
 
