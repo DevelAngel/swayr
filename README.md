@@ -3,6 +3,7 @@
 [![builds.sr.ht status](https://builds.sr.ht/~tsdh/swayr.svg)](https://builds.sr.ht/~tsdh/swayr?)
 [![latest release](https://img.shields.io/crates/v/swayr.svg)](https://crates.io/crates/swayr)
 [![License GPL 3 or later](https://img.shields.io/crates/l/swayr.svg)](https://www.gnu.org/licenses/gpl-3.0.en.html)
+[![dependency status](https://deps.rs/repo/sourcehut/~tsdh/swayr/status.svg)](https://deps.rs/repo/sourcehut/~tsdh/swayr)
 
 Swayr consists of a demon, and a client.  The demon `swayrd` records
 window/workspace creations, deletions, and focus changes using sway's JSON IPC
