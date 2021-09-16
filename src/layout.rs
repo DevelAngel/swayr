@@ -139,7 +139,7 @@ pub fn relayout_current_workspace(
             let mut focused_win = None;
             for win in &cur_ws.windows {
                 if win.is_focused() {
-                    focused_win.insert(win);
+                    focused_win = Some(win);
                 }
                 if !include_floating && win.is_floating() {
                     continue;
