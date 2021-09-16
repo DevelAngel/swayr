@@ -125,6 +125,8 @@ pub fn maybe_auto_tile(config: &config::Config) {
     }
 }
 
+const SWAYR_TMP_WORKSPACE: &str = "✨";
+
 pub fn relayout_current_workspace(
     include_floating: bool,
     insert_win_fn: Box<
@@ -146,8 +148,9 @@ pub fn relayout_current_workspace(
                 }
                 moved_wins.push(win);
                 con.run_command(format!(
-                    "[con_id={}] move to scratchpad",
-                    win.get_id()
+                    "[con_id={}] move to workspace {}",
+                    win.get_id(),
+                    SWAYR_TMP_WORKSPACE
                 ))?;
             }
 

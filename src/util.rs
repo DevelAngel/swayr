@@ -23,6 +23,10 @@ use std::path as p;
 use std::process as proc;
 
 pub fn get_swayr_socket_path() -> String {
+    // We prefer checking the env variable instead of
+    // directories::BaseDirs::new().unwrap().runtime_dir().unwrap() because
+    // directories errors if the XDG_RUNTIME_DIR isn't set or set to a relative
+    // path which actually works fine for sway & swayr.
     let xdg_runtime_dir = std::env::var("XDG_RUNTIME_DIR");
     let wayland_display = std::env::var("WAYLAND_DISPLAY");
     format!(

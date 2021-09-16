@@ -350,14 +350,16 @@ fn tile_current_workspace(include_floating: bool, shuffle: bool) {
                 wins.reverse()
             }
             for win in wins {
+                if win.is_floating() {
+                    std::thread::sleep(std::time::Duration::from_millis(25));
+                    con.run_command(format!(
+                        "[con_id={}] floating disable",
+                        win.get_id()
+                    ))?;
+                }
                 std::thread::sleep(std::time::Duration::from_millis(25));
                 con.run_command(format!(
                     "[con_id={}] move to workspace current",
-                    win.get_id()
-                ))?;
-                std::thread::sleep(std::time::Duration::from_millis(25));
-                con.run_command(format!(
-                    "[con_id={}] floating disable",
                     win.get_id()
                 ))?;
                 placed_wins.push(win);
