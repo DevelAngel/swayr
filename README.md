@@ -36,10 +36,10 @@ Right now, there are these subcommands:
   key.)
 * `tile-workspace exclude-floating|include-floating` tiles all windows on the
   current workspace (excluding or including floating ones).  That's done by
-  moving all windows to the scratchpad, setting the workspace to `splith`
-  layout, and then moving the windows back.  If the `auto_tile` feature is
-  used, see the Configuration section below, it'll change from splitting
-  horizontally to vertically during re-insertion.
+  moving all windows away to some special workspace, setting the current
+  workspace to `splith` layout, and then moving the windows back.  If the
+  `auto_tile` feature is used, see the Configuration section below, it'll
+  change from splitting horizontally to vertically during re-insertion.
 * `shuffle-tile-workspace exclude-floating|include-floating` shuffles & tiles
   all windows on the current workspace.  The shuffle part means that (a) the
   windows are shuffled before re-insertion, and (b) a randomly chosen already
