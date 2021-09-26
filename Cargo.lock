@@ -73,9 +73,9 @@ dependencies = [
 
 [[package]]
 name = "directories"
-version = "4.0.0"
+version = "4.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5f0435dee2e8f0783bd48571bd8a8a8f531b5adcf0b8d7dc705a37c81108418d"
+checksum = "f51c5d4ddabd36886dd3e1438cb358cdcb0d7c499cb99cb4ac2e38e18b5cb210"
 dependencies = [
  "dirs-sys",
 ]
@@ -357,7 +357,7 @@ dependencies = [
 
 [[package]]
 name = "swayr"
-version = "0.7.0-beta.2"
+version = "0.7.0"
 dependencies = [
  "clap",
  "directories",
@@ -372,9 +372,9 @@ dependencies = [
 
 [[package]]
 name = "syn"
-version = "1.0.76"
+version = "1.0.77"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c6f107db402c2c2055242dbf4d2af0e69197202e9faacbef9571bbe47f5a1b84"
+checksum = "5239bc68e0fef57495900cfea4e8dc75596d9a319d7e16b1e0a440d24e6fe0a0"
 dependencies = [
  "proc-macro2",
  "quote",
