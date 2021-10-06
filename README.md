@@ -223,7 +223,7 @@ replaced with a prompt such as "Switch to window" depending on context.
 ### The format section
 
 In the `[format]` section, format strings are specified defining how selection
-choises are to be layed out.  `wofi` supports [pango
+choices are to be layed out.  `wofi` supports [pango
 markup](https://docs.gtk.org/Pango/pango_markup.html) which makes it possible
 to style the text using HTML and CSS.  The following formats are supported
 right now.
