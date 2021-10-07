@@ -157,6 +157,22 @@ impl Window<'_> {
     pub fn is_floating(&self) -> bool {
         self.node.node_type == s::NodeType::FloatingCon
     }
+
+    pub fn get_parent(&self) -> &s::Node {
+        NodeIter::new(self.workspace)
+            .find(|n| n.nodes.contains(self.node))
+            .expect("No parent node of a window!")
+    }
+
+    pub fn is_child_of_tiled_container(&self) -> bool {
+        let layout = &self.get_parent().layout;
+        layout == &s::NodeLayout::SplitH || layout == &s::NodeLayout::SplitV
+    }
+
+    pub fn is_child_of_tabbed_or_stacked_container(&self) -> bool {
+        let layout = &self.get_parent().layout;
+        layout == &s::NodeLayout::Tabbed || layout == &s::NodeLayout::Stacked
+    }
 }
 
 impl PartialEq for Window<'_> {

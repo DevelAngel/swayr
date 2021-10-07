@@ -48,6 +48,14 @@ pub enum SwayrCommand {
     NextWindow,
     /// Focus the previous window.
     PrevWindow,
+    /// Focus the next window of a tiled container.
+    NextTiledWindow,
+    /// Focus the previous window of a tiled container.
+    PrevTiledWindow,
+    /// Focus the next window of a tabbed or stacked container.
+    NextTabbedOrStackedWindow,
+    /// Focus the previous window of a tabbed or stacked container.
+    PrevTabbedOrStackedWindow,
     /// Quit the selected window.
     QuitWindow,
     /// Switch to the selected workspace.
@@ -98,6 +106,10 @@ impl DisplayFormat for SwayrCommand {
     }
 }
 
+fn always_true(_x: &con::Window) -> bool {
+    true
+}
+
 pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
     let props = args.extra_props;
     match args.cmd {
@@ -110,11 +122,41 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
         SwayrCommand::NextWindow => focus_next_window_in_direction(
             Direction::Forward,
             Some(&*props.read().unwrap()),
+            Box::new(always_true),
         ),
         SwayrCommand::PrevWindow => focus_next_window_in_direction(
             Direction::Backward,
             Some(&*props.read().unwrap()),
+            Box::new(always_true),
         ),
+        SwayrCommand::NextTiledWindow => focus_next_window_in_direction(
+            Direction::Forward,
+            Some(&*props.read().unwrap()),
+            Box::new(|w: &con::Window| w.is_child_of_tiled_container()),
+        ),
+        SwayrCommand::PrevTiledWindow => focus_next_window_in_direction(
+            Direction::Backward,
+            Some(&*props.read().unwrap()),
+            Box::new(|w: &con::Window| w.is_child_of_tiled_container()),
+        ),
+        SwayrCommand::NextTabbedOrStackedWindow => {
+            focus_next_window_in_direction(
+                Direction::Forward,
+                Some(&*props.read().unwrap()),
+                Box::new(|w: &con::Window| {
+                    w.is_child_of_tabbed_or_stacked_container()
+                }),
+            )
+        }
+        SwayrCommand::PrevTabbedOrStackedWindow => {
+            focus_next_window_in_direction(
+                Direction::Backward,
+                Some(&*props.read().unwrap()),
+                Box::new(|w: &con::Window| {
+                    w.is_child_of_tabbed_or_stacked_container()
+                }),
+            )
+        }
         SwayrCommand::QuitWindow => quit_window(Some(&*props.read().unwrap())),
         SwayrCommand::SwitchWorkspace => {
             switch_workspace(Some(&*props.read().unwrap()))
@@ -181,6 +223,8 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
                     },
                     SwayrCommand::NextWindow,
                     SwayrCommand::PrevWindow,
+                    SwayrCommand::NextTiledWindow,
+                    SwayrCommand::PrevTiledWindow,
                 ],
             ) {
                 exec_swayr_cmd(ExecSwayrCmdArgs {
@@ -238,9 +282,12 @@ pub enum Direction {
     Forward,
 }
 
+// TODO: Maybe we should have a bool parameter telling if it should act on all
+// windows or just the ones on the current workspace.
 pub fn focus_next_window_in_direction(
     dir: Direction,
     extra_props: Option<&HashMap<i64, con::ExtraProps>>,
+    pred: Box<dyn Fn(&con::Window) -> bool>,
 ) {
     let root = get_tree();
     let windows = con::get_windows(&root, false, None);
@@ -249,7 +296,7 @@ pub fn focus_next_window_in_direction(
         return;
     }
 
-    let pred: Box<dyn Fn(&con::Window) -> bool> =
+    let is_focused_window: Box<dyn Fn(&con::Window) -> bool> =
         if !windows.iter().any(|w| w.is_focused()) {
             let last_focused_win_id =
                 con::get_windows(&root, false, extra_props)
@@ -268,8 +315,8 @@ pub fn focus_next_window_in_direction(
 
     loop {
         let win = iter.next().unwrap();
-        if pred(win) {
-            let win = iter.next().unwrap();
+        if is_focused_window(win) {
+            let win = iter.filter(|w| pred(w)).next().unwrap();
             focus_window_by_id(win.get_id());
             return;
         }
