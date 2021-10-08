@@ -38,6 +38,14 @@ pub enum ConsiderFloating {
     ExcludeFloating,
 }
 
+#[derive(Clap, Debug, Deserialize, Serialize, PartialEq)]
+pub enum ConsiderWindows {
+    /// Consider windows of all workspaces.
+    AllWorkspaces,
+    /// Consider windows of only the current workspaces.
+    CurrentWorkspace,
+}
+
 #[derive(Clap, Debug, Deserialize, Serialize)]
 pub enum SwayrCommand {
     /// Switch to next urgent window (if any) or to last recently used window.
@@ -45,17 +53,35 @@ pub enum SwayrCommand {
     /// Focus the selected window.
     SwitchWindow,
     /// Focus the next window.
-    NextWindow,
+    NextWindow {
+        #[clap(subcommand)]
+        windows: ConsiderWindows,
+    },
     /// Focus the previous window.
-    PrevWindow,
+    PrevWindow {
+        #[clap(subcommand)]
+        windows: ConsiderWindows,
+    },
     /// Focus the next window of a tiled container.
-    NextTiledWindow,
+    NextTiledWindow {
+        #[clap(subcommand)]
+        windows: ConsiderWindows,
+    },
     /// Focus the previous window of a tiled container.
-    PrevTiledWindow,
+    PrevTiledWindow {
+        #[clap(subcommand)]
+        windows: ConsiderWindows,
+    },
     /// Focus the next window of a tabbed or stacked container.
-    NextTabbedOrStackedWindow,
+    NextTabbedOrStackedWindow {
+        #[clap(subcommand)]
+        windows: ConsiderWindows,
+    },
     /// Focus the previous window of a tabbed or stacked container.
-    PrevTabbedOrStackedWindow,
+    PrevTabbedOrStackedWindow {
+        #[clap(subcommand)]
+        windows: ConsiderWindows,
+    },
     /// Quit the selected window.
     QuitWindow,
     /// Switch to the selected workspace.
@@ -119,38 +145,48 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
         SwayrCommand::SwitchWindow => {
             switch_window(Some(&*props.read().unwrap()))
         }
-        SwayrCommand::NextWindow => focus_next_window_in_direction(
+        SwayrCommand::NextWindow { windows } => focus_next_window_in_direction(
             Direction::Forward,
+            windows,
             Some(&*props.read().unwrap()),
             Box::new(always_true),
         ),
-        SwayrCommand::PrevWindow => focus_next_window_in_direction(
+        SwayrCommand::PrevWindow { windows } => focus_next_window_in_direction(
             Direction::Backward,
+            windows,
             Some(&*props.read().unwrap()),
             Box::new(always_true),
         ),
-        SwayrCommand::NextTiledWindow => focus_next_window_in_direction(
-            Direction::Forward,
-            Some(&*props.read().unwrap()),
-            Box::new(|w: &con::Window| w.is_child_of_tiled_container()),
-        ),
-        SwayrCommand::PrevTiledWindow => focus_next_window_in_direction(
-            Direction::Backward,
-            Some(&*props.read().unwrap()),
-            Box::new(|w: &con::Window| w.is_child_of_tiled_container()),
-        ),
-        SwayrCommand::NextTabbedOrStackedWindow => {
+        SwayrCommand::NextTiledWindow { windows } => {
             focus_next_window_in_direction(
                 Direction::Forward,
+                windows,
+                Some(&*props.read().unwrap()),
+                Box::new(|w: &con::Window| w.is_child_of_tiled_container()),
+            )
+        }
+        SwayrCommand::PrevTiledWindow { windows } => {
+            focus_next_window_in_direction(
+                Direction::Backward,
+                windows,
+                Some(&*props.read().unwrap()),
+                Box::new(|w: &con::Window| w.is_child_of_tiled_container()),
+            )
+        }
+        SwayrCommand::NextTabbedOrStackedWindow { windows } => {
+            focus_next_window_in_direction(
+                Direction::Forward,
+                windows,
                 Some(&*props.read().unwrap()),
                 Box::new(|w: &con::Window| {
                     w.is_child_of_tabbed_or_stacked_container()
                 }),
             )
         }
-        SwayrCommand::PrevTabbedOrStackedWindow => {
+        SwayrCommand::PrevTabbedOrStackedWindow { windows } => {
             focus_next_window_in_direction(
                 Direction::Backward,
+                windows,
                 Some(&*props.read().unwrap()),
                 Box::new(|w: &con::Window| {
                     w.is_child_of_tabbed_or_stacked_container()
@@ -221,10 +257,42 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
                     SwayrCommand::ShuffleTileWorkspace {
                         floating: ConsiderFloating::IncludeFloating,
                     },
-                    SwayrCommand::NextWindow,
-                    SwayrCommand::PrevWindow,
-                    SwayrCommand::NextTiledWindow,
-                    SwayrCommand::PrevTiledWindow,
+                    SwayrCommand::NextWindow {
+                        windows: ConsiderWindows::AllWorkspaces,
+                    },
+                    SwayrCommand::NextWindow {
+                        windows: ConsiderWindows::CurrentWorkspace,
+                    },
+                    SwayrCommand::PrevWindow {
+                        windows: ConsiderWindows::AllWorkspaces,
+                    },
+                    SwayrCommand::PrevWindow {
+                        windows: ConsiderWindows::CurrentWorkspace,
+                    },
+                    SwayrCommand::NextTiledWindow {
+                        windows: ConsiderWindows::AllWorkspaces,
+                    },
+                    SwayrCommand::NextTiledWindow {
+                        windows: ConsiderWindows::CurrentWorkspace,
+                    },
+                    SwayrCommand::PrevTiledWindow {
+                        windows: ConsiderWindows::AllWorkspaces,
+                    },
+                    SwayrCommand::PrevTiledWindow {
+                        windows: ConsiderWindows::CurrentWorkspace,
+                    },
+                    SwayrCommand::NextTabbedOrStackedWindow {
+                        windows: ConsiderWindows::AllWorkspaces,
+                    },
+                    SwayrCommand::NextTabbedOrStackedWindow {
+                        windows: ConsiderWindows::CurrentWorkspace,
+                    },
+                    SwayrCommand::PrevTabbedOrStackedWindow {
+                        windows: ConsiderWindows::AllWorkspaces,
+                    },
+                    SwayrCommand::PrevTabbedOrStackedWindow {
+                        windows: ConsiderWindows::CurrentWorkspace,
+                    },
                 ],
             ) {
                 exec_swayr_cmd(ExecSwayrCmdArgs {
@@ -282,15 +350,25 @@ pub enum Direction {
     Forward,
 }
 
-// TODO: Maybe we should have a bool parameter telling if it should act on all
-// windows or just the ones on the current workspace.
 pub fn focus_next_window_in_direction(
     dir: Direction,
+    consider_wins: &ConsiderWindows,
     extra_props: Option<&HashMap<i64, con::ExtraProps>>,
     pred: Box<dyn Fn(&con::Window) -> bool>,
 ) {
     let root = get_tree();
-    let windows = con::get_windows(&root, false, None);
+    let root = match consider_wins {
+        ConsiderWindows::AllWorkspaces => &root,
+        ConsiderWindows::CurrentWorkspace => {
+            con::get_workspaces(&root, false, extra_props)
+                .iter()
+                .find(|w| w.is_current())
+                .expect("No current workspace!")
+                .node
+        }
+    };
+
+    let windows = con::get_windows(root, false, extra_props);
 
     if windows.len() < 2 {
         return;

@@ -436,7 +436,7 @@ pub fn select_workspace_or_window<'a>(
 }
 
 pub struct Workspace<'a> {
-    node: &'a s::Node,
+    pub node: &'a s::Node,
     extra_props: Option<ExtraProps>,
     pub windows: Vec<Window<'a>>,
 }
