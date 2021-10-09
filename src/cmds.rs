@@ -203,23 +203,17 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
         SwayrCommand::QuitWorkspaceOrWindow => {
             quit_workspace_or_window(Some(&*props.read().unwrap()))
         }
-        SwayrCommand::TileWorkspace { floating } => tile_current_workspace(
-            floating == &ConsiderFloating::IncludeFloating,
-            false,
-        ),
-        SwayrCommand::TabWorkspace { floating } => tab_current_workspace(
-            floating == &ConsiderFloating::IncludeFloating,
-        ),
+        SwayrCommand::TileWorkspace { floating } => {
+            tile_current_workspace(floating, false)
+        }
+        SwayrCommand::TabWorkspace { floating } => {
+            tab_current_workspace(floating)
+        }
         SwayrCommand::ShuffleTileWorkspace { floating } => {
-            tile_current_workspace(
-                floating == &ConsiderFloating::IncludeFloating,
-                true,
-            )
+            tile_current_workspace(floating, true)
         }
         SwayrCommand::ToggleTabShuffleTileWorkspace { floating } => {
-            toggle_tab_tile_current_workspace(
-                floating == &ConsiderFloating::IncludeFloating,
-            )
+            toggle_tab_tile_current_workspace(floating)
         }
         SwayrCommand::ExecuteSwaymsgCommand => exec_swaymsg_command(),
         SwayrCommand::ExecuteSwayrCommand => {
@@ -377,7 +371,7 @@ pub fn focus_next_window_in_direction(
     let is_focused_window: Box<dyn Fn(&con::Window) -> bool> =
         if !windows.iter().any(|w| w.is_focused()) {
             let last_focused_win_id =
-                con::get_windows(&root, false, extra_props)
+                con::get_windows(root, false, extra_props)
                     .get(0)
                     .unwrap()
                     .get_id();
@@ -394,7 +388,7 @@ pub fn focus_next_window_in_direction(
     loop {
         let win = iter.next().unwrap();
         if is_focused_window(win) {
-            let win = iter.filter(|w| pred(w)).next().unwrap();
+            let win = iter.find(|w| pred(w)).unwrap();
             focus_window_by_id(win.get_id());
             return;
         }
@@ -460,9 +454,9 @@ pub fn quit_workspace_or_window(
     }
 }
 
-fn tile_current_workspace(include_floating: bool, shuffle: bool) {
+fn tile_current_workspace(floating: &ConsiderFloating, shuffle: bool) {
     match layout::relayout_current_workspace(
-        include_floating,
+        floating == &ConsiderFloating::IncludeFloating,
         Box::new(move |wins, con: &mut s::Connection| {
             con.run_command("focus parent".to_string())?;
             con.run_command("layout splith".to_string())?;
@@ -505,9 +499,9 @@ fn tile_current_workspace(include_floating: bool, shuffle: bool) {
     }
 }
 
-fn tab_current_workspace(include_floating: bool) {
+fn tab_current_workspace(floating: &ConsiderFloating) {
     match layout::relayout_current_workspace(
-        include_floating,
+        floating == &ConsiderFloating::IncludeFloating,
         Box::new(move |wins, con: &mut s::Connection| {
             con.run_command("focus parent".to_string())?;
             con.run_command("layout tabbed".to_string())?;
@@ -537,7 +531,7 @@ fn tab_current_workspace(include_floating: bool) {
     }
 }
 
-fn toggle_tab_tile_current_workspace(include_floating: bool) {
+fn toggle_tab_tile_current_workspace(floating: &ConsiderFloating) {
     let tree = get_tree();
     let workspaces = tree.workspaces();
     let cur_ws = workspaces
@@ -545,9 +539,9 @@ fn toggle_tab_tile_current_workspace(include_floating: bool) {
         .find(|w| con::is_current_container(w))
         .unwrap();
     if cur_ws.layout == s::NodeLayout::Tabbed {
-        tile_current_workspace(include_floating, true);
+        tile_current_workspace(floating, true);
     } else {
-        tab_current_workspace(include_floating);
+        tab_current_workspace(floating);
     }
 }
 
