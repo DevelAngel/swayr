@@ -30,7 +30,7 @@ use std::sync::Arc;
 use std::sync::RwLock;
 use swayipc as s;
 
-#[derive(Clap, Debug, Deserialize, Serialize, PartialEq)]
+#[derive(Clap, Debug, Deserialize, Serialize, PartialEq, Clone)]
 pub enum ConsiderFloating {
     /// Include floating windows.
     IncludeFloating,
@@ -38,7 +38,7 @@ pub enum ConsiderFloating {
     ExcludeFloating,
 }
 
-#[derive(Clap, Debug, Deserialize, Serialize, PartialEq)]
+#[derive(Clap, Debug, Deserialize, Serialize, PartialEq, Clone)]
 pub enum ConsiderWindows {
     /// Consider windows of all workspaces.
     AllWorkspaces,
@@ -217,78 +217,51 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
         }
         SwayrCommand::ExecuteSwaymsgCommand => exec_swaymsg_command(),
         SwayrCommand::ExecuteSwayrCommand => {
-            if let Some(c) = util::select_from_menu(
-                "Select swayr command",
-                &[
-                    SwayrCommand::ExecuteSwaymsgCommand,
-                    SwayrCommand::QuitWindow,
-                    SwayrCommand::QuitWorkspaceOrWindow,
-                    SwayrCommand::SwitchWindow,
-                    SwayrCommand::SwitchWorkspace,
-                    SwayrCommand::SwitchWorkspaceOrWindow,
-                    SwayrCommand::SwitchToUrgentOrLRUWindow,
-                    SwayrCommand::ToggleTabShuffleTileWorkspace {
-                        floating: ConsiderFloating::ExcludeFloating,
-                    },
-                    SwayrCommand::ToggleTabShuffleTileWorkspace {
-                        floating: ConsiderFloating::IncludeFloating,
-                    },
-                    SwayrCommand::TileWorkspace {
-                        floating: ConsiderFloating::ExcludeFloating,
-                    },
-                    SwayrCommand::TileWorkspace {
-                        floating: ConsiderFloating::IncludeFloating,
-                    },
-                    SwayrCommand::TabWorkspace {
-                        floating: ConsiderFloating::ExcludeFloating,
-                    },
-                    SwayrCommand::TabWorkspace {
-                        floating: ConsiderFloating::IncludeFloating,
-                    },
-                    SwayrCommand::ShuffleTileWorkspace {
-                        floating: ConsiderFloating::ExcludeFloating,
-                    },
-                    SwayrCommand::ShuffleTileWorkspace {
-                        floating: ConsiderFloating::IncludeFloating,
-                    },
-                    SwayrCommand::NextWindow {
-                        windows: ConsiderWindows::AllWorkspaces,
-                    },
-                    SwayrCommand::NextWindow {
-                        windows: ConsiderWindows::CurrentWorkspace,
-                    },
-                    SwayrCommand::PrevWindow {
-                        windows: ConsiderWindows::AllWorkspaces,
-                    },
-                    SwayrCommand::PrevWindow {
-                        windows: ConsiderWindows::CurrentWorkspace,
-                    },
-                    SwayrCommand::NextTiledWindow {
-                        windows: ConsiderWindows::AllWorkspaces,
-                    },
-                    SwayrCommand::NextTiledWindow {
-                        windows: ConsiderWindows::CurrentWorkspace,
-                    },
-                    SwayrCommand::PrevTiledWindow {
-                        windows: ConsiderWindows::AllWorkspaces,
-                    },
-                    SwayrCommand::PrevTiledWindow {
-                        windows: ConsiderWindows::CurrentWorkspace,
-                    },
-                    SwayrCommand::NextTabbedOrStackedWindow {
-                        windows: ConsiderWindows::AllWorkspaces,
-                    },
-                    SwayrCommand::NextTabbedOrStackedWindow {
-                        windows: ConsiderWindows::CurrentWorkspace,
-                    },
-                    SwayrCommand::PrevTabbedOrStackedWindow {
-                        windows: ConsiderWindows::AllWorkspaces,
-                    },
-                    SwayrCommand::PrevTabbedOrStackedWindow {
-                        windows: ConsiderWindows::CurrentWorkspace,
-                    },
-                ],
-            ) {
+            let mut cmds = vec![
+                SwayrCommand::ExecuteSwaymsgCommand,
+                SwayrCommand::QuitWindow,
+                SwayrCommand::QuitWorkspaceOrWindow,
+                SwayrCommand::SwitchWindow,
+                SwayrCommand::SwitchWorkspace,
+                SwayrCommand::SwitchWorkspaceOrWindow,
+                SwayrCommand::SwitchToUrgentOrLRUWindow,
+            ];
+            for f in [
+                ConsiderFloating::ExcludeFloating,
+                ConsiderFloating::IncludeFloating,
+            ] {
+                cmds.push(SwayrCommand::ToggleTabShuffleTileWorkspace {
+                    floating: f.clone(),
+                });
+                cmds.push(SwayrCommand::TileWorkspace {
+                    floating: f.clone(),
+                });
+                cmds.push(SwayrCommand::TabWorkspace {
+                    floating: f.clone(),
+                });
+                cmds.push(SwayrCommand::ShuffleTileWorkspace {
+                    floating: f.clone(),
+                });
+            }
+            for f in [
+                ConsiderWindows::AllWorkspaces,
+                ConsiderWindows::CurrentWorkspace,
+            ] {
+                cmds.push(SwayrCommand::NextWindow { windows: f.clone() });
+                cmds.push(SwayrCommand::PrevWindow { windows: f.clone() });
+                cmds.push(SwayrCommand::NextTiledWindow { windows: f.clone() });
+                cmds.push(SwayrCommand::PrevTiledWindow { windows: f.clone() });
+                cmds.push(SwayrCommand::NextTabbedOrStackedWindow {
+                    windows: f.clone(),
+                });
+                cmds.push(SwayrCommand::PrevTabbedOrStackedWindow {
+                    windows: f.clone(),
+                });
+            }
+
+            if let Some(c) =
+                util::select_from_menu("Select swayr command", &cmds)
+            {
                 exec_swayr_cmd(ExecSwayrCmdArgs {
                     cmd: c,
                     extra_props: props,
