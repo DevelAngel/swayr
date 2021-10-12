@@ -153,9 +153,10 @@ and logging are optional.
 
 ## Configuration
 
-Swayr can be configured using the `~/.config/swayr/config.toml` config file.
+Swayr can be configured using the `~/.config/swayr/config.toml` or
+`/etc/xdg/swayr/config.toml` config file.
 
-If it doesn't exist, a simple default configuration will be created on the
+If no config files exists, a simple default configuration will be created on the
 first invocation for use with the [wofi](https://todo.sr.ht/~scoopta/wofi)
 menu program.
 

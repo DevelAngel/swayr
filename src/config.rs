@@ -258,14 +258,18 @@ impl Default for Config {
 
 fn get_config_file_path() -> Box<Path> {
     let proj_dirs = ProjectDirs::from("", "", "swayr").expect("");
-    let config_dir = proj_dirs.config_dir();
-    if !config_dir.exists() {
+    let user_config_dir = proj_dirs.config_dir();
+    if !user_config_dir.exists() {
+        let sys_config_file = Path::new("/etc/xdg/swayr/config.toml");
+        if sys_config_file.exists() {
+            return sys_config_file.into();
+        }
         DirBuilder::new()
             .recursive(true)
-            .create(config_dir)
+            .create(user_config_dir)
             .unwrap();
     }
-    config_dir.join("config.toml").into_boxed_path()
+    user_config_dir.join("config.toml").into_boxed_path()
 }
 
 pub fn save_config(cfg: Config) {
