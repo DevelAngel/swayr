@@ -82,6 +82,14 @@ pub enum SwayrCommand {
         #[clap(subcommand)]
         windows: ConsiderWindows,
     },
+    NextFloatingWindow {
+        #[clap(subcommand)]
+        windows: ConsiderWindows,
+    },
+    PrevFloatingWindow {
+        #[clap(subcommand)]
+        windows: ConsiderWindows,
+    },
     /// Quit the selected window.
     QuitWindow,
     /// Switch to the selected workspace.
@@ -193,6 +201,22 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
                 }),
             )
         }
+        SwayrCommand::NextFloatingWindow { windows } => {
+            focus_next_window_in_direction(
+                Direction::Forward,
+                windows,
+                Some(&*props.read().unwrap()),
+                Box::new(|w: &con::Window| w.is_floating()),
+            )
+        }
+        SwayrCommand::PrevFloatingWindow { windows } => {
+            focus_next_window_in_direction(
+                Direction::Backward,
+                windows,
+                Some(&*props.read().unwrap()),
+                Box::new(|w: &con::Window| w.is_floating()),
+            )
+        }
         SwayrCommand::QuitWindow => quit_window(Some(&*props.read().unwrap())),
         SwayrCommand::SwitchWorkspace => {
             switch_workspace(Some(&*props.read().unwrap()))
@@ -243,20 +267,26 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
                     floating: f.clone(),
                 });
             }
-            for f in [
+            for w in [
                 ConsiderWindows::AllWorkspaces,
                 ConsiderWindows::CurrentWorkspace,
             ] {
-                cmds.push(SwayrCommand::NextWindow { windows: f.clone() });
-                cmds.push(SwayrCommand::PrevWindow { windows: f.clone() });
-                cmds.push(SwayrCommand::NextTiledWindow { windows: f.clone() });
-                cmds.push(SwayrCommand::PrevTiledWindow { windows: f.clone() });
+                cmds.push(SwayrCommand::NextWindow { windows: w.clone() });
+                cmds.push(SwayrCommand::PrevWindow { windows: w.clone() });
+                cmds.push(SwayrCommand::NextTiledWindow { windows: w.clone() });
+                cmds.push(SwayrCommand::PrevTiledWindow { windows: w.clone() });
                 cmds.push(SwayrCommand::NextTabbedOrStackedWindow {
-                    windows: f.clone(),
+                    windows: w.clone(),
                 });
                 cmds.push(SwayrCommand::PrevTabbedOrStackedWindow {
-                    windows: f.clone(),
+                    windows: w.clone(),
                 });
+                cmds.push(SwayrCommand::NextFloatingWindow {
+                    windows: w.clone(),
+                });
+                cmds.push(SwayrCommand::PrevFloatingWindow {
+                    windows: w.clone(),
+                })
             }
 
             if let Some(c) =
