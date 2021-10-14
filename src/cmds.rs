@@ -90,6 +90,14 @@ pub enum SwayrCommand {
         #[clap(subcommand)]
         windows: ConsiderWindows,
     },
+    NextSimilarWindow {
+        #[clap(subcommand)]
+        windows: ConsiderWindows,
+    },
+    PrevSimilarWindow {
+        #[clap(subcommand)]
+        windows: ConsiderWindows,
+    },
     /// Quit the selected window.
     QuitWindow,
     /// Switch to the selected workspace.
@@ -153,36 +161,32 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
         SwayrCommand::SwitchWindow => {
             switch_window(Some(&*props.read().unwrap()))
         }
-        SwayrCommand::NextWindow { windows } => focus_next_window_in_direction(
+        SwayrCommand::NextWindow { windows } => focus_window_in_direction(
             Direction::Forward,
             windows,
             Some(&*props.read().unwrap()),
             Box::new(always_true),
         ),
-        SwayrCommand::PrevWindow { windows } => focus_next_window_in_direction(
+        SwayrCommand::PrevWindow { windows } => focus_window_in_direction(
             Direction::Backward,
             windows,
             Some(&*props.read().unwrap()),
             Box::new(always_true),
         ),
-        SwayrCommand::NextTiledWindow { windows } => {
-            focus_next_window_in_direction(
-                Direction::Forward,
-                windows,
-                Some(&*props.read().unwrap()),
-                Box::new(|w: &con::Window| w.is_child_of_tiled_container()),
-            )
-        }
-        SwayrCommand::PrevTiledWindow { windows } => {
-            focus_next_window_in_direction(
-                Direction::Backward,
-                windows,
-                Some(&*props.read().unwrap()),
-                Box::new(|w: &con::Window| w.is_child_of_tiled_container()),
-            )
-        }
+        SwayrCommand::NextTiledWindow { windows } => focus_window_in_direction(
+            Direction::Forward,
+            windows,
+            Some(&*props.read().unwrap()),
+            Box::new(|w: &con::Window| w.is_child_of_tiled_container()),
+        ),
+        SwayrCommand::PrevTiledWindow { windows } => focus_window_in_direction(
+            Direction::Backward,
+            windows,
+            Some(&*props.read().unwrap()),
+            Box::new(|w: &con::Window| w.is_child_of_tiled_container()),
+        ),
         SwayrCommand::NextTabbedOrStackedWindow { windows } => {
-            focus_next_window_in_direction(
+            focus_window_in_direction(
                 Direction::Forward,
                 windows,
                 Some(&*props.read().unwrap()),
@@ -192,7 +196,7 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
             )
         }
         SwayrCommand::PrevTabbedOrStackedWindow { windows } => {
-            focus_next_window_in_direction(
+            focus_window_in_direction(
                 Direction::Backward,
                 windows,
                 Some(&*props.read().unwrap()),
@@ -202,7 +206,7 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
             )
         }
         SwayrCommand::NextFloatingWindow { windows } => {
-            focus_next_window_in_direction(
+            focus_window_in_direction(
                 Direction::Forward,
                 windows,
                 Some(&*props.read().unwrap()),
@@ -210,11 +214,25 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
             )
         }
         SwayrCommand::PrevFloatingWindow { windows } => {
-            focus_next_window_in_direction(
+            focus_window_in_direction(
                 Direction::Backward,
                 windows,
                 Some(&*props.read().unwrap()),
                 Box::new(|w: &con::Window| w.is_floating()),
+            )
+        }
+        SwayrCommand::NextSimilarWindow { windows } => {
+            focus_similar_window_in_direction(
+                Direction::Forward,
+                windows,
+                Some(&*props.read().unwrap()),
+            )
+        }
+        SwayrCommand::PrevSimilarWindow { windows } => {
+            focus_similar_window_in_direction(
+                Direction::Backward,
+                windows,
+                Some(&*props.read().unwrap()),
             )
         }
         SwayrCommand::QuitWindow => quit_window(Some(&*props.read().unwrap())),
@@ -347,7 +365,7 @@ pub enum Direction {
     Forward,
 }
 
-pub fn focus_next_window_in_direction(
+pub fn focus_window_in_direction(
     dir: Direction,
     consider_wins: &ConsiderWindows,
     extra_props: Option<&HashMap<i64, con::ExtraProps>>,
@@ -373,11 +391,7 @@ pub fn focus_next_window_in_direction(
 
     let is_focused_window: Box<dyn Fn(&con::Window) -> bool> =
         if !windows.iter().any(|w| w.is_focused()) {
-            let last_focused_win_id =
-                con::get_windows(root, false, extra_props)
-                    .get(0)
-                    .unwrap()
-                    .get_id();
+            let last_focused_win_id = windows.get(0).unwrap().get_id();
             Box::new(move |w| w.get_id() == last_focused_win_id)
         } else {
             Box::new(|w: &con::Window| w.is_focused())
@@ -395,6 +409,36 @@ pub fn focus_next_window_in_direction(
             focus_window_by_id(win.get_id());
             return;
         }
+    }
+}
+
+pub fn focus_similar_window_in_direction(
+    dir: Direction,
+    consider_wins: &ConsiderWindows,
+    extra_props: Option<&HashMap<i64, con::ExtraProps>>,
+) {
+    let root = get_tree();
+    let windows = con::get_windows(&root, false, extra_props);
+    let current_window = windows
+        .iter()
+        .find(|w| w.is_focused())
+        .or_else(|| windows.get(0));
+
+    if let Some(current_window) = current_window {
+        focus_window_in_direction(
+            dir,
+            consider_wins,
+            extra_props,
+            if current_window.is_floating() {
+                Box::new(|w| w.is_floating())
+            } else if current_window.is_child_of_tabbed_or_stacked_container() {
+                Box::new(|w| w.is_child_of_tabbed_or_stacked_container())
+            } else if current_window.is_child_of_tiled_container() {
+                Box::new(|w| w.is_child_of_tiled_container())
+            } else {
+                Box::new(always_true)
+            },
+        )
     }
 }
 
