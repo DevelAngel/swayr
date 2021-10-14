@@ -12,10 +12,6 @@ interface.  The client `swayr` offers subcommands, see `swayr --help`, and
 sends them to the demon which executes them.
 
 Right now, there are these subcommands:
-* `next-window` focuses the next window in depth-first iteration order of the
-  tree.
-* `prev-window` focuses the previous window in depth-first iteration order of
-  the tree.
 * `switch-window` displays all windows in the order urgent first, then
   last-recently-used, focused last and focuses the selected.
 * `quit-window` displays all windows and quits the selected one.
@@ -28,6 +24,24 @@ Right now, there are these subcommands:
 * `quit-workspace-or-window` displays all workspaces and their windows and
   allows to quit either the selected workspace (all its windows) or the
   selected window.
+* `next-window (all-workspaces|current-workspace)` & `prev-window
+  (all-workspaces|current-workspace)` focus the next/previous window in
+  depth-first iteration order of the tree.  The argument `all-workspaces` or
+  `current-workspace` define if all windows of all workspaces or only those of
+  the current workspace are considered.
+* `next-tiled-window` & `prev-tiled-window` do the same as `next-window` &
+  `prev-window` but switch only between windows contained in a tiled container.
+* `next-tabbed-or-stacked-window` & `prev-tabbed-or-stacked-window` do the same
+  as `next-window` & `prev-window` but switch only between windows contained in
+  a tabbed or stacked container.
+* `next-floating-window` & `prev-floating-window` do the same as `next-window`
+  & `prev-window` but switch only between floating windows.
+* `next-similar-window` & `prev-similar-window` is like `next-floating-window`
+  / `prev-floating-window` if the current window is floating, it is like
+  `next-tabbed-or-stacked-window` / `prev-tabbed-or-stacked-window` if the
+  current window is in a tabbed, or stacked container, it is like
+  `next-tiled-window` / `prev-tiled-window` if the current windows is in a
+  tiled container, and is like `next-window` / `prev-window` otherwise.
 * `execute-swaymsg-command` displays most swaymsg which don't require
   additional input and executes the selected one.  That's handy especially for
   less often used commands not bound to a key.
