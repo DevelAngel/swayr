@@ -82,18 +82,22 @@ pub enum SwayrCommand {
         #[clap(subcommand)]
         windows: ConsiderWindows,
     },
+    /// Focus the next floating window.
     NextFloatingWindow {
         #[clap(subcommand)]
         windows: ConsiderWindows,
     },
+    /// Focus the previous floating window.
     PrevFloatingWindow {
         #[clap(subcommand)]
         windows: ConsiderWindows,
     },
+    /// Focus the next window having the same layout as the current one.
     NextSimilarWindow {
         #[clap(subcommand)]
         windows: ConsiderWindows,
     },
+    /// Focus the previous window having the same layout as the current one.
     PrevSimilarWindow {
         #[clap(subcommand)]
         windows: ConsiderWindows,
