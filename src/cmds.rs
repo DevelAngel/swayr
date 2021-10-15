@@ -181,13 +181,17 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
             Direction::Forward,
             windows,
             Some(&*props.read().unwrap()),
-            Box::new(|w: &con::Window| w.is_child_of_tiled_container()),
+            Box::new(|w: &con::Window| {
+                !w.is_floating() && w.is_child_of_tiled_container()
+            }),
         ),
         SwayrCommand::PrevTiledWindow { windows } => focus_window_in_direction(
             Direction::Backward,
             windows,
             Some(&*props.read().unwrap()),
-            Box::new(|w: &con::Window| w.is_child_of_tiled_container()),
+            Box::new(|w: &con::Window| {
+                !w.is_floating() && w.is_child_of_tiled_container()
+            }),
         ),
         SwayrCommand::NextTabbedOrStackedWindow { windows } => {
             focus_window_in_direction(
@@ -195,7 +199,8 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
                 windows,
                 Some(&*props.read().unwrap()),
                 Box::new(|w: &con::Window| {
-                    w.is_child_of_tabbed_or_stacked_container()
+                    !w.is_floating()
+                        && w.is_child_of_tabbed_or_stacked_container()
                 }),
             )
         }
@@ -205,7 +210,8 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
                 windows,
                 Some(&*props.read().unwrap()),
                 Box::new(|w: &con::Window| {
-                    w.is_child_of_tabbed_or_stacked_container()
+                    !w.is_floating()
+                        && w.is_child_of_tabbed_or_stacked_container()
                 }),
             )
         }
@@ -387,7 +393,10 @@ pub fn focus_window_in_direction(
         }
     };
 
-    let windows = con::get_windows(root, false, extra_props);
+    let windows: Vec<con::Window> = con::get_windows(root, false, extra_props)
+        .into_iter()
+        .filter(|w| pred(w))
+        .collect();
 
     if windows.len() < 2 {
         return;
@@ -409,7 +418,7 @@ pub fn focus_window_in_direction(
     loop {
         let win = iter.next().unwrap();
         if is_focused_window(win) {
-            let win = iter.find(|w| pred(w)).unwrap();
+            let win = iter.next().unwrap();
             focus_window_by_id(win.get_id());
             return;
         }
@@ -435,10 +444,19 @@ pub fn focus_similar_window_in_direction(
             extra_props,
             if current_window.is_floating() {
                 Box::new(|w| w.is_floating())
-            } else if current_window.is_child_of_tabbed_or_stacked_container() {
-                Box::new(|w| w.is_child_of_tabbed_or_stacked_container())
-            } else if current_window.is_child_of_tiled_container() {
-                Box::new(|w| w.is_child_of_tiled_container())
+            } else if !current_window.is_floating()
+                && current_window.is_child_of_tabbed_or_stacked_container()
+            {
+                Box::new(|w| {
+                    !w.is_floating()
+                        && w.is_child_of_tabbed_or_stacked_container()
+                })
+            } else if !current_window.is_floating()
+                && current_window.is_child_of_tiled_container()
+            {
+                Box::new(|w| {
+                    !w.is_floating() && w.is_child_of_tiled_container()
+                })
             } else {
                 Box::new(always_true)
             },

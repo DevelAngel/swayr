@@ -160,8 +160,11 @@ impl Window<'_> {
 
     pub fn get_parent(&self) -> &s::Node {
         NodeIter::new(self.workspace)
-            .find(|n| n.nodes.contains(self.node))
-            .expect("No parent node of a window!")
+            .find(|n| {
+                n.nodes.contains(self.node)
+                    || n.floating_nodes.contains(self.node)
+            })
+            .unwrap_or_else(|| panic!("Window {:?} has no parent node!", self))
     }
 
     pub fn is_child_of_tiled_container(&self) -> bool {
