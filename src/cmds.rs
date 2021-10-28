@@ -196,27 +196,25 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
 
     match args.cmd {
         SwayrCommand::SwitchToUrgentOrLRUWindow => {
-            switch_to_urgent_or_lru_window(Some(&*props.read().unwrap()))
+            switch_to_urgent_or_lru_window(&*props.read().unwrap())
         }
-        SwayrCommand::SwitchWindow => {
-            switch_window(Some(&*props.read().unwrap()))
-        }
+        SwayrCommand::SwitchWindow => switch_window(&*props.read().unwrap()),
         SwayrCommand::NextWindow { windows } => focus_window_in_direction(
             Direction::Forward,
             windows,
-            Some(&*props.read().unwrap()),
+            &*props.read().unwrap(),
             Box::new(always_true),
         ),
         SwayrCommand::PrevWindow { windows } => focus_window_in_direction(
             Direction::Backward,
             windows,
-            Some(&*props.read().unwrap()),
+            &*props.read().unwrap(),
             Box::new(always_true),
         ),
         SwayrCommand::NextTiledWindow { windows } => focus_window_in_direction(
             Direction::Forward,
             windows,
-            Some(&*props.read().unwrap()),
+            &*props.read().unwrap(),
             Box::new(|w: &con::Window| {
                 !w.is_floating() && w.is_child_of_tiled_container()
             }),
@@ -224,7 +222,7 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
         SwayrCommand::PrevTiledWindow { windows } => focus_window_in_direction(
             Direction::Backward,
             windows,
-            Some(&*props.read().unwrap()),
+            &*props.read().unwrap(),
             Box::new(|w: &con::Window| {
                 !w.is_floating() && w.is_child_of_tiled_container()
             }),
@@ -233,7 +231,7 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
             focus_window_in_direction(
                 Direction::Forward,
                 windows,
-                Some(&*props.read().unwrap()),
+                &*props.read().unwrap(),
                 Box::new(|w: &con::Window| {
                     !w.is_floating()
                         && w.is_child_of_tabbed_or_stacked_container()
@@ -244,7 +242,7 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
             focus_window_in_direction(
                 Direction::Backward,
                 windows,
-                Some(&*props.read().unwrap()),
+                &*props.read().unwrap(),
                 Box::new(|w: &con::Window| {
                     !w.is_floating()
                         && w.is_child_of_tabbed_or_stacked_container()
@@ -255,7 +253,7 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
             focus_window_in_direction(
                 Direction::Forward,
                 windows,
-                Some(&*props.read().unwrap()),
+                &*props.read().unwrap(),
                 Box::new(|w: &con::Window| w.is_floating()),
             )
         }
@@ -263,7 +261,7 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
             focus_window_in_direction(
                 Direction::Backward,
                 windows,
-                Some(&*props.read().unwrap()),
+                &*props.read().unwrap(),
                 Box::new(|w: &con::Window| w.is_floating()),
             )
         }
@@ -271,25 +269,25 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
             focus_similar_window_in_direction(
                 Direction::Forward,
                 windows,
-                Some(&*props.read().unwrap()),
+                &*props.read().unwrap(),
             )
         }
         SwayrCommand::PrevSimilarWindow { windows } => {
             focus_similar_window_in_direction(
                 Direction::Backward,
                 windows,
-                Some(&*props.read().unwrap()),
+                &*props.read().unwrap(),
             )
         }
-        SwayrCommand::QuitWindow => quit_window(Some(&*props.read().unwrap())),
+        SwayrCommand::QuitWindow => quit_window(&*props.read().unwrap()),
         SwayrCommand::SwitchWorkspace => {
-            switch_workspace(Some(&*props.read().unwrap()))
+            switch_workspace(&*props.read().unwrap())
         }
         SwayrCommand::SwitchWorkspaceOrWindow => {
-            switch_workspace_or_window(Some(&*props.read().unwrap()))
+            switch_workspace_or_window(&*props.read().unwrap())
         }
         SwayrCommand::QuitWorkspaceOrWindow => {
-            quit_workspace_or_window(Some(&*props.read().unwrap()))
+            quit_workspace_or_window(&*props.read().unwrap())
         }
         SwayrCommand::TileWorkspace { floating } => {
             tile_current_workspace(floating, false)
@@ -381,7 +379,7 @@ pub fn get_tree() -> s::Node {
 }
 
 pub fn switch_to_urgent_or_lru_window(
-    extra_props: Option<&HashMap<i64, con::ExtraProps>>,
+    extra_props: &HashMap<i64, con::ExtraProps>,
 ) {
     let root = get_tree();
     let windows = con::get_windows(&root, false, extra_props);
@@ -397,7 +395,7 @@ pub fn switch_to_urgent_or_lru_window(
     }
 }
 
-pub fn switch_window(extra_props: Option<&HashMap<i64, con::ExtraProps>>) {
+pub fn switch_window(extra_props: &HashMap<i64, con::ExtraProps>) {
     let root = get_tree();
     let windows = con::get_windows(&root, true, extra_props);
 
@@ -414,7 +412,7 @@ pub enum Direction {
 pub fn focus_window_in_direction(
     dir: Direction,
     consider_wins: &ConsiderWindows,
-    extra_props: Option<&HashMap<i64, con::ExtraProps>>,
+    extra_props: &HashMap<i64, con::ExtraProps>,
     pred: Box<dyn Fn(&con::Window) -> bool>,
 ) {
     let root = get_tree();
@@ -471,7 +469,7 @@ pub fn focus_window_in_direction(
 pub fn focus_similar_window_in_direction(
     dir: Direction,
     consider_wins: &ConsiderWindows,
-    extra_props: Option<&HashMap<i64, con::ExtraProps>>,
+    extra_props: &HashMap<i64, con::ExtraProps>,
 ) {
     let root = get_tree();
     let windows = con::get_windows(&root, false, extra_props);
@@ -507,7 +505,7 @@ pub fn focus_similar_window_in_direction(
     }
 }
 
-pub fn switch_workspace(extra_props: Option<&HashMap<i64, con::ExtraProps>>) {
+pub fn switch_workspace(extra_props: &HashMap<i64, con::ExtraProps>) {
     let root = get_tree();
     let workspaces = con::get_workspaces(&root, false, extra_props);
 
@@ -518,9 +516,7 @@ pub fn switch_workspace(extra_props: Option<&HashMap<i64, con::ExtraProps>>) {
     }
 }
 
-pub fn switch_workspace_or_window(
-    extra_props: Option<&HashMap<i64, con::ExtraProps>>,
-) {
+pub fn switch_workspace_or_window(extra_props: &HashMap<i64, con::ExtraProps>) {
     let root = get_tree();
     let workspaces = con::get_workspaces(&root, true, extra_props);
     let ws_or_wins = con::WsOrWin::from_workspaces(&workspaces);
@@ -537,7 +533,7 @@ pub fn switch_workspace_or_window(
     }
 }
 
-pub fn quit_window(extra_props: Option<&HashMap<i64, con::ExtraProps>>) {
+pub fn quit_window(extra_props: &HashMap<i64, con::ExtraProps>) {
     let root = get_tree();
     let windows = con::get_windows(&root, true, extra_props);
 
@@ -546,9 +542,7 @@ pub fn quit_window(extra_props: Option<&HashMap<i64, con::ExtraProps>>) {
     }
 }
 
-pub fn quit_workspace_or_window(
-    extra_props: Option<&HashMap<i64, con::ExtraProps>>,
-) {
+pub fn quit_workspace_or_window(extra_props: &HashMap<i64, con::ExtraProps>) {
     let root = get_tree();
     let workspaces = con::get_workspaces(&root, true, extra_props);
     let ws_or_wins = con::WsOrWin::from_workspaces(&workspaces);

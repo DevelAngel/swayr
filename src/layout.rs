@@ -134,7 +134,7 @@ pub fn relayout_current_workspace(
     >,
 ) -> s::Fallible<()> {
     let root = cmds::get_tree();
-    let workspaces = con::get_workspaces(&root, false, None);
+    let workspaces = con::get_workspaces(&root, false, &HashMap::new());
     if let Some(cur_ws) = workspaces.iter().find(|ws| ws.is_current()) {
         if let Ok(mut con) = s::Connection::new() {
             let mut moved_wins: Vec<&con::Window> = vec![];

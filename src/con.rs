@@ -316,7 +316,7 @@ impl<'a> DisplayFormat for Window<'a> {
 fn build_windows<'a>(
     root: &'a s::Node,
     include_scratchpad_windows: bool,
-    extra_props: Option<&HashMap<i64, ExtraProps>>,
+    extra_props: &HashMap<i64, ExtraProps>,
 ) -> Vec<Window<'a>> {
     let mut v = vec![];
     for workspace in root.workspaces() {
@@ -327,7 +327,7 @@ fn build_windows<'a>(
         for n in workspace.windows() {
             v.push(Window {
                 node: n,
-                extra_props: extra_props.and_then(|m| m.get(&n.id).cloned()),
+                extra_props: extra_props.get(&n.id).cloned(),
                 workspace,
             })
         }
@@ -338,7 +338,7 @@ fn build_windows<'a>(
 fn build_workspaces<'a>(
     root: &'a s::Node,
     include_scratchpad: bool,
-    extra_props: Option<&HashMap<i64, ExtraProps>>,
+    extra_props: &HashMap<i64, ExtraProps>,
 ) -> Vec<Workspace<'a>> {
     let mut v = vec![];
     for workspace in root.workspaces() {
@@ -353,19 +353,22 @@ fn build_workspaces<'a>(
             .iter()
             .map(|w| Window {
                 node: w,
-                extra_props: extra_props.and_then(|m| m.get(&w.id).cloned()),
+                extra_props: extra_props.get(&w.id).cloned(),
                 workspace,
             })
             .collect();
-        wins.sort();
+        if !extra_props.is_empty() {
+            wins.sort();
+        }
         v.push(Workspace {
             node: workspace,
-            extra_props: extra_props
-                .and_then(|m| m.get(&workspace.id).cloned()),
+            extra_props: extra_props.get(&workspace.id).cloned(),
             windows: wins,
         })
     }
-    v.sort();
+    if !extra_props.is_empty() {
+        v.sort();
+    }
     v
 }
 
@@ -373,11 +376,10 @@ fn build_workspaces<'a>(
 pub fn get_windows<'a>(
     root: &'a s::Node,
     include_scratchpad_windows: bool,
-    extra_props: Option<&HashMap<i64, ExtraProps>>,
+    extra_props: &HashMap<i64, ExtraProps>,
 ) -> Vec<Window<'a>> {
-    let extra_props_given = extra_props.is_some();
     let mut wins = build_windows(root, include_scratchpad_windows, extra_props);
-    if extra_props_given {
+    if !extra_props.is_empty() {
         wins.sort();
     }
     wins
@@ -387,7 +389,7 @@ pub fn get_windows<'a>(
 pub fn get_workspaces<'a>(
     root: &'a s::Node,
     include_scratchpad: bool,
-    extra_props: Option<&HashMap<i64, ExtraProps>>,
+    extra_props: &HashMap<i64, ExtraProps>,
 ) -> Vec<Workspace<'a>> {
     let mut workspaces =
         build_workspaces(root, include_scratchpad, extra_props);
