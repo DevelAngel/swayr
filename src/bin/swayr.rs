@@ -15,14 +15,14 @@
 
 //! The `swayr` binary.
 
-use clap::{crate_version, Clap};
+use clap::Parser;
 
 /// Windows are sorted urgent first, then windows in LRU order, focused window
 /// last.  Licensed under the GPLv3 (or later).
-#[derive(Clap)]
+#[derive(clap::Parser)]
 #[clap(
     name = "swayr -- a window switcher (and more) for sway",
-    version = crate_version!(),
+    version = clap::crate_version!(),
     author = "Tassilo Horn <tsdh@gnu.org>"
 )]
 struct Opts {

@@ -21,8 +21,6 @@ use crate::config as cfg;
 use crate::layout;
 use crate::util;
 use crate::util::DisplayFormat;
-use clap::Clap;
-use rand;
 use rand::prelude::SliceRandom;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -31,7 +29,7 @@ use std::sync::Arc;
 use std::sync::RwLock;
 use swayipc as s;
 
-#[derive(Clap, Debug, Deserialize, Serialize, PartialEq, Clone)]
+#[derive(clap::Parser, Debug, Deserialize, Serialize, PartialEq, Clone)]
 pub enum ConsiderFloating {
     /// Include floating windows.
     IncludeFloating,
@@ -39,7 +37,7 @@ pub enum ConsiderFloating {
     ExcludeFloating,
 }
 
-#[derive(Clap, Debug, Deserialize, Serialize, PartialEq, Clone)]
+#[derive(clap::Parser, Debug, Deserialize, Serialize, PartialEq, Clone)]
 pub enum ConsiderWindows {
     /// Consider windows of all workspaces.
     AllWorkspaces,
@@ -47,7 +45,7 @@ pub enum ConsiderWindows {
     CurrentWorkspace,
 }
 
-#[derive(Clap, Debug, Deserialize, Serialize)]
+#[derive(clap::Parser, Debug, Deserialize, Serialize)]
 pub enum SwayrCommand {
     /// Switch to next urgent window (if any) or to last recently used window.
     SwitchToUrgentOrLRUWindow,
