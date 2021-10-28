@@ -186,6 +186,7 @@ fn update_last_focus_time(
             id,
             con::ExtraProps {
                 last_focus_time: get_epoch_time_as_millis(),
+                last_focus_time_for_next_prev_seq: 0,
             },
         );
     }

@@ -113,6 +113,7 @@ impl NodeMethods for s::Node {
 pub struct ExtraProps {
     /// Milliseconds since UNIX epoch.
     pub last_focus_time: u128,
+    pub last_focus_time_for_next_prev_seq: u128,
 }
 
 #[derive(Debug)]
@@ -175,6 +176,12 @@ impl Window<'_> {
     pub fn is_child_of_tabbed_or_stacked_container(&self) -> bool {
         let layout = &self.get_parent().layout;
         layout == &s::NodeLayout::Tabbed || layout == &s::NodeLayout::Stacked
+    }
+
+    pub fn last_focus_time_for_next_prev_seq(&self) -> u128 {
+        self.extra_props
+            .as_ref()
+            .map_or(0, |wp| wp.last_focus_time_for_next_prev_seq)
     }
 }
 

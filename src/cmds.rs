@@ -26,6 +26,7 @@ use rand;
 use rand::prelude::SliceRandom;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::sync::atomic;
 use std::sync::Arc;
 use std::sync::RwLock;
 use swayipc as s;
@@ -140,6 +141,24 @@ pub enum SwayrCommand {
     ExecuteSwayrCommand,
 }
 
+impl SwayrCommand {
+    fn is_prev_next_window_variant(&self) -> bool {
+        matches!(
+            self,
+            SwayrCommand::NextWindow { .. }
+                | SwayrCommand::PrevWindow { .. }
+                | SwayrCommand::NextTiledWindow { .. }
+                | SwayrCommand::PrevTiledWindow { .. }
+                | SwayrCommand::NextTabbedOrStackedWindow { .. }
+                | SwayrCommand::PrevTabbedOrStackedWindow { .. }
+                | SwayrCommand::NextFloatingWindow { .. }
+                | SwayrCommand::PrevFloatingWindow { .. }
+                | SwayrCommand::NextSimilarWindow { .. }
+                | SwayrCommand::PrevSimilarWindow { .. }
+        )
+    }
+}
+
 pub struct ExecSwayrCmdArgs<'a> {
     pub cmd: &'a SwayrCommand,
     pub extra_props: Arc<RwLock<HashMap<i64, con::ExtraProps>>>,
@@ -156,8 +175,25 @@ fn always_true(_x: &con::Window) -> bool {
     true
 }
 
+static IN_NEXT_PREV_WINDOW_SEQ: atomic::AtomicBool =
+    atomic::AtomicBool::new(false);
+
 pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
     let props = args.extra_props;
+
+    if args.cmd.is_prev_next_window_variant() {
+        let before =
+            IN_NEXT_PREV_WINDOW_SEQ.swap(true, atomic::Ordering::SeqCst);
+        if !before {
+            let mut map = props.write().unwrap();
+            for val in map.values_mut() {
+                val.last_focus_time_for_next_prev_seq = val.last_focus_time;
+            }
+        }
+    } else {
+        IN_NEXT_PREV_WINDOW_SEQ.store(false, atomic::Ordering::SeqCst);
+    }
+
     match args.cmd {
         SwayrCommand::SwitchToUrgentOrLRUWindow => {
             switch_to_urgent_or_lru_window(Some(&*props.read().unwrap()))
@@ -393,14 +429,21 @@ pub fn focus_window_in_direction(
         }
     };
 
-    let windows: Vec<con::Window> = con::get_windows(root, false, extra_props)
-        .into_iter()
-        .filter(|w| pred(w))
-        .collect();
+    let mut windows: Vec<con::Window> =
+        con::get_windows(root, false, extra_props)
+            .into_iter()
+            .filter(|w| pred(w))
+            .collect();
 
     if windows.len() < 2 {
         return;
     }
+
+    windows.sort_by(|a, b| {
+        let lru_a = a.last_focus_time_for_next_prev_seq();
+        let lru_b = b.last_focus_time_for_next_prev_seq();
+        lru_a.cmp(&lru_b).reverse()
+    });
 
     let is_focused_window: Box<dyn Fn(&con::Window) -> bool> =
         if !windows.iter().any(|w| w.is_focused()) {
