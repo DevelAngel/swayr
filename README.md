@@ -36,12 +36,13 @@ Right now, there are these subcommands:
   a tabbed or stacked container.
 * `next-floating-window` & `prev-floating-window` do the same as `next-window`
   & `prev-window` but switch only between floating windows.
-* `next-similar-window` & `prev-similar-window` is like `next-floating-window`
-  / `prev-floating-window` if the current window is floating, it is like
-  `next-tabbed-or-stacked-window` / `prev-tabbed-or-stacked-window` if the
-  current window is in a tabbed, or stacked container, it is like
-  `next-tiled-window` / `prev-tiled-window` if the current windows is in a
-  tiled container, and is like `next-window` / `prev-window` otherwise.
+* `next-window-of-same-layout` & `prev-window-of-same-layout` is like
+  `next-floating-window` / `prev-floating-window` if the current window is
+  floating, it is like `next-tabbed-or-stacked-window` /
+  `prev-tabbed-or-stacked-window` if the current window is in a tabbed, or
+  stacked container, it is like `next-tiled-window` / `prev-tiled-window` if
+  the current windows is in a tiled container, and is like `next-window` /
+  `prev-window` otherwise.
 * `execute-swaymsg-command` displays most swaymsg which don't require
   additional input and executes the selected one.  That's handy especially for
   less often used commands not bound to a key.
@@ -318,6 +319,14 @@ or containers are resized but unfortunately, resizing doesn't issue any events
 over IPC.  Therefore, auto-tiling is triggered by new-window events,
 close-events, move-events, floating-events, and also focus-events.  The latter
 are a workaround and wouldn't be required if there were resize-events.
+
+## Version Changes
+
+Since version 8.0.0, I've started writing a [NEWS](NEWS.md) file listing the
+news, and changes to `swayr` commands or configuration options.  If something
+doesn't seem to work as expected after an update, please consult this file to
+check if there has been some (possibly incompatible) change requiring an update
+of your config.
 
 ## Questions & Patches
 

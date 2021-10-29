@@ -51,12 +51,12 @@ pub enum SwayrCommand {
     SwitchToUrgentOrLRUWindow,
     /// Focus the selected window.
     SwitchWindow,
-    /// Focus the next window.
+    /// Focus the next window in LRU order.
     NextWindow {
         #[clap(subcommand)]
         windows: ConsiderWindows,
     },
-    /// Focus the previous window.
+    /// Focus the previous window in LRU order.
     PrevWindow {
         #[clap(subcommand)]
         windows: ConsiderWindows,
@@ -92,12 +92,12 @@ pub enum SwayrCommand {
         windows: ConsiderWindows,
     },
     /// Focus the next window having the same layout as the current one.
-    NextSimilarWindow {
+    NextWindowOfSameLayout {
         #[clap(subcommand)]
         windows: ConsiderWindows,
     },
     /// Focus the previous window having the same layout as the current one.
-    PrevSimilarWindow {
+    PrevWindowOfSameLayout {
         #[clap(subcommand)]
         windows: ConsiderWindows,
     },
@@ -151,8 +151,8 @@ impl SwayrCommand {
                 | SwayrCommand::PrevTabbedOrStackedWindow { .. }
                 | SwayrCommand::NextFloatingWindow { .. }
                 | SwayrCommand::PrevFloatingWindow { .. }
-                | SwayrCommand::NextSimilarWindow { .. }
-                | SwayrCommand::PrevSimilarWindow { .. }
+                | SwayrCommand::NextWindowOfSameLayout { .. }
+                | SwayrCommand::PrevWindowOfSameLayout { .. }
         )
     }
 }
@@ -263,15 +263,15 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
                 Box::new(|w: &con::Window| w.is_floating()),
             )
         }
-        SwayrCommand::NextSimilarWindow { windows } => {
-            focus_similar_window_in_direction(
+        SwayrCommand::NextWindowOfSameLayout { windows } => {
+            focus_window_of_same_layout_in_direction(
                 Direction::Forward,
                 windows,
                 &*props.read().unwrap(),
             )
         }
-        SwayrCommand::PrevSimilarWindow { windows } => {
-            focus_similar_window_in_direction(
+        SwayrCommand::PrevWindowOfSameLayout { windows } => {
+            focus_window_of_same_layout_in_direction(
                 Direction::Backward,
                 windows,
                 &*props.read().unwrap(),
@@ -464,7 +464,7 @@ pub fn focus_window_in_direction(
     }
 }
 
-pub fn focus_similar_window_in_direction(
+pub fn focus_window_of_same_layout_in_direction(
     dir: Direction,
     consider_wins: &ConsiderWindows,
     extra_props: &HashMap<i64, con::ExtraProps>,
