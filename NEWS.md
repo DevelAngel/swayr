@@ -1,4 +1,4 @@
-swayr v8.0.0
+swayr v0.8.0
 ============
 
 - There's now the possibility to define a system-wide config file

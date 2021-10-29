@@ -322,7 +322,7 @@ are a workaround and wouldn't be required if there were resize-events.
 
 ## Version Changes
 
-Since version 8.0.0, I've started writing a [NEWS](NEWS.md) file listing the
+Since version 0.8.0, I've started writing a [NEWS](NEWS.md) file listing the
 news, and changes to `swayr` commands or configuration options.  If something
 doesn't seem to work as expected after an update, please consult this file to
 check if there has been some (possibly incompatible) change requiring an update
