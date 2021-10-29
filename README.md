@@ -148,10 +148,10 @@ bindsym $mod+Tab exec env RUST_BACKTRACE=1 \
     swayr switch-to-urgent-or-lru-window >> /tmp/swayr.log 2>&1
 
 bindsym $mod+Next exec env RUST_BACKTRACE=1 \
-    swayr next-window >> /tmp/swayr.log 2>&2
+    swayr next-window all-workspaces >> /tmp/swayr.log 2>&2
 
 bindsym $mod+Prior exec env RUST_BACKTRACE=1 \
-    swayr prev-window >> /tmp/swayr.log 2>&2
+    swayr prev-window all-workspaces >> /tmp/swayr.log 2>&2
 
 bindsym $mod+Shift+Space exec env RUST_BACKTRACE=1 \
     swayr switch-workspace-or-window >> /tmp/swayr.log 2>&1
