@@ -397,20 +397,6 @@ pub fn get_workspaces<'a>(
     workspaces
 }
 
-pub fn select_window<'a>(
-    prompt: &str,
-    windows: &'a [Window],
-) -> Option<&'a Window<'a>> {
-    util::select_from_menu(prompt, windows)
-}
-
-pub fn select_workspace<'a>(
-    prompt: &str,
-    workspaces: &'a [Workspace],
-) -> Option<&'a Workspace<'a>> {
-    util::select_from_menu(prompt, workspaces)
-}
-
 pub enum WsOrWin<'a> {
     Ws { ws: &'a Workspace<'a> },
     Win { win: &'a Window<'a> },
@@ -438,13 +424,6 @@ impl WsOrWin<'_> {
         }
         v
     }
-}
-
-pub fn select_workspace_or_window<'a>(
-    prompt: &'a str,
-    ws_or_wins: &'a [WsOrWin<'a>],
-) -> Option<&'a WsOrWin<'a>> {
-    util::select_from_menu(prompt, ws_or_wins)
 }
 
 pub struct Workspace<'a> {

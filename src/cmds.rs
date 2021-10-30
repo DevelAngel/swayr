@@ -21,6 +21,7 @@ use crate::config as cfg;
 use crate::layout;
 use crate::util;
 use crate::util::DisplayFormat;
+use lazy_static::lazy_static;
 use rand::prelude::SliceRandom;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -349,8 +350,7 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
                 })
             }
 
-            if let Some(c) =
-                util::select_from_menu("Select swayr command", &cmds)
+            if let Ok(c) = util::select_from_menu("Select swayr command", &cmds)
             {
                 exec_swayr_cmd(ExecSwayrCmdArgs {
                     cmd: c,
@@ -393,12 +393,26 @@ pub fn switch_to_urgent_or_lru_window(
     }
 }
 
+lazy_static! {
+    static ref DIGIT_AND_NAME: regex::Regex =
+        regex::Regex::new(r"(\d):(.*)").unwrap();
+}
+
+pub fn create_workspace(ws_name: &str) {
+    if DIGIT_AND_NAME.is_match(ws_name) {
+        run_sway_command(&["workspace", "number", ws_name]);
+    } else {
+        run_sway_command(&["workspace", ws_name]);
+    }
+}
+
 pub fn switch_window(extra_props: &HashMap<i64, con::ExtraProps>) {
     let root = get_tree();
     let windows = con::get_windows(&root, true, extra_props);
 
-    if let Some(window) = con::select_window("Switch to window", &windows) {
-        focus_window_by_id(window.get_id())
+    match util::select_from_menu("Switch to window", &windows) {
+        Ok(window) => focus_window_by_id(window.get_id()),
+        Err(ws_name) => create_workspace(&ws_name),
     }
 }
 
@@ -507,10 +521,9 @@ pub fn switch_workspace(extra_props: &HashMap<i64, con::ExtraProps>) {
     let root = get_tree();
     let workspaces = con::get_workspaces(&root, false, extra_props);
 
-    if let Some(workspace) =
-        con::select_workspace("Switch to workspace", &workspaces)
-    {
-        run_sway_command(&["workspace", "number", workspace.get_name()]);
+    match util::select_from_menu("Switch to workspace", &workspaces) {
+        Ok(workspace) => run_sway_command(&["workspace", workspace.get_name()]),
+        Err(ws_name) => create_workspace(&ws_name),
     }
 }
 
@@ -518,16 +531,14 @@ pub fn switch_workspace_or_window(extra_props: &HashMap<i64, con::ExtraProps>) {
     let root = get_tree();
     let workspaces = con::get_workspaces(&root, true, extra_props);
     let ws_or_wins = con::WsOrWin::from_workspaces(&workspaces);
-    if let Some(ws_or_win) = con::select_workspace_or_window(
-        "Select workspace or window",
-        &ws_or_wins,
-    ) {
-        match ws_or_win {
+    match util::select_from_menu("Select workspace or window", &ws_or_wins) {
+        Ok(ws_or_win) => match ws_or_win {
             con::WsOrWin::Ws { ws } => {
-                run_sway_command(&["workspace", "number", ws.get_name()]);
+                run_sway_command(&["workspace", ws.get_name()]);
             }
             con::WsOrWin::Win { win } => focus_window_by_id(win.get_id()),
-        }
+        },
+        Err(ws_name) => create_workspace(&ws_name),
     }
 }
 
@@ -535,7 +546,7 @@ pub fn quit_window(extra_props: &HashMap<i64, con::ExtraProps>) {
     let root = get_tree();
     let windows = con::get_windows(&root, true, extra_props);
 
-    if let Some(window) = con::select_window("Quit window", &windows) {
+    if let Ok(window) = util::select_from_menu("Quit window", &windows) {
         quit_window_by_id(window.get_id())
     }
 }
@@ -544,8 +555,8 @@ pub fn quit_workspace_or_window(extra_props: &HashMap<i64, con::ExtraProps>) {
     let root = get_tree();
     let workspaces = con::get_workspaces(&root, true, extra_props);
     let ws_or_wins = con::WsOrWin::from_workspaces(&workspaces);
-    if let Some(ws_or_win) =
-        con::select_workspace_or_window("Quit workspace or window", &ws_or_wins)
+    if let Ok(ws_or_win) =
+        util::select_from_menu("Quit workspace or window", &ws_or_wins)
     {
         match ws_or_win {
             con::WsOrWin::Ws { ws } => {
@@ -758,8 +769,14 @@ impl DisplayFormat for SwaymsgCmd<'_> {
 pub fn exec_swaymsg_command() {
     let cmds = get_swaymsg_commands();
     let cmd = util::select_from_menu("Execute swaymsg command", &cmds);
-    if let Some(cmd) = cmd {
-        run_sway_command(&cmd.cmd);
+    match cmd {
+        Ok(cmd) => run_sway_command(&cmd.cmd),
+        Err(cmd) if !cmd.is_empty() => {
+            run_sway_command(
+                &cmd.split_ascii_whitespace().collect::<Vec<&str>>(),
+            );
+        }
+        Err(_) => (),
     }
 }
 

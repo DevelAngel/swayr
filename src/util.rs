@@ -122,7 +122,7 @@ fn find_icon(icon_name: &str, icon_dirs: &[String]) -> Option<Box<p::Path>> {
 
 lazy_static! {
     static ref WM_CLASS_OR_ICON_RX: regex::Regex =
-        regex::Regex::new("(StartupWMClass|Icon)=(.+)").unwrap();
+        regex::Regex::new(r"(StartupWMClass|Icon)=(.+)").unwrap();
     static ref REV_DOMAIN_NAME_RX: regex::Regex =
         regex::Regex::new(r"^(?:[a-zA-Z0-9-]+\.)+([a-zA-Z0-9-]+)$").unwrap();
 }
@@ -234,7 +234,7 @@ pub trait DisplayFormat {
 pub fn select_from_menu<'a, 'b, TS>(
     prompt: &'a str,
     choices: &'b [TS],
-) -> Option<&'b TS>
+) -> Result<&'b TS, String>
 where
     TS: DisplayFormat + Sized,
 {
@@ -287,5 +287,5 @@ where
     let choice = String::from_utf8_lossy(&output.stdout);
     let mut choice = String::from(choice);
     choice.pop(); // Remove trailing \n from choice.
-    map.get(&choice).copied()
+    map.get(&choice).copied().ok_or(choice)
 }
