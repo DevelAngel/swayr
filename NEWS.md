@@ -4,8 +4,8 @@ swayr v0.9.0
 - All menu switching commands (`switch-window`, `switch-workspace`, and
   `switch-workspace-or-window`) can now create and switch to not yet existing
   workspaces.  Just type a digit, a name, or `<digit>:<name>`, confirm your
-  input, and it'll do.  The `<digit>:<name>` format is explained in `man
-  sway(5)`.  If that format is given, `swayr` will create the workspace using
+  input, and it'll do.  The `<digit>:<name>` format is explained in `man 5
+  sway`.  If that format is given, `swayr` will create the workspace using
   `workspace number <digit>:<name>`.  If just a digit or name is given, the
   `number` argument is not used.
 
