@@ -342,9 +342,7 @@ fn build_workspaces<'a>(
 ) -> Vec<Workspace<'a>> {
     let mut v = vec![];
     for workspace in root.workspaces() {
-        if workspace.windows().is_empty()
-            || workspace.is_scratchpad() && !include_scratchpad
-        {
+        if workspace.is_scratchpad() && !include_scratchpad {
             continue;
         }
 
