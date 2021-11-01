@@ -1,6 +1,9 @@
 swayr v0.9.0
 ============
 
+- The commands `switch-workspace`, and `switch-workspace-or-window` now also
+  show empty workspaces which makes it possible to switch to another output
+  currently showing an empty workspace.
 - All menu switching commands (`switch-window`, `switch-workspace`, and
   `switch-workspace-or-window`) can now create and switch to not yet existing
   workspaces.  Just type a digit, a name, or `<digit>:<name>`, confirm your
@@ -8,6 +11,7 @@ swayr v0.9.0
   sway`.  If that format is given, `swayr` will create the workspace using
   `workspace number <digit>:<name>`.  If just a digit or name is given, the
   `number` argument is not used.
+
 
 swayr v0.8.0
 ============
