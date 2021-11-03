@@ -395,14 +395,35 @@ pub fn switch_to_urgent_or_lru_window(
 
 lazy_static! {
     static ref DIGIT_AND_NAME: regex::Regex =
-        regex::Regex::new(r"(\d):(.*)").unwrap();
+        regex::Regex::new(r"^(\d):(.*)").unwrap();
 }
 
-pub fn create_workspace(ws_name: &str) {
+fn create_workspace(ws_name: &str) {
     if DIGIT_AND_NAME.is_match(ws_name) {
         run_sway_command(&["workspace", "number", ws_name]);
     } else {
         run_sway_command(&["workspace", ws_name]);
+    }
+}
+
+lazy_static! {
+    static ref SPECIAL_WORKSPACE: regex::Regex =
+        regex::Regex::new(r"^#*w:(.*)").unwrap();
+    static ref SPECIAL_SWAY: regex::Regex =
+        regex::Regex::new(r"^#*s:(.*)").unwrap();
+}
+
+fn handle_non_matching_input(input: &str) {
+    if input.is_empty() {
+        return;
+    }
+
+    if let Some(c) = SPECIAL_SWAY.captures(input) {
+        run_sway_command(&c[1].split_ascii_whitespace().collect::<Vec<&str>>());
+    } else if let Some(c) = SPECIAL_WORKSPACE.captures(input) {
+        create_workspace(&c[1]);
+    } else {
+        create_workspace(input);
     }
 }
 
@@ -412,7 +433,9 @@ pub fn switch_window(extra_props: &HashMap<i64, con::ExtraProps>) {
 
     match util::select_from_menu("Switch to window", &windows) {
         Ok(window) => focus_window_by_id(window.get_id()),
-        Err(ws_name) => create_workspace(&ws_name),
+        Err(non_matching_input) => {
+            handle_non_matching_input(&non_matching_input)
+        }
     }
 }
 
@@ -523,7 +546,9 @@ pub fn switch_workspace(extra_props: &HashMap<i64, con::ExtraProps>) {
 
     match util::select_from_menu("Switch to workspace", &workspaces) {
         Ok(workspace) => run_sway_command(&["workspace", workspace.get_name()]),
-        Err(ws_name) => create_workspace(&ws_name),
+        Err(non_matching_input) => {
+            handle_non_matching_input(&non_matching_input)
+        }
     }
 }
 
@@ -538,7 +563,9 @@ pub fn switch_workspace_or_window(extra_props: &HashMap<i64, con::ExtraProps>) {
             }
             con::WsOrWin::Win { win } => focus_window_by_id(win.get_id()),
         },
-        Err(ws_name) => create_workspace(&ws_name),
+        Err(non_matching_input) => {
+            handle_non_matching_input(&non_matching_input)
+        }
     }
 }
 
