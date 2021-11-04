@@ -110,6 +110,8 @@ pub enum SwayrCommand {
     SwitchWorkspaceOrWindow,
     /// Quit all windows of selected workspace or the selected window.
     QuitWorkspaceOrWindow,
+    /// Move the currently focused window or container to the selected workspace.
+    MoveFocusedToWorkspace,
     /// Tab or shuffle-and-tile the windows on the current workspace, including
     /// or excluding floating windows.
     ToggleTabShuffleTileWorkspace {
@@ -278,6 +280,9 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
                 &*props.read().unwrap(),
             )
         }
+        SwayrCommand::MoveFocusedToWorkspace => {
+            move_focused_container_to_workspace(&*props.read().unwrap())
+        }
         SwayrCommand::QuitWindow => quit_window(&*props.read().unwrap()),
         SwayrCommand::SwitchWorkspace => {
             switch_workspace(&*props.read().unwrap())
@@ -304,6 +309,7 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
         SwayrCommand::ExecuteSwayrCommand => {
             let mut cmds = vec![
                 SwayrCommand::ExecuteSwaymsgCommand,
+                SwayrCommand::MoveFocusedToWorkspace,
                 SwayrCommand::QuitWindow,
                 SwayrCommand::QuitWorkspaceOrWindow,
                 SwayrCommand::SwitchWindow,
@@ -413,6 +419,13 @@ lazy_static! {
         regex::Regex::new(r"^#*s:(.*)").unwrap();
 }
 
+fn chop_workspace_shortcut(input: &str) -> &str {
+    match SPECIAL_WORKSPACE.captures(input) {
+        Some(c) => c.get(1).unwrap().as_str(),
+        None => input,
+    }
+}
+
 fn handle_non_matching_input(input: &str) {
     if input.is_empty() {
         return;
@@ -420,10 +433,9 @@ fn handle_non_matching_input(input: &str) {
 
     if let Some(c) = SPECIAL_SWAY.captures(input) {
         run_sway_command(&c[1].split_ascii_whitespace().collect::<Vec<&str>>());
-    } else if let Some(c) = SPECIAL_WORKSPACE.captures(input) {
-        create_workspace(&c[1]);
     } else {
-        create_workspace(input);
+        let ws = chop_workspace_shortcut(input);
+        create_workspace(ws);
     }
 }
 
@@ -549,6 +561,35 @@ pub fn switch_workspace(extra_props: &HashMap<i64, con::ExtraProps>) {
         Err(non_matching_input) => {
             handle_non_matching_input(&non_matching_input)
         }
+    }
+}
+
+pub fn move_focused_container_to_workspace(
+    extra_props: &HashMap<i64, con::ExtraProps>,
+) {
+    let root = get_tree();
+    let workspaces = con::get_workspaces(&root, false, extra_props);
+
+    let val = util::select_from_menu(
+        "Move focused container to workspace",
+        &workspaces,
+    );
+    let ws_name = &match val {
+        Ok(workspace) => String::from(workspace.get_name()),
+        Err(input) => String::from(chop_workspace_shortcut(&input)),
+    };
+
+    if DIGIT_AND_NAME.is_match(ws_name) {
+        run_sway_command(&[
+            "move",
+            "container",
+            "to",
+            "workspace",
+            "number",
+            ws_name,
+        ]);
+    } else {
+        run_sway_command(&["move", "container", "to", "workspace", ws_name]);
     }
 }
 

@@ -18,6 +18,10 @@ swayr v0.9.0
   - `s:<cmd>`: Executes the sway command `<cmd>` using `swaymsg`.
   - Any other input is assumed to be a workspace name and thus handled as
     `w:<input>` would do.
+- There's a new command `move-focused-to-workspace` which moves the currently
+  focused window or container to another workspace selected with the menu
+  program.  Non-matching input of the form `#w:<workspace>` where the hash and
+  `w:` shortcut are optional can be used to move it to a new workspace.
 
 
 swayr v0.8.0
