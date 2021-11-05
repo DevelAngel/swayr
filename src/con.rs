@@ -69,9 +69,13 @@ pub trait NodeMethods {
     /// Returns all nodes being application windows.
     fn windows(&self) -> Vec<&s::Node>;
 
+    /// Returns all nodes being containers.
+    fn containers(&self) -> Vec<&s::Node>;
+
     /// Returns all nodes being workspaces.
     fn workspaces(&self) -> Vec<&s::Node>;
 
+    // Returns true if this node is the scratchpad workspace.
     fn is_scratchpad(&self) -> bool;
 }
 
@@ -87,14 +91,17 @@ impl NodeMethods for s::Node {
     }
 
     fn is_container(&self) -> bool {
-        self.node_type == s::NodeType::Workspace
-            || self.node_type == s::NodeType::Con
-                && self.name.is_none()
-                && self.layout != s::NodeLayout::None
+        self.node_type == s::NodeType::Con
+            && self.name.is_none()
+            && self.layout != s::NodeLayout::None
     }
 
     fn windows(&self) -> Vec<&s::Node> {
         self.iter().filter(|n| n.is_window()).collect()
+    }
+
+    fn containers(&self) -> Vec<&s::Node> {
+        self.iter().filter(|n| n.is_container()).collect()
     }
 
     fn workspaces(&self) -> Vec<&s::Node> {
@@ -439,8 +446,16 @@ impl Workspace<'_> {
         self.node.id
     }
 
+    pub fn get_windows(&self) -> &Vec<Window> {
+        &self.windows
+    }
+
     pub fn is_scratchpad(&self) -> bool {
         self.node.is_scratchpad()
+    }
+
+    pub fn is_focused(&self) -> bool {
+        self.node.focused
     }
 
     pub fn is_current(&self) -> bool {

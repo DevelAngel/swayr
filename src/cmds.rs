@@ -635,7 +635,7 @@ pub fn quit_workspace_or_window(extra_props: &HashMap<i64, con::ExtraProps>) {
     {
         match ws_or_win {
             con::WsOrWin::Ws { ws } => {
-                for win in &ws.windows {
+                for win in ws.get_windows() {
                     quit_window_by_id(win.get_id())
                 }
             }

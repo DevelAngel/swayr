@@ -139,7 +139,7 @@ pub fn relayout_current_workspace(
         if let Ok(mut con) = s::Connection::new() {
             let mut moved_wins: Vec<&con::Window> = vec![];
             let mut focused_win = None;
-            for win in &cur_ws.windows {
+            for win in cur_ws.get_windows() {
                 if win.is_focused() {
                     focused_win = Some(win);
                 }

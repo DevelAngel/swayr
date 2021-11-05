@@ -79,6 +79,14 @@ impl Config {
             .expect("No format.workspace_format defined.")
     }
 
+    pub fn get_format_container_format(&self) -> String {
+        self.format
+            .as_ref()
+            .and_then(|f| f.container_format.clone())
+            .or_else(|| Format::default().container_format)
+            .expect("No format.container_format defined.")
+    }
+
     pub fn get_format_urgency_start(&self) -> String {
         self.format
             .as_ref()
@@ -147,6 +155,7 @@ pub struct Menu {
 pub struct Format {
     window_format: Option<String>,
     workspace_format: Option<String>,
+    container_format: Option<String>,
     urgency_start: Option<String>,
     urgency_end: Option<String>,
     html_escape: Option<bool>,
@@ -204,6 +213,11 @@ impl Default for Format {
             ),
             workspace_format: Some(
                 "<b>Workspace {name}</b>   \
+                 <span alpha=\"20000\">({id})</span>"
+                    .to_string(),
+            ),
+            container_format: Some(
+                "<i>Container {name}</i>   \
                  <span alpha=\"20000\">({id})</span>"
                     .to_string(),
             ),
