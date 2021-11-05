@@ -426,6 +426,13 @@ fn chop_workspace_shortcut(input: &str) -> &str {
     }
 }
 
+fn chop_sway_shortcut(input: &str) -> &str {
+    match SPECIAL_SWAY.captures(input) {
+        Some(c) => c.get(1).unwrap().as_str(),
+        None => input,
+    }
+}
+
 fn handle_non_matching_input(input: &str) {
     if input.is_empty() {
         return;
@@ -840,6 +847,7 @@ pub fn exec_swaymsg_command() {
     match cmd {
         Ok(cmd) => run_sway_command(&cmd.cmd),
         Err(cmd) if !cmd.is_empty() => {
+            let cmd = chop_sway_shortcut(&cmd);
             run_sway_command(
                 &cmd.split_ascii_whitespace().collect::<Vec<&str>>(),
             );
