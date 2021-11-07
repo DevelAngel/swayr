@@ -45,7 +45,8 @@ Right now, there are these subcommands:
   `prev-window` otherwise.
 * `execute-swaymsg-command` displays most swaymsg which don't require
   additional input and executes the selected one.  That's handy especially for
-  less often used commands not bound to a key.
+  less often used commands not bound to a key.  Non-matching input will be
+  executed executed as-is with `swaymsg`.
 * `execute-swayr-command` displays all commands above and executes the selected
   one.  (This is useful for accessing swayr commands which are not bound to a
   key.)
@@ -72,6 +73,27 @@ Right now, there are these subcommands:
   between a tabbed and tiled layout, i.e., it calls `shuffle-tile-workspace` if
   it is currently tabbed, and calls `shuffle-tile-workspace` if it is currently
   tiled.
+* `move-focused-to-workspace` moves the currently focused window or container
+  to another workspace selected with the menu program.  Non-matching input of
+  the form `#w:<workspace>` where the hash and `w:` shortcut are optional can
+  be used to move it to a new workspace.
+
+### Menu shortcuts for non-matching input
+
+All menu switching commands (`switch-window`, `switch-workspace`, and
+`switch-workspace-or-window`) now handle non-matching input instead of doing
+nothing.  The input should start with any number of `#` (in order to be able to
+force a non-match), a shortcut followed by a colon, and some string as required
+by the shortcut.  The following shortcuts are supported.
+- `w:<workspace>`: Switches to a possibly non-existing workspace.
+  `<workspace>` must be a digit, a name, or `<digit>:<name>`.  The
+  `<digit>:<name>` format is explained in `man 5 sway`.  If that format is
+  given, `swayr` will create the workspace using `workspace number
+  <digit>:<name>`.  If just a digit or name is given, the `number` argument is
+  not used.
+- `s:<cmd>`: Executes the sway command `<cmd>` using `swaymsg`.
+- Any other input is assumed to be a workspace name and thus handled as
+  `w:<input>` would do.
 
 ## Screenshots
 
