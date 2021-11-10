@@ -172,7 +172,7 @@ impl DisplayFormat for SwayrCommand {
     }
 }
 
-fn always_true(_x: &con::Window) -> bool {
+fn always_true(_x: &con::DisplayNode) -> bool {
     true
 }
 
@@ -216,16 +216,18 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
             Direction::Forward,
             windows,
             &*props.read().unwrap(),
-            Box::new(|w: &con::Window| {
-                !w.is_floating() && w.is_child_of_tiled_container()
+            Box::new(|dn: &con::DisplayNode| {
+                !dn.node.is_floating()
+                    && dn.tree.is_child_of_tiled_container(dn.node.id)
             }),
         ),
         SwayrCommand::PrevTiledWindow { windows } => focus_window_in_direction(
             Direction::Backward,
             windows,
             &*props.read().unwrap(),
-            Box::new(|w: &con::Window| {
-                !w.is_floating() && w.is_child_of_tiled_container()
+            Box::new(|dn: &con::DisplayNode| {
+                !dn.node.is_floating()
+                    && dn.tree.is_child_of_tiled_container(dn.node.id)
             }),
         ),
         SwayrCommand::NextTabbedOrStackedWindow { windows } => {
@@ -233,9 +235,11 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
                 Direction::Forward,
                 windows,
                 &*props.read().unwrap(),
-                Box::new(|w: &con::Window| {
-                    !w.is_floating()
-                        && w.is_child_of_tabbed_or_stacked_container()
+                Box::new(|dn: &con::DisplayNode| {
+                    !dn.node.is_floating()
+                        && dn
+                            .tree
+                            .is_child_of_tabbed_or_stacked_container(dn.node.id)
                 }),
             )
         }
@@ -244,9 +248,11 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
                 Direction::Backward,
                 windows,
                 &*props.read().unwrap(),
-                Box::new(|w: &con::Window| {
-                    !w.is_floating()
-                        && w.is_child_of_tabbed_or_stacked_container()
+                Box::new(|dn: &con::DisplayNode| {
+                    !dn.node.is_floating()
+                        && dn
+                            .tree
+                            .is_child_of_tabbed_or_stacked_container(dn.node.id)
                 }),
             )
         }
@@ -255,7 +261,7 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
                 Direction::Forward,
                 windows,
                 &*props.read().unwrap(),
-                Box::new(|w: &con::Window| w.is_floating()),
+                Box::new(|dn: &con::DisplayNode| dn.node.is_floating()),
             )
         }
         SwayrCommand::PrevFloatingWindow { windows } => {
@@ -263,7 +269,7 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
                 Direction::Backward,
                 windows,
                 &*props.read().unwrap(),
-                Box::new(|w: &con::Window| w.is_floating()),
+                Box::new(|dn: &con::DisplayNode| dn.node.is_floating()),
             )
         }
         SwayrCommand::NextWindowOfSameLayout { windows } => {
@@ -375,9 +381,23 @@ fn quit_window_by_id(id: i64) {
     run_sway_command(&[format!("[con_id={}]", id).as_str(), "kill"]);
 }
 
-pub fn get_tree() -> s::Node {
+#[deprecated]
+pub fn get_tree_old() -> s::Node {
     match s::Connection::new() {
         Ok(mut con) => con.get_tree().expect("Got no root node"),
+        Err(err) => panic!("{}", err),
+    }
+}
+
+pub fn get_tree(include_scratchpad: bool) -> s::Node {
+    match s::Connection::new() {
+        Ok(mut con) => {
+            let mut root = con.get_tree().expect("Got no root node");
+            if !include_scratchpad {
+                root.nodes.retain(|o| !o.is_scratchpad());
+            }
+            root
+        }
         Err(err) => panic!("{}", err),
     }
 }
@@ -385,15 +405,15 @@ pub fn get_tree() -> s::Node {
 pub fn switch_to_urgent_or_lru_window(
     extra_props: &HashMap<i64, con::ExtraProps>,
 ) {
-    let root = get_tree();
-    let windows = con::get_windows(&root, false, extra_props);
-    if let Some(win) = windows
-        .iter()
-        .find(|w| w.is_urgent())
-        .or_else(|| windows.get(0))
-    {
-        println!("Switching to {}, id: {}", win.get_app_name(), win.get_id());
-        focus_window_by_id(win.get_id())
+    let root = get_tree(false);
+    let tree = con::get_tree(&root, extra_props);
+    if let Some(win) = tree.get_windows().get(0) {
+        println!(
+            "Switching to {}, id: {}",
+            win.node.get_app_name(),
+            win.node.id
+        );
+        focus_window_by_id(win.node.id)
     } else {
         println!("No window to switch to.")
     }
@@ -447,11 +467,11 @@ fn handle_non_matching_input(input: &str) {
 }
 
 pub fn switch_window(extra_props: &HashMap<i64, con::ExtraProps>) {
-    let root = get_tree();
-    let windows = con::get_windows(&root, true, extra_props);
+    let root = get_tree(true);
+    let tree = con::get_tree(&root, extra_props);
 
-    match util::select_from_menu("Switch to window", &windows) {
-        Ok(window) => focus_window_by_id(window.get_id()),
+    match util::select_from_menu("Switch to window", &tree.get_windows()) {
+        Ok(window) => focus_window_by_id(window.node.id),
         Err(non_matching_input) => {
             handle_non_matching_input(&non_matching_input)
         }
@@ -467,54 +487,49 @@ pub fn focus_window_in_direction(
     dir: Direction,
     consider_wins: &ConsiderWindows,
     extra_props: &HashMap<i64, con::ExtraProps>,
-    pred: Box<dyn Fn(&con::Window) -> bool>,
+    pred: Box<dyn Fn(&con::DisplayNode) -> bool>,
 ) {
-    let root = get_tree();
-    let root = match consider_wins {
-        ConsiderWindows::AllWorkspaces => &root,
-        ConsiderWindows::CurrentWorkspace => {
-            con::get_workspaces(&root, false, extra_props)
-                .iter()
-                .find(|w| w.is_current())
-                .expect("No current workspace!")
-                .node
-        }
-    };
+    let root = get_tree(false);
+    let tree = con::get_tree(&root, extra_props);
+    let mut wins = tree.get_windows();
 
-    let mut windows: Vec<con::Window> =
-        con::get_windows(root, false, extra_props)
-            .into_iter()
-            .filter(|w| pred(w))
-            .collect();
+    if consider_wins == &ConsiderWindows::CurrentWorkspace {
+        let cur_ws = tree.get_current_workspace();
+        wins.retain(|w| {
+            tree.get_workspace_node(w.node.id).unwrap().id == cur_ws.id
+        });
+    }
 
-    if windows.len() < 2 {
+    wins.retain(pred);
+
+    if wins.len() < 2 {
         return;
     }
 
-    windows.sort_by(|a, b| {
-        let lru_a = a.last_focus_time_for_next_prev_seq();
-        let lru_b = b.last_focus_time_for_next_prev_seq();
+    wins.sort_by(|a, b| {
+        let lru_a = tree.last_focus_time_for_next_prev_seq(a.node.id);
+        let lru_b = tree.last_focus_time_for_next_prev_seq(b.node.id);
         lru_a.cmp(&lru_b).reverse()
     });
 
-    let is_focused_window: Box<dyn Fn(&con::Window) -> bool> =
-        if !windows.iter().any(|w| w.is_focused()) {
-            let last_focused_win_id = windows.get(0).unwrap().get_id();
-            Box::new(move |w| w.get_id() == last_focused_win_id)
+    let is_focused_window: Box<dyn Fn(&con::DisplayNode) -> bool> =
+        if !wins.iter().any(|w| w.node.focused) {
+            let last_focused_win_id = wins.get(0).unwrap().node.id;
+            Box::new(move |dn| dn.node.id == last_focused_win_id)
         } else {
-            Box::new(|w: &con::Window| w.is_focused())
+            Box::new(|dn| dn.node.focused)
         };
 
-    let mut iter: Box<dyn Iterator<Item = &con::Window>> = match dir {
-        Direction::Forward => Box::new(windows.iter().rev().cycle()),
-        Direction::Backward => Box::new(windows.iter().cycle()),
+    let mut iter: Box<dyn Iterator<Item = &con::DisplayNode>> = match dir {
+        Direction::Forward => Box::new(wins.iter().rev().cycle()),
+        Direction::Backward => Box::new(wins.iter().cycle()),
     };
 
     loop {
         let win = iter.next().unwrap();
         if is_focused_window(win) {
             let win = iter.next().unwrap();
-            focus_window_by_id(win.get_id());
+            focus_window_by_id(win.node.id);
             return;
         }
     }
@@ -525,32 +540,35 @@ pub fn focus_window_of_same_layout_in_direction(
     consider_wins: &ConsiderWindows,
     extra_props: &HashMap<i64, con::ExtraProps>,
 ) {
-    let root = get_tree();
-    let windows = con::get_windows(&root, false, extra_props);
-    let current_window = windows
-        .iter()
-        .find(|w| w.is_focused())
-        .or_else(|| windows.get(0));
+    let root = get_tree(false);
+    let tree = con::get_tree(&root, extra_props);
+    let wins = tree.get_windows();
+    let cur_win = wins.get(0);
 
-    if let Some(current_window) = current_window {
+    if let Some(cur_win) = cur_win {
         focus_window_in_direction(
             dir,
             consider_wins,
             extra_props,
-            if current_window.is_floating() {
-                Box::new(|w| w.is_floating())
-            } else if !current_window.is_floating()
-                && current_window.is_child_of_tabbed_or_stacked_container()
+            if cur_win.node.is_floating() {
+                Box::new(|dn| dn.node.is_floating())
+            } else if !cur_win.node.is_floating()
+                && cur_win
+                    .tree
+                    .is_child_of_tabbed_or_stacked_container(cur_win.node.id)
             {
-                Box::new(|w| {
-                    !w.is_floating()
-                        && w.is_child_of_tabbed_or_stacked_container()
+                Box::new(|dn| {
+                    !dn.node.is_floating()
+                        && dn
+                            .tree
+                            .is_child_of_tabbed_or_stacked_container(dn.node.id)
                 })
-            } else if !current_window.is_floating()
-                && current_window.is_child_of_tiled_container()
+            } else if !cur_win.node.is_floating()
+                && cur_win.tree.is_child_of_tiled_container(cur_win.node.id)
             {
-                Box::new(|w| {
-                    !w.is_floating() && w.is_child_of_tiled_container()
+                Box::new(|dn| {
+                    !dn.node.is_floating()
+                        && dn.tree.is_child_of_tiled_container(dn.node.id)
                 })
             } else {
                 Box::new(always_true)
@@ -560,11 +578,14 @@ pub fn focus_window_of_same_layout_in_direction(
 }
 
 pub fn switch_workspace(extra_props: &HashMap<i64, con::ExtraProps>) {
-    let root = get_tree();
-    let workspaces = con::get_workspaces(&root, false, extra_props);
+    let root = get_tree(false);
+    let tree = con::get_tree(&root, extra_props);
 
-    match util::select_from_menu("Switch to workspace", &workspaces) {
-        Ok(workspace) => run_sway_command(&["workspace", workspace.get_name()]),
+    match util::select_from_menu("Switch to workspace", &tree.get_workspaces())
+    {
+        Ok(workspace) => {
+            run_sway_command(&["workspace", workspace.node.get_name()])
+        }
         Err(non_matching_input) => {
             handle_non_matching_input(&non_matching_input)
         }
@@ -574,15 +595,16 @@ pub fn switch_workspace(extra_props: &HashMap<i64, con::ExtraProps>) {
 pub fn move_focused_container_to_workspace(
     extra_props: &HashMap<i64, con::ExtraProps>,
 ) {
-    let root = get_tree();
-    let workspaces = con::get_workspaces(&root, false, extra_props);
+    let root = get_tree(true);
+    let tree = con::get_tree(&root, extra_props);
+    let workspaces = tree.get_workspaces();
 
     let val = util::select_from_menu(
         "Move focused container to workspace",
         &workspaces,
     );
     let ws_name = &match val {
-        Ok(workspace) => String::from(workspace.get_name()),
+        Ok(workspace) => String::from(workspace.node.get_name()),
         Err(input) => String::from(chop_workspace_shortcut(&input)),
     };
 
@@ -601,15 +623,20 @@ pub fn move_focused_container_to_workspace(
 }
 
 pub fn switch_workspace_or_window(extra_props: &HashMap<i64, con::ExtraProps>) {
-    let root = get_tree();
-    let workspaces = con::get_workspaces(&root, true, extra_props);
-    let ws_or_wins = con::WsOrWin::from_workspaces(&workspaces);
+    let root = get_tree(true);
+    let tree = con::get_tree(&root, extra_props);
+    let ws_or_wins = tree.get_workspaces_and_windows();
     match util::select_from_menu("Select workspace or window", &ws_or_wins) {
-        Ok(ws_or_win) => match ws_or_win {
-            con::WsOrWin::Ws { ws } => {
-                run_sway_command(&["workspace", ws.get_name()]);
+        Ok(tn) => match tn.node.get_type() {
+            con::Type::Workspace => {
+                if !tn.node.is_scratchpad() {
+                    run_sway_command(&["workspace", tn.node.get_name()]);
+                }
             }
-            con::WsOrWin::Win { win } => focus_window_by_id(win.get_id()),
+            con::Type::Window => focus_window_by_id(tn.node.id),
+            t => {
+                eprintln!("Cannot handle {:?} in switch_workspace_or_window", t)
+            }
         },
         Err(non_matching_input) => {
             handle_non_matching_input(&non_matching_input)
@@ -618,28 +645,35 @@ pub fn switch_workspace_or_window(extra_props: &HashMap<i64, con::ExtraProps>) {
 }
 
 pub fn quit_window(extra_props: &HashMap<i64, con::ExtraProps>) {
-    let root = get_tree();
-    let windows = con::get_windows(&root, true, extra_props);
+    let root = get_tree(true);
+    let tree = con::get_tree(&root, extra_props);
 
-    if let Ok(window) = util::select_from_menu("Quit window", &windows) {
-        quit_window_by_id(window.get_id())
+    if let Ok(window) =
+        util::select_from_menu("Quit window", &tree.get_windows())
+    {
+        quit_window_by_id(window.node.id)
     }
 }
 
 pub fn quit_workspace_or_window(extra_props: &HashMap<i64, con::ExtraProps>) {
-    let root = get_tree();
-    let workspaces = con::get_workspaces(&root, true, extra_props);
-    let ws_or_wins = con::WsOrWin::from_workspaces(&workspaces);
-    if let Ok(ws_or_win) =
+    let root = get_tree(true);
+    let tree = con::get_tree(&root, extra_props);
+    let ws_or_wins = tree.get_workspaces_and_windows();
+    if let Ok(tn) =
         util::select_from_menu("Quit workspace or window", &ws_or_wins)
     {
-        match ws_or_win {
-            con::WsOrWin::Ws { ws } => {
-                for win in ws.get_windows() {
-                    quit_window_by_id(win.get_id())
+        match tn.node.get_type() {
+            con::Type::Workspace => {
+                for win in
+                    tn.node.iter().filter(|n| n.get_type() == con::Type::Window)
+                {
+                    quit_window_by_id(win.id)
                 }
             }
-            con::WsOrWin::Win { win } => quit_window_by_id(win.get_id()),
+            con::Type::Window => quit_window_by_id(tn.node.id),
+            t => {
+                eprintln!("Cannot handle {:?} in quit_workspace_or_window", t)
+            }
         }
     }
 }
@@ -662,22 +696,19 @@ fn tile_current_workspace(floating: &ConsiderFloating, shuffle: bool) {
                 if win.is_floating() {
                     con.run_command(format!(
                         "[con_id={}] floating disable",
-                        win.get_id()
+                        win.id
                     ))?;
                 }
                 std::thread::sleep(std::time::Duration::from_millis(25));
                 con.run_command(format!(
                     "[con_id={}] move to workspace current",
-                    win.get_id()
+                    win.id
                 ))?;
                 placed_wins.push(win);
                 if shuffle {
                     std::thread::sleep(std::time::Duration::from_millis(25));
                     if let Some(win) = placed_wins.choose(&mut rng) {
-                        con.run_command(format!(
-                            "[con_id={}] focus",
-                            win.get_id()
-                        ))?;
+                        con.run_command(format!("[con_id={}] focus", win.id))?;
                     }
                 }
             }
@@ -702,14 +733,14 @@ fn tab_current_workspace(floating: &ConsiderFloating) {
                 if win.is_floating() {
                     con.run_command(format!(
                         "[con_id={}] floating disable",
-                        win.get_id()
+                        win.id
                     ))?;
                 }
 
                 std::thread::sleep(std::time::Duration::from_millis(25));
                 con.run_command(format!(
                     "[con_id={}] move to workspace current",
-                    win.get_id()
+                    win.id
                 ))?;
                 placed_wins.push(win);
             }
@@ -722,12 +753,9 @@ fn tab_current_workspace(floating: &ConsiderFloating) {
 }
 
 fn toggle_tab_tile_current_workspace(floating: &ConsiderFloating) {
-    let tree = get_tree();
-    let workspaces = tree.workspaces();
-    let cur_ws = workspaces
-        .iter()
-        .find(|w| con::is_current_container(w))
-        .unwrap();
+    let tree = get_tree(false);
+    let workspaces = tree.nodes_of_type(con::Type::Workspace);
+    let cur_ws = workspaces.iter().find(|w| w.is_current()).unwrap();
     if cur_ws.layout == s::NodeLayout::Tabbed {
         tile_current_workspace(floating, true);
     } else {

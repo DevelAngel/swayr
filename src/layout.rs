@@ -42,8 +42,8 @@ pub fn auto_tile(res_to_min_width: &HashMap<i32, i32>) {
 
                 if let Some(min_window_width) = min_window_width {
                     for container in con::NodeIter::new(output).filter(|n| {
-                        n.node_type == s::NodeType::Workspace
-                            || n.is_container()
+                        let t = n.get_type();
+                        t == con::Type::Workspace || t == con::Type::Container
                     }) {
                         if container.is_scratchpad() {
                             println!("  Skipping scratchpad");
@@ -55,8 +55,10 @@ pub fn auto_tile(res_to_min_width: &HashMap<i32, i32>) {
                             container.layout,
                             container.nodes.len(),
                         );
-                        for child_win in
-                            container.nodes.iter().filter(|n| n.is_window())
+                        for child_win in container
+                            .nodes
+                            .iter()
+                            .filter(|n| n.get_type() == con::Type::Window)
                         {
                             // Width if we'd split once more.
                             let estimated_width =
@@ -132,17 +134,22 @@ const SWAYR_TMP_WORKSPACE: &str = "✨";
 pub fn relayout_current_workspace(
     include_floating: bool,
     insert_win_fn: Box<
-        dyn Fn(&mut [&con::Window], &mut s::Connection) -> s::Fallible<()>,
+        dyn Fn(&mut [&s::Node], &mut s::Connection) -> s::Fallible<()>,
     >,
 ) -> s::Fallible<()> {
-    let root = cmds::get_tree();
-    let workspaces = con::get_workspaces(&root, false, &HashMap::new());
+    let root = cmds::get_tree(false);
+    let workspaces: Vec<&s::Node> = root
+        .iter()
+        .filter(|n| n.get_type() == con::Type::Workspace)
+        .collect();
     if let Some(cur_ws) = workspaces.iter().find(|ws| ws.is_current()) {
         if let Ok(mut con) = s::Connection::new() {
-            let mut moved_wins: Vec<&con::Window> = vec![];
+            let mut moved_wins: Vec<&s::Node> = vec![];
             let mut focused_win = None;
-            for win in cur_ws.get_windows() {
-                if win.is_focused() {
+            for win in
+                cur_ws.iter().filter(|n| n.get_type() == con::Type::Window)
+            {
+                if win.focused {
                     focused_win = Some(win);
                 }
                 if !include_floating && win.is_floating() {
@@ -151,8 +158,7 @@ pub fn relayout_current_workspace(
                 moved_wins.push(win);
                 con.run_command(format!(
                     "[con_id={}] move to workspace {}",
-                    win.get_id(),
-                    SWAYR_TMP_WORKSPACE
+                    win.id, SWAYR_TMP_WORKSPACE
                 ))?;
             }
 
@@ -160,7 +166,7 @@ pub fn relayout_current_workspace(
             std::thread::sleep(std::time::Duration::from_millis(25));
 
             if let Some(win) = focused_win {
-                con.run_command(format!("[con_id={}] focus", win.get_id()))?;
+                con.run_command(format!("[con_id={}] focus", win.id))?;
             }
             Ok(())
         } else {

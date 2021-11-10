@@ -15,7 +15,7 @@
 
 //! Convenience data structures built from the IPC structs.
 
-use crate::config as cfg;
+use crate::config;
 use crate::util;
 use crate::util::DisplayFormat;
 use lazy_static::lazy_static;
@@ -55,28 +55,37 @@ impl<'a> Iterator for NodeIter<'a> {
     }
 }
 
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub enum Type {
+    Root,
+    Output,
+    Workspace,
+    Container,
+    Window,
+}
+
 /// Extension methods for [`swayipc::Node`].
 pub trait NodeMethods {
     /// Returns an iterator for this [`swayipc::Node`] and its childres.
     fn iter(&self) -> NodeIter;
 
-    fn is_window(&self) -> bool;
+    /// Returns true if this node is an output.
+    fn get_type(&self) -> Type;
 
-    /// Either a workspace or a con holding windows, e.g. a vertical split side
-    /// in a horizontally split workspace.
-    fn is_container(&self) -> bool;
+    /// Returns the app_id if present, otherwise the window-properties class if
+    /// present, otherwise "<unknown_app>".
+    fn get_app_name(&self) -> &str;
 
-    /// Returns all nodes being application windows.
-    fn windows(&self) -> Vec<&s::Node>;
+    fn nodes_of_type(&self, t: Type) -> Vec<&s::Node>;
+    fn get_name(&self) -> &str;
 
-    /// Returns all nodes being containers.
-    fn containers(&self) -> Vec<&s::Node>;
-
-    /// Returns all nodes being workspaces.
-    fn workspaces(&self) -> Vec<&s::Node>;
-
-    // Returns true if this node is the scratchpad workspace.
+    // Returns true if this node is the scratchpad output or workspace.
     fn is_scratchpad(&self) -> bool;
+    fn is_floating(&self) -> bool;
+
+    fn is_current(&self) -> bool {
+        self.iter().any(|n| n.focused)
+    }
 }
 
 impl NodeMethods for s::Node {
@@ -84,34 +93,66 @@ impl NodeMethods for s::Node {
         NodeIter::new(self)
     }
 
-    fn is_window(&self) -> bool {
-        (self.node_type == s::NodeType::Con
-            || self.node_type == s::NodeType::FloatingCon)
-            && self.name.is_some()
+    fn get_type(&self) -> Type {
+        match self.node_type {
+            s::NodeType::Root => Type::Root,
+            s::NodeType::Output => Type::Output,
+            s::NodeType::Workspace => Type::Workspace,
+            s::NodeType::FloatingCon => Type::Window,
+            _ => {
+                if self.node_type == s::NodeType::Con
+                    && self.name.is_none()
+                    && self.layout != s::NodeLayout::None
+                {
+                    Type::Container
+                } else if (self.node_type == s::NodeType::Con
+                    || self.node_type == s::NodeType::FloatingCon)
+                    && self.name.is_some()
+                {
+                    Type::Window
+                } else {
+                    panic!(
+                        "Don't know type of node with id {} and node_type {:?}",
+                        self.id, self.node_type
+                    )
+                }
+            }
+        }
     }
 
-    fn is_container(&self) -> bool {
-        self.node_type == s::NodeType::Con
-            && self.name.is_none()
-            && self.layout != s::NodeLayout::None
+    fn get_name(&self) -> &str {
+        if let Some(name) = &self.name {
+            name.as_ref()
+        } else {
+            "<unnamed>"
+        }
     }
 
-    fn windows(&self) -> Vec<&s::Node> {
-        self.iter().filter(|n| n.is_window()).collect()
-    }
-
-    fn containers(&self) -> Vec<&s::Node> {
-        self.iter().filter(|n| n.is_container()).collect()
-    }
-
-    fn workspaces(&self) -> Vec<&s::Node> {
-        self.iter()
-            .filter(|n| n.node_type == s::NodeType::Workspace)
-            .collect()
+    fn get_app_name(&self) -> &str {
+        if let Some(app_id) = &self.app_id {
+            app_id
+        } else if let Some(wp_class) = self
+            .window_properties
+            .as_ref()
+            .and_then(|wp| wp.class.as_ref())
+        {
+            wp_class
+        } else {
+            "<unknown_app>"
+        }
     }
 
     fn is_scratchpad(&self) -> bool {
-        self.name.is_some() && self.name.as_ref().unwrap().eq("__i3_scratch")
+        let name = self.get_name();
+        name.eq("__i3") || name.eq("__i3_scratch")
+    }
+
+    fn nodes_of_type(&self, t: Type) -> Vec<&s::Node> {
+        self.iter().filter(|n| n.get_type() == t).collect()
+    }
+
+    fn is_floating(&self) -> bool {
+        self.node_type == s::NodeType::FloatingCon
     }
 }
 
@@ -123,110 +164,179 @@ pub struct ExtraProps {
     pub last_focus_time_for_next_prev_seq: u128,
 }
 
-#[derive(Debug)]
-pub struct Window<'a> {
-    node: &'a s::Node,
-    workspace: &'a s::Node,
-    extra_props: Option<ExtraProps>,
+pub struct Tree<'a> {
+    root: &'a s::Node,
+    id_node: HashMap<i64, &'a s::Node>,
+    id_parent: HashMap<i64, i64>,
+    extra_props: &'a HashMap<i64, ExtraProps>,
 }
 
-impl Window<'_> {
-    pub fn get_id(&self) -> i64 {
-        self.node.id
+pub struct DisplayNode<'a> {
+    pub node: &'a s::Node,
+    pub tree: &'a Tree<'a>,
+}
+
+impl<'a> Tree<'a> {
+    fn get_node_by_id(&self, id: i64) -> &&s::Node {
+        self.id_node
+            .get(&id)
+            .unwrap_or_else(|| panic!("No node with id {}", id))
     }
 
-    pub fn get_app_name(&self) -> &str {
-        if let Some(app_id) = &self.node.app_id {
-            app_id
-        } else if let Some(wp_class) = self
-            .node
-            .window_properties
-            .as_ref()
-            .and_then(|wp| wp.class.as_ref())
-        {
-            wp_class
+    fn get_parent_node(&self, id: i64) -> Option<&&s::Node> {
+        self.id_parent.get(&id).map(|pid| self.get_node_by_id(*pid))
+    }
+
+    pub fn get_workspace_node(&self, id: i64) -> Option<&&s::Node> {
+        let n = self.get_node_by_id(id);
+        if n.get_type() == Type::Workspace {
+            Some(n)
+        } else if let Some(pid) = self.id_parent.get(&id) {
+            self.get_workspace_node(*pid)
         } else {
-            "<Unknown>"
+            None
         }
     }
 
-    pub fn get_title(&self) -> &str {
-        self.node.name.as_ref().unwrap()
+    pub fn last_focus_time(&self, id: i64) -> u128 {
+        self.extra_props.get(&id).map_or(0, |wp| wp.last_focus_time)
     }
 
-    pub fn is_urgent(&self) -> bool {
-        self.node.urgent
-    }
-
-    pub fn is_focused(&self) -> bool {
-        self.node.focused
-    }
-
-    pub fn is_floating(&self) -> bool {
-        self.node.node_type == s::NodeType::FloatingCon
-    }
-
-    pub fn get_parent(&self) -> &s::Node {
-        NodeIter::new(self.workspace)
-            .find(|n| {
-                n.nodes.contains(self.node)
-                    || n.floating_nodes.contains(self.node)
-            })
-            .unwrap_or_else(|| panic!("Window {:?} has no parent node!", self))
-    }
-
-    pub fn is_child_of_tiled_container(&self) -> bool {
-        let layout = &self.get_parent().layout;
-        layout == &s::NodeLayout::SplitH || layout == &s::NodeLayout::SplitV
-    }
-
-    pub fn is_child_of_tabbed_or_stacked_container(&self) -> bool {
-        let layout = &self.get_parent().layout;
-        layout == &s::NodeLayout::Tabbed || layout == &s::NodeLayout::Stacked
-    }
-
-    pub fn last_focus_time_for_next_prev_seq(&self) -> u128 {
+    pub fn last_focus_time_for_next_prev_seq(&self, id: i64) -> u128 {
         self.extra_props
-            .as_ref()
+            .get(&id)
             .map_or(0, |wp| wp.last_focus_time_for_next_prev_seq)
     }
-}
 
-impl PartialEq for Window<'_> {
-    fn eq(&self, other: &Self) -> bool {
-        self.get_id() == other.get_id()
+    fn sorted_nodes_of_type_1(
+        &self,
+        node: &'a s::Node,
+        t: Type,
+    ) -> Vec<&s::Node> {
+        let mut v: Vec<&s::Node> = node.nodes_of_type(t);
+        v.sort_by(|a, b| {
+            if a.urgent && !b.urgent {
+                cmp::Ordering::Less
+            } else if !a.urgent && b.urgent {
+                cmp::Ordering::Greater
+            } else {
+                let lru_a = self.last_focus_time(a.id);
+                let lru_b = self.last_focus_time(b.id);
+                lru_a.cmp(&lru_b).reverse()
+            }
+        });
+        v
     }
-}
 
-impl Eq for Window<'_> {}
+    fn sorted_nodes_of_type(&self, t: Type) -> Vec<&s::Node> {
+        self.sorted_nodes_of_type_1(self.root, t)
+    }
 
-impl Ord for Window<'_> {
-    fn cmp(&self, other: &Self) -> cmp::Ordering {
-        if self == other {
-            cmp::Ordering::Equal
-        } else if self.is_urgent() && !other.is_urgent()
-            || !self.is_focused() && other.is_focused()
-        {
-            cmp::Ordering::Less
-        } else if !self.is_urgent() && other.is_urgent()
-            || self.is_focused() && !other.is_focused()
-        {
-            std::cmp::Ordering::Greater
-        } else {
-            let lru_a =
-                self.extra_props.as_ref().map_or(0, |wp| wp.last_focus_time);
-            let lru_b = other
-                .extra_props
-                .as_ref()
-                .map_or(0, |wp| wp.last_focus_time);
-            lru_a.cmp(&lru_b).reverse()
+    fn as_display_nodes(&self, v: Vec<&'a s::Node>) -> Vec<DisplayNode> {
+        v.iter()
+            .map(|n| DisplayNode {
+                node: n,
+                tree: self,
+            })
+            .collect()
+    }
+
+    pub fn get_current_workspace(&self) -> &s::Node {
+        self.root
+            .iter()
+            .find(|n| n.get_type() == Type::Workspace && n.is_current())
+            .expect("No current Workspace")
+    }
+
+    pub fn get_workspaces(&self) -> Vec<DisplayNode> {
+        let mut v = self.sorted_nodes_of_type(Type::Workspace);
+        v.rotate_left(1);
+        self.as_display_nodes(v)
+    }
+
+    pub fn get_windows(&self) -> Vec<DisplayNode> {
+        let mut v = self.sorted_nodes_of_type(Type::Window);
+        v.rotate_left(1);
+        self.as_display_nodes(v)
+    }
+
+    pub fn get_workspaces_and_windows(&self) -> Vec<DisplayNode> {
+        let workspaces = self.sorted_nodes_of_type(Type::Workspace);
+        let mut first = true;
+        let mut v = vec![];
+        for ws in workspaces {
+            v.push(ws);
+            let mut wins = self.sorted_nodes_of_type_1(ws, Type::Window);
+            if first {
+                wins.rotate_left(1);
+                first = false;
+            }
+            v.append(&mut wins);
+        }
+
+        // Rotate until we have the second recently used workspace in front.
+        v.rotate_left(1);
+        while v[0].get_type() != Type::Workspace {
+            v.rotate_left(1);
+        }
+
+        self.as_display_nodes(v)
+    }
+
+    pub fn is_child_of_tiled_container(&self, id: i64) -> bool {
+        match self.get_parent_node(id) {
+            Some(n) => {
+                n.layout == s::NodeLayout::SplitH
+                    || n.layout == s::NodeLayout::SplitV
+            }
+            None => false,
+        }
+    }
+
+    pub fn is_child_of_tabbed_or_stacked_container(&self, id: i64) -> bool {
+        match self.get_parent_node(id) {
+            Some(n) => {
+                n.layout == s::NodeLayout::Tabbed
+                    || n.layout == s::NodeLayout::Stacked
+            }
+            None => false,
         }
     }
 }
 
-impl PartialOrd for Window<'_> {
-    fn partial_cmp(&self, other: &Window) -> Option<cmp::Ordering> {
-        Some(self.cmp(other))
+fn init_id_parent<'a>(
+    n: &'a s::Node,
+    parent: Option<&'a s::Node>,
+    id_node: &mut HashMap<i64, &'a s::Node>,
+    id_parent: &mut HashMap<i64, i64>,
+) {
+    id_node.insert(n.id, n);
+
+    if let Some(p) = parent {
+        id_parent.insert(n.id, p.id);
+    }
+
+    for c in &n.nodes {
+        init_id_parent(c, Some(n), id_node, id_parent);
+    }
+    for c in &n.floating_nodes {
+        init_id_parent(c, Some(n), id_node, id_parent);
+    }
+}
+
+pub fn get_tree<'a>(
+    root: &'a s::Node,
+    extra_props: &'a HashMap<i64, ExtraProps>,
+) -> Tree<'a> {
+    let mut id_node: HashMap<i64, &s::Node> = HashMap::new();
+    let mut id_parent: HashMap<i64, i64> = HashMap::new();
+    init_id_parent(root, None, &mut id_node, &mut id_parent);
+
+    Tree {
+        root,
+        id_node,
+        id_parent,
+        extra_props,
     }
 }
 
@@ -245,264 +355,104 @@ fn maybe_html_escape(do_it: bool, text: &str) -> String {
     }
 }
 
-impl<'a> DisplayFormat for Window<'a> {
-    fn format_for_display(&self, cfg: &cfg::Config) -> String {
-        let window_format = cfg.get_format_window_format();
-        let urgency_start = cfg.get_format_urgency_start();
-        let urgency_end = cfg.get_format_urgency_end();
-        let html_escape = cfg.get_format_html_escape();
-        let icon_dirs = cfg.get_format_icon_dirs();
-        // fallback_icon has no default value.
-        let fallback_icon: Option<Box<std::path::Path>> = cfg
-            .get_format_fallback_icon()
-            .as_ref()
-            .map(|i| std::path::Path::new(i).to_owned().into_boxed_path());
+impl DisplayFormat for DisplayNode<'_> {
+    fn format_for_display(&self, cfg: &config::Config) -> String {
+        match self.node.get_type() {
+            Type::Root => String::from("Cannot format Root"),
+            Type::Output => String::from("Cannot format Output"),
+            Type::Workspace => {
+                let fmt = cfg.get_format_workspace_format();
+                let html_escape = cfg.get_format_html_escape();
 
-        // Some apps report, e.g., Gimp-2.10 but the icon is still named
-        // gimp.png.
-        let app_name_no_version =
-            APP_NAME_AND_VERSION_RX.replace(self.get_app_name(), "$1");
+                fmt.replace("{id}", format!("{}", self.node.id).as_str())
+                    .replace(
+                        "{name}",
+                        &maybe_html_escape(html_escape, self.node.get_name()),
+                    )
+            }
+            Type::Container => {
+                todo!("DisplayFormat for Container not yet implemented")
+            }
+            Type::Window => {
+                let window_format = cfg.get_format_window_format();
+                let urgency_start = cfg.get_format_urgency_start();
+                let urgency_end = cfg.get_format_urgency_end();
+                let html_escape = cfg.get_format_html_escape();
+                let icon_dirs = cfg.get_format_icon_dirs();
+                // fallback_icon has no default value.
+                let fallback_icon: Option<Box<std::path::Path>> =
+                    cfg.get_format_fallback_icon().as_ref().map(|i| {
+                        std::path::Path::new(i).to_owned().into_boxed_path()
+                    });
 
-        window_format
-            .replace("{id}", format!("{}", self.get_id()).as_str())
-            .replace(
-                "{urgency_start}",
-                if self.is_urgent() {
-                    urgency_start.as_str()
-                } else {
-                    ""
-                },
-            )
-            .replace(
-                "{urgency_end}",
-                if self.is_urgent() {
-                    urgency_end.as_str()
-                } else {
-                    ""
-                },
-            )
-            .replace(
-                "{app_name}",
-                &maybe_html_escape(html_escape, self.get_app_name()),
-            )
-            .replace(
-                "{workspace_name}",
-                &maybe_html_escape(
-                    html_escape,
-                    self.workspace.name.as_ref().unwrap().as_str(),
-                ),
-            )
-            .replace(
-                "{marks}",
-                &maybe_html_escape(html_escape, &self.node.marks.join(", ")),
-            )
-            .replace(
-                "{app_icon}",
-                util::get_icon(self.get_app_name(), &icon_dirs)
-                    .or_else(|| {
-                        util::get_icon(&app_name_no_version, &icon_dirs)
-                    })
-                    .or_else(|| {
-                        util::get_icon(
-                            &app_name_no_version.to_lowercase(),
-                            &icon_dirs,
-                        )
-                    })
-                    .or(fallback_icon)
-                    .map(|i| i.to_string_lossy().into_owned())
-                    .unwrap_or_else(String::new)
-                    .as_str(),
-            )
-            .replace(
-                "{title}",
-                &maybe_html_escape(html_escape, self.get_title()),
-            )
-    }
-}
+                // Some apps report, e.g., Gimp-2.10 but the icon is still named
+                // gimp.png.
+                let app_name_no_version = APP_NAME_AND_VERSION_RX
+                    .replace(self.node.get_app_name(), "$1");
 
-fn build_windows<'a>(
-    root: &'a s::Node,
-    include_scratchpad_windows: bool,
-    extra_props: &HashMap<i64, ExtraProps>,
-) -> Vec<Window<'a>> {
-    let mut v = vec![];
-    for workspace in root.workspaces() {
-        if !include_scratchpad_windows && workspace.is_scratchpad() {
-            continue;
-        }
-
-        for n in workspace.windows() {
-            v.push(Window {
-                node: n,
-                extra_props: extra_props.get(&n.id).cloned(),
-                workspace,
-            })
-        }
-    }
-    v
-}
-
-fn build_workspaces<'a>(
-    root: &'a s::Node,
-    include_scratchpad: bool,
-    extra_props: &HashMap<i64, ExtraProps>,
-) -> Vec<Workspace<'a>> {
-    let mut v = vec![];
-    for workspace in root.workspaces() {
-        if workspace.is_scratchpad() && !include_scratchpad {
-            continue;
-        }
-
-        let mut wins: Vec<Window> = workspace
-            .windows()
-            .iter()
-            .map(|w| Window {
-                node: w,
-                extra_props: extra_props.get(&w.id).cloned(),
-                workspace,
-            })
-            .collect();
-        if !extra_props.is_empty() {
-            wins.sort();
-        }
-        v.push(Workspace {
-            node: workspace,
-            extra_props: extra_props.get(&workspace.id).cloned(),
-            windows: wins,
-        })
-    }
-    if !extra_props.is_empty() {
-        v.sort();
-    }
-    v
-}
-
-/// Gets all application windows of the tree.
-pub fn get_windows<'a>(
-    root: &'a s::Node,
-    include_scratchpad_windows: bool,
-    extra_props: &HashMap<i64, ExtraProps>,
-) -> Vec<Window<'a>> {
-    let mut wins = build_windows(root, include_scratchpad_windows, extra_props);
-    if !extra_props.is_empty() {
-        wins.sort();
-    }
-    wins
-}
-
-/// Gets all workspaces of the tree.
-pub fn get_workspaces<'a>(
-    root: &'a s::Node,
-    include_scratchpad: bool,
-    extra_props: &HashMap<i64, ExtraProps>,
-) -> Vec<Workspace<'a>> {
-    let mut workspaces =
-        build_workspaces(root, include_scratchpad, extra_props);
-    workspaces.rotate_left(1);
-    workspaces
-}
-
-pub enum WsOrWin<'a> {
-    Ws { ws: &'a Workspace<'a> },
-    Win { win: &'a Window<'a> },
-}
-
-impl DisplayFormat for WsOrWin<'_> {
-    fn format_for_display(&self, cfg: &cfg::Config) -> String {
-        match self {
-            WsOrWin::Ws { ws } => ws.format_for_display(cfg),
-            WsOrWin::Win { win } => win.format_for_display(cfg),
-        }
-    }
-}
-
-impl WsOrWin<'_> {
-    pub fn from_workspaces<'a>(
-        workspaces: &'a [Workspace],
-    ) -> Vec<WsOrWin<'a>> {
-        let mut v = vec![];
-        for ws in workspaces {
-            v.push(WsOrWin::Ws { ws });
-            for win in &ws.windows {
-                v.push(WsOrWin::Win { win });
+                window_format
+                    .replace("{id}", format!("{}", self.node.id).as_str())
+                    .replace(
+                        "{urgency_start}",
+                        if self.node.urgent {
+                            urgency_start.as_str()
+                        } else {
+                            ""
+                        },
+                    )
+                    .replace(
+                        "{urgency_end}",
+                        if self.node.urgent {
+                            urgency_end.as_str()
+                        } else {
+                            ""
+                        },
+                    )
+                    .replace(
+                        "{app_name}",
+                        &maybe_html_escape(
+                            html_escape,
+                            self.node.get_app_name(),
+                        ),
+                    )
+                    .replace(
+                        "{workspace_name}",
+                        &maybe_html_escape(
+                            html_escape,
+                            self.tree
+                                .get_workspace_node(self.node.id)
+                                .map_or("<no_workspace>", |w| w.get_name()),
+                        ),
+                    )
+                    .replace(
+                        "{marks}",
+                        &maybe_html_escape(
+                            html_escape,
+                            &self.node.marks.join(", "),
+                        ),
+                    )
+                    .replace(
+                        "{app_icon}",
+                        util::get_icon(self.node.get_app_name(), &icon_dirs)
+                            .or_else(|| {
+                                util::get_icon(&app_name_no_version, &icon_dirs)
+                            })
+                            .or_else(|| {
+                                util::get_icon(
+                                    &app_name_no_version.to_lowercase(),
+                                    &icon_dirs,
+                                )
+                            })
+                            .or(fallback_icon)
+                            .map(|i| i.to_string_lossy().into_owned())
+                            .unwrap_or_else(String::new)
+                            .as_str(),
+                    )
+                    .replace(
+                        "{title}",
+                        &maybe_html_escape(html_escape, self.node.get_name()),
+                    )
             }
         }
-        v
-    }
-}
-
-pub struct Workspace<'a> {
-    pub node: &'a s::Node,
-    extra_props: Option<ExtraProps>,
-    pub windows: Vec<Window<'a>>,
-}
-
-impl Workspace<'_> {
-    pub fn get_name(&self) -> &str {
-        self.node.name.as_ref().unwrap()
-    }
-
-    pub fn get_id(&self) -> i64 {
-        self.node.id
-    }
-
-    pub fn get_windows(&self) -> &Vec<Window> {
-        &self.windows
-    }
-
-    pub fn is_scratchpad(&self) -> bool {
-        self.node.is_scratchpad()
-    }
-
-    pub fn is_focused(&self) -> bool {
-        self.node.focused
-    }
-
-    pub fn is_current(&self) -> bool {
-        is_current_container(self.node)
-    }
-}
-
-pub fn is_current_container(node: &s::Node) -> bool {
-    node.focused || NodeIter::new(node).any(|c| c.focused)
-}
-
-impl PartialEq for Workspace<'_> {
-    fn eq(&self, other: &Self) -> bool {
-        self.get_id() == other.get_id()
-    }
-}
-
-impl Eq for Workspace<'_> {}
-
-impl Ord for Workspace<'_> {
-    fn cmp(&self, other: &Self) -> cmp::Ordering {
-        if self == other {
-            cmp::Ordering::Equal
-        } else {
-            let lru_a =
-                self.extra_props.as_ref().map_or(0, |wp| wp.last_focus_time);
-            let lru_b = other
-                .extra_props
-                .as_ref()
-                .map_or(0, |wp| wp.last_focus_time);
-            lru_a.cmp(&lru_b).reverse()
-        }
-    }
-}
-
-impl PartialOrd for Workspace<'_> {
-    fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl<'a> DisplayFormat for Workspace<'a> {
-    fn format_for_display(&self, cfg: &cfg::Config) -> String {
-        let fmt = cfg.get_format_workspace_format();
-        let html_escape = cfg.get_format_html_escape();
-
-        fmt.replace("{id}", format!("{}", self.get_id()).as_str())
-            .replace("{name}", &maybe_html_escape(html_escape, self.get_name()))
     }
 }
