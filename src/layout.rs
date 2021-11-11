@@ -41,10 +41,12 @@ pub fn auto_tile(res_to_min_width: &HashMap<i32, i32>) {
                 let min_window_width = &res_to_min_width.get(&output_width);
 
                 if let Some(min_window_width) = min_window_width {
-                    for container in
-                        con::NodeIter::new(output).filter(|n| n.is_container())
-                    {
+                    for container in con::NodeIter::new(output).filter(|n| {
+                        n.node_type == s::NodeType::Workspace
+                            || n.is_container()
+                    }) {
                         if container.is_scratchpad() {
+                            println!("  Skipping scratchpad");
                             continue;
                         }
                         println!(
