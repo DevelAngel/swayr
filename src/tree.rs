@@ -32,7 +32,7 @@ pub struct NodeIter<'a> {
 }
 
 impl<'a> NodeIter<'a> {
-    pub fn new(node: &'a s::Node) -> NodeIter {
+    fn new(node: &'a s::Node) -> NodeIter {
         NodeIter { stack: vec![node] }
     }
 }
@@ -66,26 +66,14 @@ pub enum Type {
 
 /// Extension methods for [`swayipc::Node`].
 pub trait NodeMethods {
-    /// Returns an iterator for this [`swayipc::Node`] and its childres.
     fn iter(&self) -> NodeIter;
-
-    /// Returns true if this node is an output.
     fn get_type(&self) -> Type;
-
-    /// Returns the app_id if present, otherwise the window-properties class if
-    /// present, otherwise "<unknown_app>".
-    fn get_app_name(&self) -> &str;
-
+    fn get_app_name(&self) -> Result<&str, &str>;
     fn nodes_of_type(&self, t: Type) -> Vec<&s::Node>;
     fn get_name(&self) -> &str;
-
-    // Returns true if this node is the scratchpad output or workspace.
     fn is_scratchpad(&self) -> bool;
     fn is_floating(&self) -> bool;
-
-    fn is_current(&self) -> bool {
-        self.iter().any(|n| n.focused)
-    }
+    fn is_current(&self) -> bool;
 }
 
 impl NodeMethods for s::Node {
@@ -102,6 +90,8 @@ impl NodeMethods for s::Node {
             _ => {
                 if self.node_type == s::NodeType::Con
                     && self.name.is_none()
+                    && self.app_id.is_none()
+                    && self.window_properties.is_none()
                     && self.layout != s::NodeLayout::None
                 {
                     Type::Container
@@ -128,17 +118,17 @@ impl NodeMethods for s::Node {
         }
     }
 
-    fn get_app_name(&self) -> &str {
+    fn get_app_name(&self) -> Result<&str, &str> {
         if let Some(app_id) = &self.app_id {
-            app_id
+            Ok(app_id)
         } else if let Some(wp_class) = self
             .window_properties
             .as_ref()
             .and_then(|wp| wp.class.as_ref())
         {
-            wp_class
+            Ok(wp_class)
         } else {
-            "<unknown_app>"
+            Err("<unknown_app>")
         }
     }
 
@@ -153,6 +143,10 @@ impl NodeMethods for s::Node {
 
     fn is_floating(&self) -> bool {
         self.node_type == s::NodeType::FloatingCon
+    }
+
+    fn is_current(&self) -> bool {
+        self.iter().any(|n| n.focused)
     }
 }
 
@@ -387,8 +381,10 @@ impl DisplayFormat for DisplayNode<'_> {
 
                 // Some apps report, e.g., Gimp-2.10 but the icon is still named
                 // gimp.png.
-                let app_name_no_version = APP_NAME_AND_VERSION_RX
-                    .replace(self.node.get_app_name(), "$1");
+                let app_name =
+                    self.node.get_app_name().unwrap_or("_unknown_app_");
+                let app_name_no_version =
+                    APP_NAME_AND_VERSION_RX.replace(app_name, "$1");
 
                 window_format
                     .replace("{id}", format!("{}", self.node.id).as_str())
@@ -412,7 +408,7 @@ impl DisplayFormat for DisplayNode<'_> {
                         "{app_name}",
                         &maybe_html_escape(
                             html_escape,
-                            self.node.get_app_name(),
+                            self.node.get_app_name().unwrap_or_else(|e| e),
                         ),
                     )
                     .replace(
@@ -433,20 +429,23 @@ impl DisplayFormat for DisplayNode<'_> {
                     )
                     .replace(
                         "{app_icon}",
-                        util::get_icon(self.node.get_app_name(), &icon_dirs)
-                            .or_else(|| {
-                                util::get_icon(&app_name_no_version, &icon_dirs)
-                            })
-                            .or_else(|| {
-                                util::get_icon(
-                                    &app_name_no_version.to_lowercase(),
-                                    &icon_dirs,
-                                )
-                            })
-                            .or(fallback_icon)
-                            .map(|i| i.to_string_lossy().into_owned())
-                            .unwrap_or_else(String::new)
-                            .as_str(),
+                        util::get_icon(
+                            self.node.get_app_name().unwrap_or_else(|e| e),
+                            &icon_dirs,
+                        )
+                        .or_else(|| {
+                            util::get_icon(&app_name_no_version, &icon_dirs)
+                        })
+                        .or_else(|| {
+                            util::get_icon(
+                                &app_name_no_version.to_lowercase(),
+                                &icon_dirs,
+                            )
+                        })
+                        .or(fallback_icon)
+                        .map(|i| i.to_string_lossy().into_owned())
+                        .unwrap_or_else(String::new)
+                        .as_str(),
                     )
                     .replace(
                         "{title}",

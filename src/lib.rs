@@ -25,8 +25,8 @@
 
 pub mod client;
 pub mod cmds;
-pub mod con;
 pub mod config;
 pub mod demon;
 pub mod layout;
+pub mod tree;
 pub mod util;

@@ -15,10 +15,10 @@
 
 //! Functions and data structures of the swayr client.
 
-use crate::con;
-use crate::con::NodeMethods;
 use crate::config as cfg;
 use crate::layout;
+use crate::tree as t;
+use crate::tree::NodeMethods;
 use crate::util;
 use crate::util::DisplayFormat;
 use lazy_static::lazy_static;
@@ -162,7 +162,7 @@ impl SwayrCommand {
 
 pub struct ExecSwayrCmdArgs<'a> {
     pub cmd: &'a SwayrCommand,
-    pub extra_props: Arc<RwLock<HashMap<i64, con::ExtraProps>>>,
+    pub extra_props: Arc<RwLock<HashMap<i64, t::ExtraProps>>>,
 }
 
 impl DisplayFormat for SwayrCommand {
@@ -172,7 +172,7 @@ impl DisplayFormat for SwayrCommand {
     }
 }
 
-fn always_true(_x: &con::DisplayNode) -> bool {
+fn always_true(_x: &t::DisplayNode) -> bool {
     true
 }
 
@@ -216,7 +216,7 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
             Direction::Forward,
             windows,
             &*props.read().unwrap(),
-            Box::new(|dn: &con::DisplayNode| {
+            Box::new(|dn: &t::DisplayNode| {
                 !dn.node.is_floating()
                     && dn.tree.is_child_of_tiled_container(dn.node.id)
             }),
@@ -225,7 +225,7 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
             Direction::Backward,
             windows,
             &*props.read().unwrap(),
-            Box::new(|dn: &con::DisplayNode| {
+            Box::new(|dn: &t::DisplayNode| {
                 !dn.node.is_floating()
                     && dn.tree.is_child_of_tiled_container(dn.node.id)
             }),
@@ -235,7 +235,7 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
                 Direction::Forward,
                 windows,
                 &*props.read().unwrap(),
-                Box::new(|dn: &con::DisplayNode| {
+                Box::new(|dn: &t::DisplayNode| {
                     !dn.node.is_floating()
                         && dn
                             .tree
@@ -248,7 +248,7 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
                 Direction::Backward,
                 windows,
                 &*props.read().unwrap(),
-                Box::new(|dn: &con::DisplayNode| {
+                Box::new(|dn: &t::DisplayNode| {
                     !dn.node.is_floating()
                         && dn
                             .tree
@@ -261,7 +261,7 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
                 Direction::Forward,
                 windows,
                 &*props.read().unwrap(),
-                Box::new(|dn: &con::DisplayNode| dn.node.is_floating()),
+                Box::new(|dn: &t::DisplayNode| dn.node.is_floating()),
             )
         }
         SwayrCommand::PrevFloatingWindow { windows } => {
@@ -269,7 +269,7 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
                 Direction::Backward,
                 windows,
                 &*props.read().unwrap(),
-                Box::new(|dn: &con::DisplayNode| dn.node.is_floating()),
+                Box::new(|dn: &t::DisplayNode| dn.node.is_floating()),
             )
         }
         SwayrCommand::NextWindowOfSameLayout { windows } => {
@@ -403,14 +403,14 @@ pub fn get_tree(include_scratchpad: bool) -> s::Node {
 }
 
 pub fn switch_to_urgent_or_lru_window(
-    extra_props: &HashMap<i64, con::ExtraProps>,
+    extra_props: &HashMap<i64, t::ExtraProps>,
 ) {
     let root = get_tree(false);
-    let tree = con::get_tree(&root, extra_props);
+    let tree = t::get_tree(&root, extra_props);
     if let Some(win) = tree.get_windows().get(0) {
         println!(
             "Switching to {}, id: {}",
-            win.node.get_app_name(),
+            win.node.get_app_name().unwrap_or_else(|e| e),
             win.node.id
         );
         focus_window_by_id(win.node.id)
@@ -466,9 +466,9 @@ fn handle_non_matching_input(input: &str) {
     }
 }
 
-pub fn switch_window(extra_props: &HashMap<i64, con::ExtraProps>) {
+pub fn switch_window(extra_props: &HashMap<i64, t::ExtraProps>) {
     let root = get_tree(true);
-    let tree = con::get_tree(&root, extra_props);
+    let tree = t::get_tree(&root, extra_props);
 
     match util::select_from_menu("Switch to window", &tree.get_windows()) {
         Ok(window) => focus_window_by_id(window.node.id),
@@ -486,11 +486,11 @@ pub enum Direction {
 pub fn focus_window_in_direction(
     dir: Direction,
     consider_wins: &ConsiderWindows,
-    extra_props: &HashMap<i64, con::ExtraProps>,
-    pred: Box<dyn Fn(&con::DisplayNode) -> bool>,
+    extra_props: &HashMap<i64, t::ExtraProps>,
+    pred: Box<dyn Fn(&t::DisplayNode) -> bool>,
 ) {
     let root = get_tree(false);
-    let tree = con::get_tree(&root, extra_props);
+    let tree = t::get_tree(&root, extra_props);
     let mut wins = tree.get_windows();
 
     if consider_wins == &ConsiderWindows::CurrentWorkspace {
@@ -512,7 +512,7 @@ pub fn focus_window_in_direction(
         lru_a.cmp(&lru_b).reverse()
     });
 
-    let is_focused_window: Box<dyn Fn(&con::DisplayNode) -> bool> =
+    let is_focused_window: Box<dyn Fn(&t::DisplayNode) -> bool> =
         if !wins.iter().any(|w| w.node.focused) {
             let last_focused_win_id = wins.get(0).unwrap().node.id;
             Box::new(move |dn| dn.node.id == last_focused_win_id)
@@ -520,7 +520,7 @@ pub fn focus_window_in_direction(
             Box::new(|dn| dn.node.focused)
         };
 
-    let mut iter: Box<dyn Iterator<Item = &con::DisplayNode>> = match dir {
+    let mut iter: Box<dyn Iterator<Item = &t::DisplayNode>> = match dir {
         Direction::Forward => Box::new(wins.iter().rev().cycle()),
         Direction::Backward => Box::new(wins.iter().cycle()),
     };
@@ -538,10 +538,10 @@ pub fn focus_window_in_direction(
 pub fn focus_window_of_same_layout_in_direction(
     dir: Direction,
     consider_wins: &ConsiderWindows,
-    extra_props: &HashMap<i64, con::ExtraProps>,
+    extra_props: &HashMap<i64, t::ExtraProps>,
 ) {
     let root = get_tree(false);
-    let tree = con::get_tree(&root, extra_props);
+    let tree = t::get_tree(&root, extra_props);
     let wins = tree.get_windows();
     let cur_win = wins.get(0);
 
@@ -577,9 +577,9 @@ pub fn focus_window_of_same_layout_in_direction(
     }
 }
 
-pub fn switch_workspace(extra_props: &HashMap<i64, con::ExtraProps>) {
+pub fn switch_workspace(extra_props: &HashMap<i64, t::ExtraProps>) {
     let root = get_tree(false);
-    let tree = con::get_tree(&root, extra_props);
+    let tree = t::get_tree(&root, extra_props);
 
     match util::select_from_menu("Switch to workspace", &tree.get_workspaces())
     {
@@ -593,10 +593,10 @@ pub fn switch_workspace(extra_props: &HashMap<i64, con::ExtraProps>) {
 }
 
 pub fn move_focused_container_to_workspace(
-    extra_props: &HashMap<i64, con::ExtraProps>,
+    extra_props: &HashMap<i64, t::ExtraProps>,
 ) {
     let root = get_tree(true);
-    let tree = con::get_tree(&root, extra_props);
+    let tree = t::get_tree(&root, extra_props);
     let workspaces = tree.get_workspaces();
 
     let val = util::select_from_menu(
@@ -622,18 +622,18 @@ pub fn move_focused_container_to_workspace(
     }
 }
 
-pub fn switch_workspace_or_window(extra_props: &HashMap<i64, con::ExtraProps>) {
+pub fn switch_workspace_or_window(extra_props: &HashMap<i64, t::ExtraProps>) {
     let root = get_tree(true);
-    let tree = con::get_tree(&root, extra_props);
+    let tree = t::get_tree(&root, extra_props);
     let ws_or_wins = tree.get_workspaces_and_windows();
     match util::select_from_menu("Select workspace or window", &ws_or_wins) {
         Ok(tn) => match tn.node.get_type() {
-            con::Type::Workspace => {
+            t::Type::Workspace => {
                 if !tn.node.is_scratchpad() {
                     run_sway_command(&["workspace", tn.node.get_name()]);
                 }
             }
-            con::Type::Window => focus_window_by_id(tn.node.id),
+            t::Type::Window => focus_window_by_id(tn.node.id),
             t => {
                 eprintln!("Cannot handle {:?} in switch_workspace_or_window", t)
             }
@@ -644,9 +644,9 @@ pub fn switch_workspace_or_window(extra_props: &HashMap<i64, con::ExtraProps>) {
     }
 }
 
-pub fn quit_window(extra_props: &HashMap<i64, con::ExtraProps>) {
+pub fn quit_window(extra_props: &HashMap<i64, t::ExtraProps>) {
     let root = get_tree(true);
-    let tree = con::get_tree(&root, extra_props);
+    let tree = t::get_tree(&root, extra_props);
 
     if let Ok(window) =
         util::select_from_menu("Quit window", &tree.get_windows())
@@ -655,22 +655,22 @@ pub fn quit_window(extra_props: &HashMap<i64, con::ExtraProps>) {
     }
 }
 
-pub fn quit_workspace_or_window(extra_props: &HashMap<i64, con::ExtraProps>) {
+pub fn quit_workspace_or_window(extra_props: &HashMap<i64, t::ExtraProps>) {
     let root = get_tree(true);
-    let tree = con::get_tree(&root, extra_props);
+    let tree = t::get_tree(&root, extra_props);
     let ws_or_wins = tree.get_workspaces_and_windows();
     if let Ok(tn) =
         util::select_from_menu("Quit workspace or window", &ws_or_wins)
     {
         match tn.node.get_type() {
-            con::Type::Workspace => {
+            t::Type::Workspace => {
                 for win in
-                    tn.node.iter().filter(|n| n.get_type() == con::Type::Window)
+                    tn.node.iter().filter(|n| n.get_type() == t::Type::Window)
                 {
                     quit_window_by_id(win.id)
                 }
             }
-            con::Type::Window => quit_window_by_id(tn.node.id),
+            t::Type::Window => quit_window_by_id(tn.node.id),
             t => {
                 eprintln!("Cannot handle {:?} in quit_workspace_or_window", t)
             }
@@ -754,7 +754,7 @@ fn tab_current_workspace(floating: &ConsiderFloating) {
 
 fn toggle_tab_tile_current_workspace(floating: &ConsiderFloating) {
     let tree = get_tree(false);
-    let workspaces = tree.nodes_of_type(con::Type::Workspace);
+    let workspaces = tree.nodes_of_type(t::Type::Workspace);
     let cur_ws = workspaces.iter().find(|w| w.is_current()).unwrap();
     if cur_ws.layout == s::NodeLayout::Tabbed {
         tile_current_workspace(floating, true);

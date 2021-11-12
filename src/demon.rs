@@ -16,9 +16,9 @@
 //! Functions and data structures of the swayrd demon.
 
 use crate::cmds;
-use crate::con;
 use crate::config;
 use crate::layout;
+use crate::tree as t;
 use crate::util;
 use std::collections::HashMap;
 use std::io::Read;
@@ -30,7 +30,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use swayipc as s;
 
 pub fn run_demon() {
-    let extra_props: Arc<RwLock<HashMap<i64, con::ExtraProps>>> =
+    let extra_props: Arc<RwLock<HashMap<i64, t::ExtraProps>>> =
         Arc::new(RwLock::new(HashMap::new()));
     let extra_props_for_ev_handler = extra_props.clone();
 
@@ -47,7 +47,7 @@ fn connect_and_subscribe() -> s::Fallible<s::EventStream> {
 }
 
 pub fn monitor_sway_events(
-    extra_props: Arc<RwLock<HashMap<i64, con::ExtraProps>>>,
+    extra_props: Arc<RwLock<HashMap<i64, t::ExtraProps>>>,
 ) {
     let config = config::load_config();
 
@@ -104,7 +104,7 @@ pub fn monitor_sway_events(
 
 fn handle_window_event(
     ev: Box<s::WindowEvent>,
-    extra_props: Arc<RwLock<HashMap<i64, con::ExtraProps>>>,
+    extra_props: Arc<RwLock<HashMap<i64, t::ExtraProps>>>,
     config: &config::Config,
 ) -> bool {
     let s::WindowEvent {
@@ -143,7 +143,7 @@ fn handle_window_event(
 
 fn handle_workspace_event(
     ev: Box<s::WorkspaceEvent>,
-    extra_props: Arc<RwLock<HashMap<i64, con::ExtraProps>>>,
+    extra_props: Arc<RwLock<HashMap<i64, t::ExtraProps>>>,
 ) -> bool {
     let s::WorkspaceEvent {
         change,
@@ -176,7 +176,7 @@ fn handle_workspace_event(
 
 fn update_last_focus_time(
     id: i64,
-    extra_props: Arc<RwLock<HashMap<i64, con::ExtraProps>>>,
+    extra_props: Arc<RwLock<HashMap<i64, t::ExtraProps>>>,
 ) {
     let mut write_lock = extra_props.write().unwrap();
     if let Some(wp) = write_lock.get_mut(&id) {
@@ -184,7 +184,7 @@ fn update_last_focus_time(
     } else {
         write_lock.insert(
             id,
-            con::ExtraProps {
+            t::ExtraProps {
                 last_focus_time: get_epoch_time_as_millis(),
                 last_focus_time_for_next_prev_seq: 0,
             },
@@ -194,7 +194,7 @@ fn update_last_focus_time(
 
 fn remove_extra_props(
     id: i64,
-    extra_props: Arc<RwLock<HashMap<i64, con::ExtraProps>>>,
+    extra_props: Arc<RwLock<HashMap<i64, t::ExtraProps>>>,
 ) {
     extra_props.write().unwrap().remove(&id);
 }
@@ -207,7 +207,7 @@ fn get_epoch_time_as_millis() -> u128 {
 }
 
 pub fn serve_client_requests(
-    extra_props: Arc<RwLock<HashMap<i64, con::ExtraProps>>>,
+    extra_props: Arc<RwLock<HashMap<i64, t::ExtraProps>>>,
 ) {
     match std::fs::remove_file(util::get_swayr_socket_path()) {
         Ok(()) => println!("Deleted stale socket from previous run."),
@@ -236,7 +236,7 @@ pub fn serve_client_requests(
 
 fn handle_client_request(
     mut stream: UnixStream,
-    extra_props: Arc<RwLock<HashMap<i64, con::ExtraProps>>>,
+    extra_props: Arc<RwLock<HashMap<i64, t::ExtraProps>>>,
 ) {
     let mut cmd_str = String::new();
     if stream.read_to_string(&mut cmd_str).is_ok() {
