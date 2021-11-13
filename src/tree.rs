@@ -151,7 +151,7 @@ impl NodeMethods for s::Node {
 }
 
 /// Extra properties gathered by swayrd for windows and workspaces.
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Copy, Clone, Debug, Deserialize, Serialize)]
 pub struct ExtraProps {
     /// Milliseconds since UNIX epoch.
     pub last_focus_time: u128,
@@ -165,9 +165,17 @@ pub struct Tree<'a> {
     extra_props: &'a HashMap<i64, ExtraProps>,
 }
 
+#[derive(Copy, Clone, PartialEq, Eq)]
+enum IndentLevel {
+    Fixed(u32),
+    WorkspacesZeroWindowsOne,
+    TreeDepth(u8),
+}
+
 pub struct DisplayNode<'a> {
     pub node: &'a s::Node,
     pub tree: &'a Tree<'a>,
+    indent_level: IndentLevel,
 }
 
 impl<'a> Tree<'a> {
@@ -226,11 +234,16 @@ impl<'a> Tree<'a> {
         self.sorted_nodes_of_type_1(self.root, t)
     }
 
-    fn as_display_nodes(&self, v: Vec<&'a s::Node>) -> Vec<DisplayNode> {
+    fn as_display_nodes(
+        &self,
+        v: Vec<&'a s::Node>,
+        indent_level: IndentLevel,
+    ) -> Vec<DisplayNode> {
         v.iter()
-            .map(|n| DisplayNode {
-                node: n,
+            .map(|node| DisplayNode {
+                node,
                 tree: self,
+                indent_level,
             })
             .collect()
     }
@@ -245,13 +258,13 @@ impl<'a> Tree<'a> {
     pub fn get_workspaces(&self) -> Vec<DisplayNode> {
         let mut v = self.sorted_nodes_of_type(Type::Workspace);
         v.rotate_left(1);
-        self.as_display_nodes(v)
+        self.as_display_nodes(v, IndentLevel::Fixed(0))
     }
 
     pub fn get_windows(&self) -> Vec<DisplayNode> {
         let mut v = self.sorted_nodes_of_type(Type::Window);
         v.rotate_left(1);
-        self.as_display_nodes(v)
+        self.as_display_nodes(v, IndentLevel::Fixed(0))
     }
 
     pub fn get_workspaces_and_windows(&self) -> Vec<DisplayNode> {
@@ -274,7 +287,7 @@ impl<'a> Tree<'a> {
             v.rotate_left(1);
         }
 
-        self.as_display_nodes(v)
+        self.as_display_nodes(v, IndentLevel::WorkspacesZeroWindowsOne)
     }
 
     pub fn is_child_of_tiled_container(&self, id: i64) -> bool {
@@ -351,27 +364,27 @@ fn maybe_html_escape(do_it: bool, text: &str) -> String {
 
 impl DisplayFormat for DisplayNode<'_> {
     fn format_for_display(&self, cfg: &config::Config) -> String {
+        let indent = cfg.get_format_indent();
+        let html_escape = cfg.get_format_html_escape();
+
         match self.node.get_type() {
             Type::Root => String::from("Cannot format Root"),
             Type::Output => String::from("Cannot format Output"),
-            Type::Workspace => {
-                let fmt = cfg.get_format_workspace_format();
-                let html_escape = cfg.get_format_html_escape();
-
-                fmt.replace("{id}", format!("{}", self.node.id).as_str())
-                    .replace(
-                        "{name}",
-                        &maybe_html_escape(html_escape, self.node.get_name()),
-                    )
-            }
+            Type::Workspace => cfg
+                .get_format_workspace_format()
+                .replace("{indent}", &indent.repeat(self.get_indent_level()))
+                .replace("{layout}", format!("{:?}", self.node.layout).as_str())
+                .replace("{id}", format!("{}", self.node.id).as_str())
+                .replace(
+                    "{name}",
+                    &maybe_html_escape(html_escape, self.node.get_name()),
+                ),
             Type::Container => {
                 todo!("DisplayFormat for Container not yet implemented")
             }
             Type::Window => {
-                let window_format = cfg.get_format_window_format();
                 let urgency_start = cfg.get_format_urgency_start();
                 let urgency_end = cfg.get_format_urgency_end();
-                let html_escape = cfg.get_format_html_escape();
                 let icon_dirs = cfg.get_format_icon_dirs();
                 // fallback_icon has no default value.
                 let fallback_icon: Option<Box<std::path::Path>> =
@@ -386,7 +399,15 @@ impl DisplayFormat for DisplayNode<'_> {
                 let app_name_no_version =
                     APP_NAME_AND_VERSION_RX.replace(app_name, "$1");
 
-                window_format
+                cfg.get_format_window_format()
+                    .replace(
+                        "{indent}",
+                        &indent.repeat(self.get_indent_level()),
+                    )
+                    .replace(
+                        "{layout}",
+                        format!("{:?}", self.node.layout).as_str(),
+                    )
                     .replace("{id}", format!("{}", self.node.id).as_str())
                     .replace(
                         "{urgency_start}",
@@ -451,6 +472,28 @@ impl DisplayFormat for DisplayNode<'_> {
                         "{title}",
                         &maybe_html_escape(html_escape, self.node.get_name()),
                     )
+            }
+        }
+    }
+
+    fn get_indent_level(&self) -> usize {
+        match self.indent_level {
+            IndentLevel::Fixed(level) => level as usize,
+            IndentLevel::WorkspacesZeroWindowsOne => {
+                match self.node.get_type(){
+                    Type::Workspace => 0,
+                    Type::Window => 1,
+                    _ => panic!("Only Workspaces and Windows expected. File a bug report!")
+                }
+            }
+            IndentLevel::TreeDepth(offset) => {
+                let mut depth: usize = 0;
+                let mut node = self.node;
+                while let Some(p) = self.tree.get_parent_node(node.id) {
+                    depth += 1;
+                    node = p;
+                }
+                depth - offset as usize
             }
         }
     }

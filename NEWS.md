@@ -1,3 +1,18 @@
+swayr v0.10.0
+=============
+
+- The `con` module which enhances the sway IPC container tree structure has
+  been replaced by `tree` which achieves the same job but is not restricted to
+  only handle workspaces, and windows.
+- Formats such as `format.workspace_format`, and `format.window_format` can now
+  include a `{indent}` placeholder which will be replaced with N times the new
+  `format.indent` value.  N is the depth in the shown menu input, e.g., with
+  `swayr switch-workspace-or-window` the indent level for workspaces is 0, and
+  1 for windows.
+- The `format.workspace_format` may now include a `{layout}` placeholder which
+  is replaced with the current container's layout.
+  
+
 swayr v0.9.0
 ============
 

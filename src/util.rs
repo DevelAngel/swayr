@@ -229,6 +229,7 @@ fn test_icon_stuff() {
 
 pub trait DisplayFormat {
     fn format_for_display(&self, config: &cfg::Config) -> String;
+    fn get_indent_level(&self) -> usize;
 }
 
 pub fn select_from_menu<'a, 'b, TS>(

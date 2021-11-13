@@ -167,8 +167,14 @@ pub struct ExecSwayrCmdArgs<'a> {
 
 impl DisplayFormat for SwayrCommand {
     fn format_for_display(&self, _: &cfg::Config) -> std::string::String {
-        // TODO: Add a format to Config
+        // TODO: It would be very nice if the display format was exactly like
+        // the swayr invocation in the shell.  Can that somehow be retrieved
+        // from clap?
         format!("{:?}", self)
+    }
+
+    fn get_indent_level(&self) -> usize {
+        0
     }
 }
 
@@ -866,6 +872,10 @@ struct SwaymsgCmd<'a> {
 impl DisplayFormat for SwaymsgCmd<'_> {
     fn format_for_display(&self, _: &cfg::Config) -> std::string::String {
         self.cmd.join(" ")
+    }
+
+    fn get_indent_level(&self) -> usize {
+        0
     }
 }
 

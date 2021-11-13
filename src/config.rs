@@ -87,6 +87,14 @@ impl Config {
     //         .expect("No format.container_format defined.")
     // }
 
+    pub fn get_format_indent(&self) -> String {
+        self.format
+            .as_ref()
+            .and_then(|f| f.indent.clone())
+            .or_else(|| Format::default().indent)
+            .expect("No format.indent defined.")
+    }
+
     pub fn get_format_urgency_start(&self) -> String {
         self.format
             .as_ref()
@@ -156,6 +164,7 @@ pub struct Format {
     window_format: Option<String>,
     workspace_format: Option<String>,
     //container_format: Option<String>,
+    indent: Option<String>,
     urgency_start: Option<String>,
     urgency_end: Option<String>,
     html_escape: Option<bool>,
@@ -196,6 +205,7 @@ impl Default for Menu {
                 "--insensitive".to_string(),
                 "--cache-file=/dev/null".to_string(),
                 "--parse-search".to_string(),
+                "--height=40%".to_string(),
                 "--prompt={prompt}".to_string(),
             ]),
         }
@@ -206,13 +216,14 @@ impl Default for Format {
     fn default() -> Self {
         Format {
             window_format: Some(
-                "{urgency_start}<b>“{title}”</b>{urgency_end} \
-                 — <i>{app_name}</i> on workspace {workspace_name}   \
+                "img:{app_icon}:text:{indent}<i>{app_name}</i> — \
+                 {urgency_start}<b>“{title}”</b>{urgency_end} {layout} \
+                 on workspace {workspace_name} {marks}    \
                  <span alpha=\"20000\">({id})</span>"
                     .to_string(),
             ),
             workspace_format: Some(
-                "<b>Workspace {name}</b>   \
+                "{indent}<b>Workspace {name}</b> {layout}    \
                  <span alpha=\"20000\">({id})</span>"
                     .to_string(),
             ),
@@ -221,6 +232,7 @@ impl Default for Format {
             //      <span alpha=\"20000\">({id})</span>"
             //         .to_string(),
             // ),
+            indent: Some("    ".to_string()),
             html_escape: Some(true),
             urgency_start: Some(
                 "<span background=\"darkred\" foreground=\"yellow\">"
@@ -229,7 +241,10 @@ impl Default for Format {
             urgency_end: Some("</span>".to_string()),
             icon_dirs: Some(vec![
                 "/usr/share/icons/hicolor/scalable/apps".to_string(),
+                "/usr/share/icons/hicolor/64x64/apps".to_string(),
                 "/usr/share/icons/hicolor/48x48/apps".to_string(),
+                "/usr/share/icons/Adwaita/64x64/apps".to_string(),
+                "/usr/share/icons/Adwaita/48x48/apps".to_string(),
                 "/usr/share/pixmaps".to_string(),
             ]),
             fallback_icon: None,
@@ -240,6 +255,7 @@ impl Default for Format {
 impl Default for Layout {
     fn default() -> Layout {
         let resolution_min_width_vec = vec![
+            [800, 400],
             [1024, 500],
             [1280, 600],
             [1400, 680],
