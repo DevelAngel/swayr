@@ -290,6 +290,22 @@ impl<'a> Tree<'a> {
         self.as_display_nodes(v, IndentLevel::WorkspacesZeroWindowsOne)
     }
 
+    pub fn get_workspaces_containers_and_windows(&self) -> Vec<DisplayNode> {
+        let workspaces = self.sorted_nodes_of_type(Type::Workspace);
+        let mut v: Vec<&s::Node> = vec![];
+        for ws in workspaces {
+            // TODO: implement me!
+        }
+
+        // Rotate until we have the second recently used workspace in front.
+        v.rotate_left(1);
+        while v[0].get_type() != Type::Workspace {
+            v.rotate_left(1);
+        }
+
+        self.as_display_nodes(v, IndentLevel::TreeDepth(2))
+    }
+
     pub fn is_child_of_tiled_container(&self, id: i64) -> bool {
         match self.get_parent_node(id) {
             Some(n) => {

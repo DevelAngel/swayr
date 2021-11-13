@@ -108,6 +108,9 @@ pub enum SwayrCommand {
     SwitchWorkspace,
     /// Switch to the selected workspace or focus the selected window.
     SwitchWorkspaceOrWindow,
+    /// Switch to the selected workspace or focus the selected container, or
+    /// window.
+    SwitchWorkspaceContainerOrWindow,
     /// Quit all windows of selected workspace or the selected window.
     QuitWorkspaceOrWindow,
     /// Move the currently focused window or container to the selected workspace.
@@ -301,6 +304,9 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
         }
         SwayrCommand::SwitchWorkspaceOrWindow => {
             switch_workspace_or_window(&*props.read().unwrap())
+        }
+        SwayrCommand::SwitchWorkspaceContainerOrWindow => {
+            switch_workspace_container_or_window(&*props.read().unwrap())
         }
         SwayrCommand::QuitWorkspaceOrWindow => {
             quit_workspace_or_window(&*props.read().unwrap())
@@ -640,6 +646,35 @@ pub fn switch_workspace_or_window(extra_props: &HashMap<i64, t::ExtraProps>) {
                 }
             }
             t::Type::Window => focus_window_by_id(tn.node.id),
+            t => {
+                eprintln!("Cannot handle {:?} in switch_workspace_or_window", t)
+            }
+        },
+        Err(non_matching_input) => {
+            handle_non_matching_input(&non_matching_input)
+        }
+    }
+}
+
+pub fn switch_workspace_container_or_window(
+    extra_props: &HashMap<i64, t::ExtraProps>,
+) {
+    let root = get_tree(true);
+    let tree = t::get_tree(&root, extra_props);
+    let ws_or_wins = tree.get_workspaces_containers_and_windows();
+    match util::select_from_menu(
+        "Select workspace, container, or window",
+        &ws_or_wins,
+    ) {
+        Ok(tn) => match tn.node.get_type() {
+            t::Type::Workspace => {
+                if !tn.node.is_scratchpad() {
+                    run_sway_command(&["workspace", tn.node.get_name()]);
+                }
+            }
+            t::Type::Window | t::Type::Container => {
+                focus_window_by_id(tn.node.id)
+            }
             t => {
                 eprintln!("Cannot handle {:?} in switch_workspace_or_window", t)
             }
