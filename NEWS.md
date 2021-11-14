@@ -11,6 +11,13 @@ swayr v0.10.0
   1 for windows.
 - The `format.workspace_format` may now include a `{layout}` placeholder which
   is replaced with the current container's layout.
+- New command: `switch-workspace-container-or-window` shows workspaces,
+  containers, and their windows in the menu program and switches to the
+  selected one.
+- New command: `quit-workspace-container-or-window` shows workspaces,
+  containers, and their windows in the menu program and quits all windows of
+  the selected workspace/container, or the selected window.
+
   
 
 swayr v0.9.0

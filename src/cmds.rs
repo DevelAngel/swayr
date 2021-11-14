@@ -52,6 +52,20 @@ pub enum SwayrCommand {
     SwitchToUrgentOrLRUWindow,
     /// Focus the selected window.
     SwitchWindow,
+    /// Switch to the selected workspace.
+    SwitchWorkspace,
+    /// Switch to the selected workspace or focus the selected window.
+    SwitchWorkspaceOrWindow,
+    /// Switch to the selected workspace or focus the selected container, or
+    /// window.
+    SwitchWorkspaceContainerOrWindow,
+    /// Quit the selected window.
+    QuitWindow,
+    /// Quit all windows of selected workspace or the selected window.
+    QuitWorkspaceOrWindow,
+    /// Quit all windows of selected workspace, or container or the selected
+    /// window.
+    QuitWorkspaceContainerOrWindow,
     /// Focus the next window in LRU order.
     NextWindow {
         #[clap(subcommand)]
@@ -102,18 +116,8 @@ pub enum SwayrCommand {
         #[clap(subcommand)]
         windows: ConsiderWindows,
     },
-    /// Quit the selected window.
-    QuitWindow,
-    /// Switch to the selected workspace.
-    SwitchWorkspace,
-    /// Switch to the selected workspace or focus the selected window.
-    SwitchWorkspaceOrWindow,
-    /// Switch to the selected workspace or focus the selected container, or
-    /// window.
-    SwitchWorkspaceContainerOrWindow,
-    /// Quit all windows of selected workspace or the selected window.
-    QuitWorkspaceOrWindow,
-    /// Move the currently focused window or container to the selected workspace.
+    /// Move the currently focused window or container to the selected
+    /// workspace.
     MoveFocusedToWorkspace,
     /// Tab or shuffle-and-tile the windows on the current workspace, including
     /// or excluding floating windows.
@@ -209,6 +213,22 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
             switch_to_urgent_or_lru_window(&*props.read().unwrap())
         }
         SwayrCommand::SwitchWindow => switch_window(&*props.read().unwrap()),
+        SwayrCommand::SwitchWorkspace => {
+            switch_workspace(&*props.read().unwrap())
+        }
+        SwayrCommand::SwitchWorkspaceOrWindow => {
+            switch_workspace_or_window(&*props.read().unwrap())
+        }
+        SwayrCommand::SwitchWorkspaceContainerOrWindow => {
+            switch_workspace_container_or_window(&*props.read().unwrap())
+        }
+        SwayrCommand::QuitWindow => quit_window(&*props.read().unwrap()),
+        SwayrCommand::QuitWorkspaceOrWindow => {
+            quit_workspace_or_window(&*props.read().unwrap())
+        }
+        SwayrCommand::QuitWorkspaceContainerOrWindow => {
+            quit_workspace_container_or_window(&*props.read().unwrap())
+        }
         SwayrCommand::NextWindow { windows } => focus_window_in_direction(
             Direction::Forward,
             windows,
@@ -298,19 +318,6 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
         SwayrCommand::MoveFocusedToWorkspace => {
             move_focused_container_to_workspace(&*props.read().unwrap())
         }
-        SwayrCommand::QuitWindow => quit_window(&*props.read().unwrap()),
-        SwayrCommand::SwitchWorkspace => {
-            switch_workspace(&*props.read().unwrap())
-        }
-        SwayrCommand::SwitchWorkspaceOrWindow => {
-            switch_workspace_or_window(&*props.read().unwrap())
-        }
-        SwayrCommand::SwitchWorkspaceContainerOrWindow => {
-            switch_workspace_container_or_window(&*props.read().unwrap())
-        }
-        SwayrCommand::QuitWorkspaceOrWindow => {
-            quit_workspace_or_window(&*props.read().unwrap())
-        }
         SwayrCommand::TileWorkspace { floating } => {
             tile_current_workspace(floating, false)
         }
@@ -393,14 +400,6 @@ fn quit_window_by_id(id: i64) {
     run_sway_command(&[format!("[con_id={}]", id).as_str(), "kill"]);
 }
 
-#[deprecated]
-pub fn get_tree_old() -> s::Node {
-    match s::Connection::new() {
-        Ok(mut con) => con.get_tree().expect("Got no root node"),
-        Err(err) => panic!("{}", err),
-    }
-}
-
 pub fn get_tree(include_scratchpad: bool) -> s::Node {
     match s::Connection::new() {
         Ok(mut con) => {
@@ -478,15 +477,130 @@ fn handle_non_matching_input(input: &str) {
     }
 }
 
-pub fn switch_window(extra_props: &HashMap<i64, t::ExtraProps>) {
-    let root = get_tree(true);
-    let tree = t::get_tree(&root, extra_props);
-
-    match util::select_from_menu("Switch to window", &tree.get_windows()) {
-        Ok(window) => focus_window_by_id(window.node.id),
+fn select_and_focus(prompt: &str, choices: &[t::DisplayNode]) {
+    match util::select_from_menu(prompt, choices) {
+        Ok(tn) => match tn.node.get_type() {
+            t::Type::Workspace => {
+                if !tn.node.is_scratchpad() {
+                    run_sway_command(&["workspace", tn.node.get_name()]);
+                }
+            }
+            t::Type::Window | t::Type::Container => {
+                focus_window_by_id(tn.node.id)
+            }
+            t => {
+                eprintln!("Cannot handle {:?} in select_and_focus", t)
+            }
+        },
         Err(non_matching_input) => {
             handle_non_matching_input(&non_matching_input)
         }
+    }
+}
+
+pub fn switch_window(extra_props: &HashMap<i64, t::ExtraProps>) {
+    let root = get_tree(true);
+    let tree = t::get_tree(&root, extra_props);
+    select_and_focus("Select window", &tree.get_windows());
+}
+
+pub fn switch_workspace(extra_props: &HashMap<i64, t::ExtraProps>) {
+    let root = get_tree(false);
+    let tree = t::get_tree(&root, extra_props);
+    select_and_focus("Select workspace", &tree.get_workspaces());
+}
+
+pub fn switch_workspace_or_window(extra_props: &HashMap<i64, t::ExtraProps>) {
+    let root = get_tree(true);
+    let tree = t::get_tree(&root, extra_props);
+    select_and_focus(
+        "Select workspace, or window",
+        &tree.get_workspaces_and_windows(),
+    );
+}
+
+pub fn switch_workspace_container_or_window(
+    extra_props: &HashMap<i64, t::ExtraProps>,
+) {
+    let root = get_tree(true);
+    let tree = t::get_tree(&root, extra_props);
+    select_and_focus(
+        "Select workspace, container, or window",
+        &tree.get_workspaces_containers_and_windows(),
+    );
+}
+
+fn select_and_quit(prompt: &str, choices: &[t::DisplayNode]) {
+    if let Ok(tn) = util::select_from_menu(prompt, choices) {
+        match tn.node.get_type() {
+            t::Type::Workspace | t::Type::Container => {
+                for win in
+                    tn.node.iter().filter(|n| n.get_type() == t::Type::Window)
+                {
+                    quit_window_by_id(win.id)
+                }
+            }
+            t::Type::Window => quit_window_by_id(tn.node.id),
+            t => {
+                eprintln!("Cannot handle {:?} in quit_workspace_or_window", t)
+            }
+        }
+    }
+}
+
+pub fn quit_window(extra_props: &HashMap<i64, t::ExtraProps>) {
+    let root = get_tree(true);
+    let tree = t::get_tree(&root, extra_props);
+    select_and_quit("Quit window", &tree.get_windows());
+}
+
+pub fn quit_workspace_or_window(extra_props: &HashMap<i64, t::ExtraProps>) {
+    let root = get_tree(true);
+    let tree = t::get_tree(&root, extra_props);
+    select_and_quit(
+        "Quit workspace, or window",
+        &tree.get_workspaces_and_windows(),
+    );
+}
+
+pub fn quit_workspace_container_or_window(
+    extra_props: &HashMap<i64, t::ExtraProps>,
+) {
+    let root = get_tree(true);
+    let tree = t::get_tree(&root, extra_props);
+    select_and_quit(
+        "Quit workspace, container, or window",
+        &tree.get_workspaces_containers_and_windows(),
+    );
+}
+
+pub fn move_focused_container_to_workspace(
+    extra_props: &HashMap<i64, t::ExtraProps>,
+) {
+    let root = get_tree(true);
+    let tree = t::get_tree(&root, extra_props);
+    let workspaces = tree.get_workspaces();
+
+    let val = util::select_from_menu(
+        "Move focused container to workspace",
+        &workspaces,
+    );
+    let ws_name = &match val {
+        Ok(workspace) => String::from(workspace.node.get_name()),
+        Err(input) => String::from(chop_workspace_shortcut(&input)),
+    };
+
+    if DIGIT_AND_NAME.is_match(ws_name) {
+        run_sway_command(&[
+            "move",
+            "container",
+            "to",
+            "workspace",
+            "number",
+            ws_name,
+        ]);
+    } else {
+        run_sway_command(&["move", "container", "to", "workspace", ws_name]);
     }
 }
 
@@ -586,136 +700,6 @@ pub fn focus_window_of_same_layout_in_direction(
                 Box::new(always_true)
             },
         )
-    }
-}
-
-pub fn switch_workspace(extra_props: &HashMap<i64, t::ExtraProps>) {
-    let root = get_tree(false);
-    let tree = t::get_tree(&root, extra_props);
-
-    match util::select_from_menu("Switch to workspace", &tree.get_workspaces())
-    {
-        Ok(workspace) => {
-            run_sway_command(&["workspace", workspace.node.get_name()])
-        }
-        Err(non_matching_input) => {
-            handle_non_matching_input(&non_matching_input)
-        }
-    }
-}
-
-pub fn move_focused_container_to_workspace(
-    extra_props: &HashMap<i64, t::ExtraProps>,
-) {
-    let root = get_tree(true);
-    let tree = t::get_tree(&root, extra_props);
-    let workspaces = tree.get_workspaces();
-
-    let val = util::select_from_menu(
-        "Move focused container to workspace",
-        &workspaces,
-    );
-    let ws_name = &match val {
-        Ok(workspace) => String::from(workspace.node.get_name()),
-        Err(input) => String::from(chop_workspace_shortcut(&input)),
-    };
-
-    if DIGIT_AND_NAME.is_match(ws_name) {
-        run_sway_command(&[
-            "move",
-            "container",
-            "to",
-            "workspace",
-            "number",
-            ws_name,
-        ]);
-    } else {
-        run_sway_command(&["move", "container", "to", "workspace", ws_name]);
-    }
-}
-
-pub fn switch_workspace_or_window(extra_props: &HashMap<i64, t::ExtraProps>) {
-    let root = get_tree(true);
-    let tree = t::get_tree(&root, extra_props);
-    let ws_or_wins = tree.get_workspaces_and_windows();
-    match util::select_from_menu("Select workspace or window", &ws_or_wins) {
-        Ok(tn) => match tn.node.get_type() {
-            t::Type::Workspace => {
-                if !tn.node.is_scratchpad() {
-                    run_sway_command(&["workspace", tn.node.get_name()]);
-                }
-            }
-            t::Type::Window => focus_window_by_id(tn.node.id),
-            t => {
-                eprintln!("Cannot handle {:?} in switch_workspace_or_window", t)
-            }
-        },
-        Err(non_matching_input) => {
-            handle_non_matching_input(&non_matching_input)
-        }
-    }
-}
-
-pub fn switch_workspace_container_or_window(
-    extra_props: &HashMap<i64, t::ExtraProps>,
-) {
-    let root = get_tree(true);
-    let tree = t::get_tree(&root, extra_props);
-    let ws_or_wins = tree.get_workspaces_containers_and_windows();
-    match util::select_from_menu(
-        "Select workspace, container, or window",
-        &ws_or_wins,
-    ) {
-        Ok(tn) => match tn.node.get_type() {
-            t::Type::Workspace => {
-                if !tn.node.is_scratchpad() {
-                    run_sway_command(&["workspace", tn.node.get_name()]);
-                }
-            }
-            t::Type::Window | t::Type::Container => {
-                focus_window_by_id(tn.node.id)
-            }
-            t => {
-                eprintln!("Cannot handle {:?} in switch_workspace_or_window", t)
-            }
-        },
-        Err(non_matching_input) => {
-            handle_non_matching_input(&non_matching_input)
-        }
-    }
-}
-
-pub fn quit_window(extra_props: &HashMap<i64, t::ExtraProps>) {
-    let root = get_tree(true);
-    let tree = t::get_tree(&root, extra_props);
-
-    if let Ok(window) =
-        util::select_from_menu("Quit window", &tree.get_windows())
-    {
-        quit_window_by_id(window.node.id)
-    }
-}
-
-pub fn quit_workspace_or_window(extra_props: &HashMap<i64, t::ExtraProps>) {
-    let root = get_tree(true);
-    let tree = t::get_tree(&root, extra_props);
-    let ws_or_wins = tree.get_workspaces_and_windows();
-    if let Ok(tn) =
-        util::select_from_menu("Quit workspace or window", &ws_or_wins)
-    {
-        match tn.node.get_type() {
-            t::Type::Workspace => {
-                for win in
-                    tn.node.iter().filter(|n| n.get_type() == t::Type::Window)
-                {
-                    quit_window_by_id(win.id)
-                }
-            }
-            t::Type::Window => quit_window_by_id(tn.node.id),
-            t => {
-                eprintln!("Cannot handle {:?} in quit_workspace_or_window", t)
-            }
-        }
     }
 }
 
