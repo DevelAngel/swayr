@@ -273,12 +273,6 @@ impl<'a> Tree<'a> {
             v.append(&mut wins);
         }
 
-        // Rotate until we have the second recently used workspace in front.
-        v.rotate_left(1);
-        while v[0].get_type() != Type::Workspace {
-            v.rotate_left(1);
-        }
-
         self.as_display_nodes(&v, IndentLevel::WorkspacesZeroWindowsOne)
     }
 
@@ -319,11 +313,6 @@ impl<'a> Tree<'a> {
             self.push_subtree_sorted(ws, Rc::clone(&v));
         }
 
-        // Rotate until we have the second recently used workspace in front.
-        v.borrow_mut().rotate_left(1);
-        while v.borrow()[0].get_type() != Type::Workspace {
-            v.borrow_mut().rotate_left(1);
-        }
         let x = self.as_display_nodes(&*v.borrow(), IndentLevel::TreeDepth(2));
         x
     }
