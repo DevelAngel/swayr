@@ -316,7 +316,7 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
             )
         }
         SwayrCommand::MoveFocusedToWorkspace => {
-            move_focused_container_to_workspace(&*props.read().unwrap())
+            move_focused_to_workspace(&*props.read().unwrap())
         }
         SwayrCommand::TileWorkspace { floating } => {
             tile_current_workspace(floating, false)
@@ -574,22 +574,7 @@ pub fn quit_workspace_container_or_window(
     );
 }
 
-pub fn move_focused_container_to_workspace(
-    extra_props: &HashMap<i64, t::ExtraProps>,
-) {
-    let root = get_tree(true);
-    let tree = t::get_tree(&root, extra_props);
-    let workspaces = tree.get_workspaces();
-
-    let val = util::select_from_menu(
-        "Move focused container to workspace",
-        &workspaces,
-    );
-    let ws_name = &match val {
-        Ok(workspace) => String::from(workspace.node.get_name()),
-        Err(input) => String::from(chop_workspace_shortcut(&input)),
-    };
-
+fn move_focused_to_workspace_1(ws_name: &str) {
     if DIGIT_AND_NAME.is_match(ws_name) {
         run_sway_command(&[
             "move",
@@ -602,6 +587,35 @@ pub fn move_focused_container_to_workspace(
     } else {
         run_sway_command(&["move", "container", "to", "workspace", ws_name]);
     }
+}
+
+fn move_focused_to_container_1(id: i64) {
+    run_sway_command(&["move", "container", "to", &format!("{}", id)]);
+}
+
+fn select_and_move_focused_to(prompt: &str, choices: &[t::DisplayNode]) {
+    match util::select_from_menu(prompt, choices) {
+        Ok(tn) => match tn.node.get_type() {
+            t::Type::Workspace => {
+                move_focused_to_workspace_1(tn.node.get_name())
+            }
+            t::Type::Container => move_focused_to_container_1(tn.node.id),
+            t => eprintln!("Cannot move focused to {:?}", t),
+        },
+        Err(input) => {
+            let ws_name = chop_workspace_shortcut(&input);
+            move_focused_to_workspace_1(ws_name);
+        }
+    }
+}
+
+pub fn move_focused_to_workspace(extra_props: &HashMap<i64, t::ExtraProps>) {
+    let root = get_tree(true);
+    let tree = t::get_tree(&root, extra_props);
+    select_and_move_focused_to(
+        "Move focused container to workspace",
+        &tree.get_workspaces(),
+    );
 }
 
 pub enum Direction {
