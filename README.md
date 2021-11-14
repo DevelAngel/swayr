@@ -12,18 +12,22 @@ interface.  The client `swayr` offers subcommands, see `swayr --help`, and
 sends them to the demon which executes them.
 
 Right now, there are these subcommands:
-* `switch-window` displays all windows in the order urgent first, then
-  last-recently-used, focused last and focuses the selected.
-* `quit-window` displays all windows and quits the selected one.
 * `switch-to-urgent-or-lru-window` switches to the next window with urgency
   hint (if any) or to the last recently used window.
+* `switch-window` displays all windows in the order urgent first, then
+  last-recently-used, focused last and focuses the selected.
 * `switch-workspace` displays all workspaces in LRU order and switches to the
   selected one.
 * `switch-workspace-or-window` displays all workspaces and their windows and
    switches to the selected workspace or window.
+* `quit-window` displays all windows and quits the selected one.
 * `quit-workspace-or-window` displays all workspaces and their windows and
   allows to quit either the selected workspace (all its windows) or the
   selected window.
+* `move-focused-to-workspace` moves the currently focused window or container
+  to another workspace selected with the menu program.  Non-matching input of
+  the form `#w:<workspace>` where the hash and `w:` shortcut are optional can
+  be used to move it to a new workspace.
 * `next-window (all-workspaces|current-workspace)` & `prev-window
   (all-workspaces|current-workspace)` focus the next/previous window in
   depth-first iteration order of the tree.  The argument `all-workspaces` or
@@ -43,13 +47,6 @@ Right now, there are these subcommands:
   stacked container, it is like `next-tiled-window` / `prev-tiled-window` if
   the current windows is in a tiled container, and is like `next-window` /
   `prev-window` otherwise.
-* `execute-swaymsg-command` displays most swaymsg which don't require
-  additional input and executes the selected one.  That's handy especially for
-  less often used commands not bound to a key.  Non-matching input will be
-  executed executed as-is with `swaymsg`.
-* `execute-swayr-command` displays all commands above and executes the selected
-  one.  (This is useful for accessing swayr commands which are not bound to a
-  key.)
 * `tile-workspace exclude-floating|include-floating` tiles all windows on the
   current workspace (excluding or including floating ones).  That's done by
   moving all windows away to some special workspace, setting the current
@@ -73,10 +70,13 @@ Right now, there are these subcommands:
   between a tabbed and tiled layout, i.e., it calls `shuffle-tile-workspace` if
   it is currently tabbed, and calls `shuffle-tile-workspace` if it is currently
   tiled.
-* `move-focused-to-workspace` moves the currently focused window or container
-  to another workspace selected with the menu program.  Non-matching input of
-  the form `#w:<workspace>` where the hash and `w:` shortcut are optional can
-  be used to move it to a new workspace.
+* `execute-swaymsg-command` displays most swaymsg which don't require
+  additional input and executes the selected one.  That's handy especially for
+  less often used commands not bound to a key.  Non-matching input will be
+  executed executed as-is with `swaymsg`.
+* `execute-swayr-command` displays all commands above and executes the selected
+  one.  (This is useful for accessing swayr commands which are not bound to a
+  key.)
 
 ### Menu shortcuts for non-matching input
 
