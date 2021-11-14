@@ -20,8 +20,10 @@ use crate::util;
 use crate::util::DisplayFormat;
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
+use std::cell::RefCell;
 use std::cmp;
 use std::collections::HashMap;
+use std::rc::Rc;
 use swayipc as s;
 
 /// Immutable Node Iterator
@@ -216,17 +218,7 @@ impl<'a> Tree<'a> {
         t: Type,
     ) -> Vec<&s::Node> {
         let mut v: Vec<&s::Node> = node.nodes_of_type(t);
-        v.sort_by(|a, b| {
-            if a.urgent && !b.urgent {
-                cmp::Ordering::Less
-            } else if !a.urgent && b.urgent {
-                cmp::Ordering::Greater
-            } else {
-                let lru_a = self.last_focus_time(a.id);
-                let lru_b = self.last_focus_time(b.id);
-                lru_a.cmp(&lru_b).reverse()
-            }
-        });
+        self.sort_by_lru_time(&mut v);
         v
     }
 
@@ -236,7 +228,7 @@ impl<'a> Tree<'a> {
 
     fn as_display_nodes(
         &self,
-        v: Vec<&'a s::Node>,
+        v: &[&'a s::Node],
         indent_level: IndentLevel,
     ) -> Vec<DisplayNode> {
         v.iter()
@@ -258,13 +250,13 @@ impl<'a> Tree<'a> {
     pub fn get_workspaces(&self) -> Vec<DisplayNode> {
         let mut v = self.sorted_nodes_of_type(Type::Workspace);
         v.rotate_left(1);
-        self.as_display_nodes(v, IndentLevel::Fixed(0))
+        self.as_display_nodes(&v, IndentLevel::Fixed(0))
     }
 
     pub fn get_windows(&self) -> Vec<DisplayNode> {
         let mut v = self.sorted_nodes_of_type(Type::Window);
         v.rotate_left(1);
-        self.as_display_nodes(v, IndentLevel::Fixed(0))
+        self.as_display_nodes(&v, IndentLevel::Fixed(0))
     }
 
     pub fn get_workspaces_and_windows(&self) -> Vec<DisplayNode> {
@@ -287,23 +279,53 @@ impl<'a> Tree<'a> {
             v.rotate_left(1);
         }
 
-        self.as_display_nodes(v, IndentLevel::WorkspacesZeroWindowsOne)
+        self.as_display_nodes(&v, IndentLevel::WorkspacesZeroWindowsOne)
+    }
+
+    fn sort_by_lru_time(&self, v: &mut Vec<&s::Node>) {
+        v.sort_by(|a, b| {
+            if a.urgent && !b.urgent {
+                cmp::Ordering::Less
+            } else if !a.urgent && b.urgent {
+                cmp::Ordering::Greater
+            } else {
+                let lru_a = self.last_focus_time(a.id);
+                let lru_b = self.last_focus_time(b.id);
+                lru_a.cmp(&lru_b).reverse()
+            }
+        });
+    }
+
+    fn push_subtree_sorted(
+        &self,
+        n: &'a s::Node,
+        v: Rc<RefCell<Vec<&'a s::Node>>>,
+    ) {
+        v.borrow_mut().push(n);
+
+        let mut children: Vec<&s::Node> = n.nodes.iter().collect();
+        children.append(&mut n.floating_nodes.iter().collect());
+        self.sort_by_lru_time(&mut children);
+
+        for c in children {
+            self.push_subtree_sorted(c, Rc::clone(&v));
+        }
     }
 
     pub fn get_workspaces_containers_and_windows(&self) -> Vec<DisplayNode> {
         let workspaces = self.sorted_nodes_of_type(Type::Workspace);
-        let mut v: Vec<&s::Node> = vec![];
+        let v: Rc<RefCell<Vec<&s::Node>>> = Rc::new(RefCell::new(vec![]));
         for ws in workspaces {
-            // TODO: implement me!
+            self.push_subtree_sorted(ws, Rc::clone(&v));
         }
 
         // Rotate until we have the second recently used workspace in front.
-        v.rotate_left(1);
-        while v[0].get_type() != Type::Workspace {
-            v.rotate_left(1);
+        v.borrow_mut().rotate_left(1);
+        while v.borrow()[0].get_type() != Type::Workspace {
+            v.borrow_mut().rotate_left(1);
         }
-
-        self.as_display_nodes(v, IndentLevel::TreeDepth(2))
+        let x = self.as_display_nodes(&*v.borrow(), IndentLevel::TreeDepth(2));
+        x
     }
 
     pub fn is_child_of_tiled_container(&self, id: i64) -> bool {
@@ -395,9 +417,20 @@ impl DisplayFormat for DisplayNode<'_> {
                     "{name}",
                     &maybe_html_escape(html_escape, self.node.get_name()),
                 ),
-            Type::Container => {
-                todo!("DisplayFormat for Container not yet implemented")
-            }
+            Type::Container => cfg
+                .get_format_container_format()
+                .replace("{indent}", &indent.repeat(self.get_indent_level()))
+                .replace("{layout}", format!("{:?}", self.node.layout).as_str())
+                .replace("{id}", format!("{}", self.node.id).as_str())
+                .replace(
+                    "{workspace_name}",
+                    &maybe_html_escape(
+                        html_escape,
+                        self.tree
+                            .get_workspace_node(self.node.id)
+                            .map_or("<no_workspace>", |w| w.get_name()),
+                    ),
+                ),
             Type::Window => {
                 let urgency_start = cfg.get_format_urgency_start();
                 let urgency_end = cfg.get_format_urgency_end();

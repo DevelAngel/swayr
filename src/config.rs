@@ -79,13 +79,13 @@ impl Config {
             .expect("No format.workspace_format defined.")
     }
 
-    // pub fn get_format_container_format(&self) -> String {
-    //     self.format
-    //         .as_ref()
-    //         .and_then(|f| f.container_format.clone())
-    //         .or_else(|| Format::default().container_format)
-    //         .expect("No format.container_format defined.")
-    // }
+    pub fn get_format_container_format(&self) -> String {
+        self.format
+            .as_ref()
+            .and_then(|f| f.container_format.clone())
+            .or_else(|| Format::default().container_format)
+            .expect("No format.container_format defined.")
+    }
 
     pub fn get_format_indent(&self) -> String {
         self.format
@@ -163,7 +163,7 @@ pub struct Menu {
 pub struct Format {
     window_format: Option<String>,
     workspace_format: Option<String>,
-    //container_format: Option<String>,
+    container_format: Option<String>,
     indent: Option<String>,
     urgency_start: Option<String>,
     urgency_end: Option<String>,
@@ -217,7 +217,7 @@ impl Default for Format {
         Format {
             window_format: Some(
                 "img:{app_icon}:text:{indent}<i>{app_name}</i> — \
-                 {urgency_start}<b>“{title}”</b>{urgency_end} {layout} \
+                 {urgency_start}<b>“{title}”</b>{urgency_end} \
                  on workspace {workspace_name} {marks}    \
                  <span alpha=\"20000\">({id})</span>"
                     .to_string(),
@@ -227,11 +227,12 @@ impl Default for Format {
                  <span alpha=\"20000\">({id})</span>"
                     .to_string(),
             ),
-            // container_format: Some(
-            //     "<i>Container {name}</i>   \
-            //      <span alpha=\"20000\">({id})</span>"
-            //         .to_string(),
-            // ),
+            container_format: Some(
+                "{indent}<b>Container {layout}</b> \
+                 on workspace {workspace_name}    \
+                 <span alpha=\"20000\">({id})</span>"
+                    .to_string(),
+            ),
             indent: Some("    ".to_string()),
             html_escape: Some(true),
             urgency_start: Some(
