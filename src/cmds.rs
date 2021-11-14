@@ -119,6 +119,9 @@ pub enum SwayrCommand {
     /// Move the currently focused window or container to the selected
     /// workspace.
     MoveFocusedToWorkspace,
+    /// Swap the currently focused window or container with the selected
+    /// container or window.
+    SwapFocusedWith,
     /// Tab or shuffle-and-tile the windows on the current workspace, including
     /// or excluding floating windows.
     ToggleTabShuffleTileWorkspace {
@@ -318,6 +321,10 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
         SwayrCommand::MoveFocusedToWorkspace => {
             move_focused_to_workspace(&*props.read().unwrap())
         }
+        SwayrCommand::SwapFocusedWith => {
+            swap_focused_with(&*props.read().unwrap())
+        }
+
         SwayrCommand::TileWorkspace { floating } => {
             tile_current_workspace(floating, false)
         }
@@ -597,7 +604,11 @@ fn select_and_move_focused_to(prompt: &str, choices: &[t::DisplayNode]) {
     match util::select_from_menu(prompt, choices) {
         Ok(tn) => match tn.node.get_type() {
             t::Type::Workspace => {
-                move_focused_to_workspace_1(tn.node.get_name())
+                if tn.node.is_scratchpad() {
+                    run_sway_command(&["move", "container", "to", "scratchpad"])
+                } else {
+                    move_focused_to_workspace_1(tn.node.get_name())
+                }
             }
             t::Type::Container => move_focused_to_container_1(tn.node.id),
             t => eprintln!("Cannot move focused to {:?}", t),
@@ -616,6 +627,32 @@ pub fn move_focused_to_workspace(extra_props: &HashMap<i64, t::ExtraProps>) {
         "Move focused container to workspace",
         &tree.get_workspaces(),
     );
+}
+
+pub fn swap_focused_with(extra_props: &HashMap<i64, t::ExtraProps>) {
+    let root = get_tree(true);
+    let tree = t::get_tree(&root, extra_props);
+    match util::select_from_menu(
+        "Swap focused with",
+        &tree.get_workspaces_containers_and_windows(),
+    ) {
+        Ok(tn) => match tn.node.get_type() {
+            t::Type::Workspace | t::Type::Container | t::Type::Window => {
+                run_sway_command(&[
+                    "swap",
+                    "container",
+                    "with",
+                    "con_id",
+                    &format!("{}", tn.node.id),
+                ])
+            }
+            t => eprintln!("Cannot move focused to {:?}", t),
+        },
+        Err(input) => {
+            let ws_name = chop_workspace_shortcut(&input);
+            move_focused_to_workspace_1(ws_name);
+        }
+    }
 }
 
 pub enum Direction {

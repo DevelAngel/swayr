@@ -16,7 +16,9 @@ swayr v0.10.0
   selected one.
 - New command: `quit-workspace-container-or-window` shows workspaces,
   containers, and their windows in the menu program and quits all windows of
-  the selected workspace/container, or the selected window.
+  the selected workspace/container or the selected window.
+- New command: `swap-focused-with` swaps the currently focused window or
+  container with the one selected from the menu program.
 
   
 
