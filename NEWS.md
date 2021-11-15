@@ -19,7 +19,9 @@ swayr v0.10.0
   the selected workspace/container or the selected window.
 - New command: `swap-focused-with` swaps the currently focused window or
   container with the one selected from the menu program.
-
+- New command: `move-focused-to` moves the currently focused container or
+  window to the selected one.  Non-matching input will create a new workspace
+  of that name and move the focused container or window there.
   
 
 swayr v0.9.0

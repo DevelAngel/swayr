@@ -119,6 +119,9 @@ pub enum SwayrCommand {
     /// Move the currently focused window or container to the selected
     /// workspace.
     MoveFocusedToWorkspace,
+    /// Move the currently focused window or container to the selected
+    /// workspace, container, or window.
+    MoveFocusedTo,
     /// Swap the currently focused window or container with the selected
     /// container or window.
     SwapFocusedWith,
@@ -232,6 +235,13 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
         SwayrCommand::QuitWorkspaceContainerOrWindow => {
             quit_workspace_container_or_window(&*props.read().unwrap())
         }
+        SwayrCommand::MoveFocusedToWorkspace => {
+            move_focused_to_workspace(&*props.read().unwrap())
+        }
+        SwayrCommand::MoveFocusedTo => move_focused_to(&*props.read().unwrap()),
+        SwayrCommand::SwapFocusedWith => {
+            swap_focused_with(&*props.read().unwrap())
+        }
         SwayrCommand::NextWindow { windows } => focus_window_in_direction(
             Direction::Forward,
             windows,
@@ -318,13 +328,6 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
                 &*props.read().unwrap(),
             )
         }
-        SwayrCommand::MoveFocusedToWorkspace => {
-            move_focused_to_workspace(&*props.read().unwrap())
-        }
-        SwayrCommand::SwapFocusedWith => {
-            swap_focused_with(&*props.read().unwrap())
-        }
-
         SwayrCommand::TileWorkspace { floating } => {
             tile_current_workspace(floating, false)
         }
@@ -342,6 +345,7 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
             let mut cmds = vec![
                 SwayrCommand::ExecuteSwaymsgCommand,
                 SwayrCommand::MoveFocusedToWorkspace,
+                SwayrCommand::SwapFocusedWith,
                 SwayrCommand::QuitWindow,
                 SwayrCommand::QuitWorkspaceOrWindow,
                 SwayrCommand::SwitchWindow,
@@ -596,8 +600,25 @@ fn move_focused_to_workspace_1(ws_name: &str) {
     }
 }
 
-fn move_focused_to_container_1(id: i64) {
-    run_sway_command(&["move", "container", "to", &format!("{}", id)]);
+fn move_focused_to_container_or_window(id: i64) {
+    run_sway_command(&[
+        &format!("[con_id=\"{}\"]", id),
+        "mark",
+        "--add",
+        "__SWAYR_MOVE_TARGET__",
+    ]);
+    run_sway_command(&[
+        "move",
+        "container",
+        "to",
+        "mark",
+        "__SWAYR_MOVE_TARGET__",
+    ]);
+    run_sway_command(&[
+        &format!("[con_id\"{}\"]", id),
+        "unmark",
+        "__SWAYR_MOVE_TARGET__",
+    ]);
 }
 
 fn select_and_move_focused_to(prompt: &str, choices: &[t::DisplayNode]) {
@@ -610,7 +631,9 @@ fn select_and_move_focused_to(prompt: &str, choices: &[t::DisplayNode]) {
                     move_focused_to_workspace_1(tn.node.get_name())
                 }
             }
-            t::Type::Container => move_focused_to_container_1(tn.node.id),
+            t::Type::Container | t::Type::Window => {
+                move_focused_to_container_or_window(tn.node.id)
+            }
             t => eprintln!("Cannot move focused to {:?}", t),
         },
         Err(input) => {
@@ -626,6 +649,15 @@ pub fn move_focused_to_workspace(extra_props: &HashMap<i64, t::ExtraProps>) {
     select_and_move_focused_to(
         "Move focused container to workspace",
         &tree.get_workspaces(),
+    );
+}
+
+pub fn move_focused_to(extra_props: &HashMap<i64, t::ExtraProps>) {
+    let root = get_tree(true);
+    let tree = t::get_tree(&root, extra_props);
+    select_and_move_focused_to(
+        "Move focused container to workspace or container",
+        &tree.get_workspaces_containers_and_windows(),
     );
 }
 
