@@ -218,7 +218,7 @@ impl Default for Format {
             window_format: Some(
                 "img:{app_icon}:text:{indent}<i>{app_name}</i> — \
                  {urgency_start}<b>“{title}”</b>{urgency_end} \
-                 on workspace {workspace_name} {marks}    \
+                 on workspace {workspace_name} <i>{marks}</i>    \
                  <span alpha=\"20000\">({id})</span>"
                     .to_string(),
             ),
@@ -229,7 +229,7 @@ impl Default for Format {
             ),
             container_format: Some(
                 "{indent}<b>Container {layout}</b> \
-                 on workspace {workspace_name}    \
+                 on workspace {workspace_name} <i>{marks}</i>    \
                  <span alpha=\"20000\">({id})</span>"
                     .to_string(),
             ),

@@ -412,6 +412,13 @@ impl DisplayFormat for DisplayNode<'_> {
                 .replace("{layout}", format!("{:?}", self.node.layout).as_str())
                 .replace("{id}", format!("{}", self.node.id).as_str())
                 .replace(
+                    "{marks}",
+                    &maybe_html_escape(
+                        html_escape,
+                        &self.node.marks.join(", "),
+                    ),
+                )
+                .replace(
                     "{workspace_name}",
                     &maybe_html_escape(
                         html_escape,
