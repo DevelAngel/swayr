@@ -70,7 +70,7 @@ pub enum Type {
 pub trait NodeMethods {
     fn iter(&self) -> NodeIter;
     fn get_type(&self) -> Type;
-    fn get_app_name(&self) -> Result<&str, &str>;
+    fn get_app_name(&self) -> &str;
     fn nodes_of_type(&self, t: Type) -> Vec<&s::Node>;
     fn get_name(&self) -> &str;
     fn is_scratchpad(&self) -> bool;
@@ -120,17 +120,17 @@ impl NodeMethods for s::Node {
         }
     }
 
-    fn get_app_name(&self) -> Result<&str, &str> {
+    fn get_app_name(&self) -> &str {
         if let Some(app_id) = &self.app_id {
-            Ok(app_id)
+            app_id
         } else if let Some(wp_class) = self
             .window_properties
             .as_ref()
             .and_then(|wp| wp.class.as_ref())
         {
-            Ok(wp_class)
+            wp_class
         } else {
-            Err("<unknown_app>")
+            "<unknown_app>"
         }
     }
 
@@ -389,136 +389,110 @@ fn maybe_html_escape(do_it: bool, text: &str) -> String {
     }
 }
 
+fn format_marks(marks: &Vec<String>) -> String {
+    if marks.is_empty() {
+        "".to_string()
+    } else {
+        format!("[{}]", marks.join(", "))
+    }
+}
+
 impl DisplayFormat for DisplayNode<'_> {
     fn format_for_display(&self, cfg: &config::Config) -> String {
         let indent = cfg.get_format_indent();
         let html_escape = cfg.get_format_html_escape();
+        let urgency_start = cfg.get_format_urgency_start();
+        let urgency_end = cfg.get_format_urgency_end();
+        let icon_dirs = cfg.get_format_icon_dirs();
+        // fallback_icon has no default value.
+        let fallback_icon: Option<Box<std::path::Path>> = cfg
+            .get_format_fallback_icon()
+            .as_ref()
+            .map(|i| std::path::Path::new(i).to_owned().into_boxed_path());
 
-        match self.node.get_type() {
+        let app_name_no_version =
+            APP_NAME_AND_VERSION_RX.replace(self.node.get_app_name(), "$1");
+
+        let fmt = match self.node.get_type() {
             Type::Root => String::from("Cannot format Root"),
             Type::Output => String::from("Cannot format Output"),
-            Type::Workspace => cfg
-                .get_format_workspace_format()
-                .replace("{indent}", &indent.repeat(self.get_indent_level()))
-                .replace("{layout}", format!("{:?}", self.node.layout).as_str())
-                .replace("{id}", format!("{}", self.node.id).as_str())
-                .replace(
-                    "{name}",
-                    &maybe_html_escape(html_escape, self.node.get_name()),
+            Type::Workspace => cfg.get_format_workspace_format(),
+            Type::Container => cfg.get_format_container_format(),
+            Type::Window => cfg.get_format_window_format(),
+        };
+        fmt.replace("{indent}", &indent.repeat(self.get_indent_level()))
+            .replace("{layout}", format!("{:?}", self.node.layout).as_str())
+            .replace("{id}", format!("{}", self.node.id).as_str())
+            .replace(
+                "{marks}",
+                &maybe_html_escape(
+                    html_escape,
+                    &format_marks(&self.node.marks),
                 ),
-            Type::Container => cfg
-                .get_format_container_format()
-                .replace("{indent}", &indent.repeat(self.get_indent_level()))
-                .replace("{layout}", format!("{:?}", self.node.layout).as_str())
-                .replace("{id}", format!("{}", self.node.id).as_str())
-                .replace(
-                    "{marks}",
-                    &maybe_html_escape(
-                        html_escape,
-                        &self.node.marks.join(", "),
-                    ),
-                )
-                .replace(
-                    "{workspace_name}",
-                    &maybe_html_escape(
-                        html_escape,
-                        self.tree
-                            .get_workspace_node(self.node.id)
-                            .map_or("<no_workspace>", |w| w.get_name()),
-                    ),
+            )
+            .replace(
+                "{urgency_start}",
+                if self.node.urgent {
+                    urgency_start.as_str()
+                } else {
+                    ""
+                },
+            )
+            .replace(
+                "{urgency_end}",
+                if self.node.urgent {
+                    urgency_end.as_str()
+                } else {
+                    ""
+                },
+            )
+            .replace(
+                "{app_name}",
+                &maybe_html_escape(html_escape, self.node.get_app_name()),
+            )
+            .replace(
+                "{name}",
+                &maybe_html_escape(html_escape, self.node.get_name()),
+            )
+            .replace(
+                "{workspace_name}",
+                &maybe_html_escape(
+                    html_escape,
+                    self.tree
+                        .get_workspace_node(self.node.id)
+                        .map_or("<no_workspace>", |w| w.get_name()),
                 ),
-            Type::Window => {
-                let urgency_start = cfg.get_format_urgency_start();
-                let urgency_end = cfg.get_format_urgency_end();
-                let icon_dirs = cfg.get_format_icon_dirs();
-                // fallback_icon has no default value.
-                let fallback_icon: Option<Box<std::path::Path>> =
-                    cfg.get_format_fallback_icon().as_ref().map(|i| {
-                        std::path::Path::new(i).to_owned().into_boxed_path()
-                    });
-
-                // Some apps report, e.g., Gimp-2.10 but the icon is still named
-                // gimp.png.
-                let app_name =
-                    self.node.get_app_name().unwrap_or("_unknown_app_");
-                let app_name_no_version =
-                    APP_NAME_AND_VERSION_RX.replace(app_name, "$1");
-
-                cfg.get_format_window_format()
-                    .replace(
-                        "{indent}",
-                        &indent.repeat(self.get_indent_level()),
-                    )
-                    .replace(
-                        "{layout}",
-                        format!("{:?}", self.node.layout).as_str(),
-                    )
-                    .replace("{id}", format!("{}", self.node.id).as_str())
-                    .replace(
-                        "{urgency_start}",
-                        if self.node.urgent {
-                            urgency_start.as_str()
-                        } else {
-                            ""
-                        },
-                    )
-                    .replace(
-                        "{urgency_end}",
-                        if self.node.urgent {
-                            urgency_end.as_str()
-                        } else {
-                            ""
-                        },
-                    )
-                    .replace(
-                        "{app_name}",
-                        &maybe_html_escape(
-                            html_escape,
-                            self.node.get_app_name().unwrap_or_else(|e| e),
-                        ),
-                    )
-                    .replace(
-                        "{workspace_name}",
-                        &maybe_html_escape(
-                            html_escape,
-                            self.tree
-                                .get_workspace_node(self.node.id)
-                                .map_or("<no_workspace>", |w| w.get_name()),
-                        ),
-                    )
-                    .replace(
-                        "{marks}",
-                        &maybe_html_escape(
-                            html_escape,
-                            &self.node.marks.join(", "),
-                        ),
-                    )
-                    .replace(
-                        "{app_icon}",
+            )
+            .replace(
+                "{workspace_name}",
+                &maybe_html_escape(
+                    html_escape,
+                    self.tree
+                        .get_workspace_node(self.node.id)
+                        .map_or("<no_workspace>", |w| w.get_name()),
+                ),
+            )
+            .replace(
+                "{app_icon}",
+                util::get_icon(self.node.get_app_name(), &icon_dirs)
+                    .or_else(|| {
+                        util::get_icon(&app_name_no_version, &icon_dirs)
+                    })
+                    .or_else(|| {
                         util::get_icon(
-                            self.node.get_app_name().unwrap_or_else(|e| e),
+                            &app_name_no_version.to_lowercase(),
                             &icon_dirs,
                         )
-                        .or_else(|| {
-                            util::get_icon(&app_name_no_version, &icon_dirs)
-                        })
-                        .or_else(|| {
-                            util::get_icon(
-                                &app_name_no_version.to_lowercase(),
-                                &icon_dirs,
-                            )
-                        })
-                        .or(fallback_icon)
-                        .map(|i| i.to_string_lossy().into_owned())
-                        .unwrap_or_else(String::new)
-                        .as_str(),
-                    )
-                    .replace(
-                        "{title}",
-                        &maybe_html_escape(html_escape, self.node.get_name()),
-                    )
-            }
-        }
+                    })
+                    .or(fallback_icon)
+                    .map(|i| i.to_string_lossy().into_owned())
+                    .unwrap_or_else(String::new)
+                    .as_str(),
+            )
+            .replace(
+                "{title}",
+                &maybe_html_escape(html_escape, self.node.get_name()),
+            )
     }
 
     fn get_indent_level(&self) -> usize {

@@ -278,7 +278,7 @@ where
             .as_mut()
             .expect("Failed to open the menu program's stdin");
         let input = strs.join("\n");
-        println!("Menu program {} input:\n{}", menu_exec, input);
+        //println!("Menu program {} input:\n{}", menu_exec, input);
         stdin
             .write_all(input.as_bytes())
             .expect("Failed to write to the menu program's stdin");

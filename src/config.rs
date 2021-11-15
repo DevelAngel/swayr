@@ -215,20 +215,20 @@ impl Default for Menu {
 impl Default for Format {
     fn default() -> Self {
         Format {
-            window_format: Some(
-                "img:{app_icon}:text:{indent}<i>{app_name}</i> — \
-                 {urgency_start}<b>“{title}”</b>{urgency_end} \
-                 on workspace {workspace_name} <i>{marks}</i>    \
-                 <span alpha=\"20000\">({id})</span>"
-                    .to_string(),
-            ),
             workspace_format: Some(
-                "{indent}<b>Workspace {name}</b> {layout}    \
+                "{indent}<b>Workspace {name} [{layout}]</b>    \
                  <span alpha=\"20000\">({id})</span>"
                     .to_string(),
             ),
             container_format: Some(
-                "{indent}<b>Container {layout}</b> \
+                "{indent}<b>Container [{layout}]</b> \
+                 on workspace {workspace_name} <i>{marks}</i>    \
+                 <span alpha=\"20000\">({id})</span>"
+                    .to_string(),
+            ),
+            window_format: Some(
+                "img:{app_icon}:text:{indent}<i>{app_name}</i> — \
+                 {urgency_start}<b>“{title}”</b>{urgency_end} \
                  on workspace {workspace_name} <i>{marks}</i>    \
                  <span alpha=\"20000\">({id})</span>"
                     .to_string(),

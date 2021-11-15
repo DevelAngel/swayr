@@ -430,11 +430,6 @@ pub fn switch_to_urgent_or_lru_window(
     let root = get_tree(false);
     let tree = t::get_tree(&root, extra_props);
     if let Some(win) = tree.get_windows().get(0) {
-        println!(
-            "Switching to {}, id: {}",
-            win.node.get_app_name().unwrap_or_else(|e| e),
-            win.node.id
-        );
         focus_window_by_id(win.node.id)
     } else {
         println!("No window to switch to.")
@@ -607,18 +602,8 @@ fn move_focused_to_container_or_window(id: i64) {
         "--add",
         "__SWAYR_MOVE_TARGET__",
     ]);
-    run_sway_command(&[
-        "move",
-        "container",
-        "to",
-        "mark",
-        "__SWAYR_MOVE_TARGET__",
-    ]);
-    run_sway_command(&[
-        &format!("[con_id\"{}\"]", id),
-        "unmark",
-        "__SWAYR_MOVE_TARGET__",
-    ]);
+    run_sway_command(&["move", "to", "mark", "__SWAYR_MOVE_TARGET__"]);
+    run_sway_command(&["unmark", "__SWAYR_MOVE_TARGET__"]);
 }
 
 fn select_and_move_focused_to(prompt: &str, choices: &[t::DisplayNode]) {
