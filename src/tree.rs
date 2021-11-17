@@ -257,12 +257,26 @@ impl<'a> Tree<'a> {
 
     pub fn get_windows(&self) -> Vec<DisplayNode> {
         let mut v = self.sorted_nodes_of_type(Type::Window);
-        // Don't rotate if there's an urgent window because that should be the
-        // first in the list because it's the most likely switch candidate.
-        if !v.is_empty() && !v[0].urgent {
-            v.rotate_left(1);
+        // Rotate, but only non-urgent windows.  Those should stay at the front
+        // as they are the most likely switch candidates.
+        let mut x;
+        if !v.is_empty() {
+            x = vec![];
+            loop {
+                if !v.is_empty() && v[0].urgent {
+                    x.push(v.remove(0));
+                } else {
+                    break;
+                }
+            }
+            if !v.is_empty() {
+                v.rotate_left(1);
+            }
+            x.append(&mut v);
+        } else {
+            x = v;
         }
-        self.as_display_nodes(&v, IndentLevel::Fixed(0))
+        self.as_display_nodes(&x, IndentLevel::Fixed(0))
     }
 
     pub fn get_workspaces_and_windows(&self) -> Vec<DisplayNode> {
@@ -395,7 +409,7 @@ fn maybe_html_escape(do_it: bool, text: &str) -> String {
     }
 }
 
-fn format_marks(marks: &Vec<String>) -> String {
+fn format_marks(marks: &[String]) -> String {
     if marks.is_empty() {
         "".to_string()
     } else {
