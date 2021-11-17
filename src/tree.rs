@@ -271,8 +271,8 @@ impl<'a> Tree<'a> {
             }
             if !v.is_empty() {
                 v.rotate_left(1);
+                x.append(&mut v);
             }
-            x.append(&mut v);
         } else {
             x = v;
         }
