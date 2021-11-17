@@ -218,7 +218,7 @@ impl<'a> Tree<'a> {
         t: Type,
     ) -> Vec<&s::Node> {
         let mut v: Vec<&s::Node> = node.nodes_of_type(t);
-        self.sort_by_lru_time(&mut v);
+        self.sort_by_urgency_and_lru_time_1(&mut v);
         v
     }
 
@@ -249,13 +249,19 @@ impl<'a> Tree<'a> {
 
     pub fn get_workspaces(&self) -> Vec<DisplayNode> {
         let mut v = self.sorted_nodes_of_type(Type::Workspace);
-        v.rotate_left(1);
+        if !v.is_empty() {
+            v.rotate_left(1);
+        }
         self.as_display_nodes(&v, IndentLevel::Fixed(0))
     }
 
     pub fn get_windows(&self) -> Vec<DisplayNode> {
         let mut v = self.sorted_nodes_of_type(Type::Window);
-        v.rotate_left(1);
+        // Don't rotate if there's an urgent window because that should be the
+        // first in the list because it's the most likely switch candidate.
+        if !v.is_empty() && !v[0].urgent {
+            v.rotate_left(1);
+        }
         self.as_display_nodes(&v, IndentLevel::Fixed(0))
     }
 
@@ -276,7 +282,7 @@ impl<'a> Tree<'a> {
         self.as_display_nodes(&v, IndentLevel::WorkspacesZeroWindowsOne)
     }
 
-    fn sort_by_lru_time(&self, v: &mut Vec<&s::Node>) {
+    fn sort_by_urgency_and_lru_time_1(&self, v: &mut Vec<&s::Node>) {
         v.sort_by(|a, b| {
             if a.urgent && !b.urgent {
                 cmp::Ordering::Less
@@ -299,7 +305,7 @@ impl<'a> Tree<'a> {
 
         let mut children: Vec<&s::Node> = n.nodes.iter().collect();
         children.append(&mut n.floating_nodes.iter().collect());
-        self.sort_by_lru_time(&mut children);
+        self.sort_by_urgency_and_lru_time_1(&mut children);
 
         for c in children {
             self.push_subtree_sorted(c, Rc::clone(&v));
