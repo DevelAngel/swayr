@@ -286,7 +286,7 @@ impl<'a> Tree<'a> {
         for ws in workspaces {
             v.push(ws);
             let mut wins = self.sorted_nodes_of_type_1(ws, Type::Window);
-            if first {
+            if first && !v.is_empty() {
                 wins.rotate_left(1);
                 first = false;
             }
