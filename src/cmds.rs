@@ -120,7 +120,7 @@ pub enum SwayrCommand {
     /// workspace.
     MoveFocusedToWorkspace,
     /// Move the currently focused window or container to the selected
-    /// workspace, container, or window.
+    /// workspace, container or window.
     MoveFocusedTo,
     /// Swap the currently focused window or container with the selected
     /// container or window.
@@ -520,7 +520,7 @@ pub fn switch_workspace_or_window(extra_props: &HashMap<i64, t::ExtraProps>) {
     let root = get_tree(true);
     let tree = t::get_tree(&root, extra_props);
     select_and_focus(
-        "Select workspace, or window",
+        "Select workspace or window",
         &tree.get_workspaces_and_windows(),
     );
 }
@@ -531,7 +531,7 @@ pub fn switch_workspace_container_or_window(
     let root = get_tree(true);
     let tree = t::get_tree(&root, extra_props);
     select_and_focus(
-        "Select workspace, container, or window",
+        "Select workspace, container or window",
         &tree.get_workspaces_containers_and_windows(),
     );
 }
@@ -564,7 +564,7 @@ pub fn quit_workspace_or_window(extra_props: &HashMap<i64, t::ExtraProps>) {
     let root = get_tree(true);
     let tree = t::get_tree(&root, extra_props);
     select_and_quit(
-        "Quit workspace, or window",
+        "Quit workspace or window",
         &tree.get_workspaces_and_windows(),
     );
 }
@@ -575,7 +575,7 @@ pub fn quit_workspace_container_or_window(
     let root = get_tree(true);
     let tree = t::get_tree(&root, extra_props);
     select_and_quit(
-        "Quit workspace, container, or window",
+        "Quit workspace, container or window",
         &tree.get_workspaces_containers_and_windows(),
     );
 }
