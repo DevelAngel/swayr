@@ -3,14 +3,16 @@ swayr v0.10.0
 
 - The `con` module which enhances the sway IPC container tree structure has
   been replaced by `tree` which achieves the same job but is not restricted to
-  only handle workspaces, and windows.
-- Formats such as `format.workspace_format`, and `format.window_format` can now
-  include a `{indent}` placeholder which will be replaced with N times the new
-  `format.indent` value.  N is the depth in the shown menu input, e.g., with
-  `swayr switch-workspace-or-window` the indent level for workspaces is 0, and
-  1 for windows.
-- The `format.workspace_format` may now include a `{layout}` placeholder which
-  is replaced with the current container's layout.
+  only handle workspaces and windows.
+- There's a new `format.container_format` for formatting the line showing a
+  container.
+- Formats such as `format.workspace_format`, `format.container_format`, and
+  `format.window_format` can now include a `{indent}` placeholder which will be
+  replaced with N times the new `format.indent` value.  N is the depth in the
+  shown menu input, e.g., with `swayr switch-workspace-or-window` the indent
+  level for workspaces is 0 and 1 for windows.
+- The `format.workspace_format` and `format.container_format` may include a
+  `{layout}` placeholder which is replaced with the container's layout.
 - New command: `switch-workspace-container-or-window` shows workspaces,
   containers, and their windows in the menu program and switches to the
   selected one.
@@ -27,7 +29,7 @@ swayr v0.10.0
 swayr v0.9.0
 ============
 
-- The commands `switch-workspace`, and `switch-workspace-or-window` now also
+- The commands `switch-workspace` and `switch-workspace-or-window` now also
   show empty workspaces which makes it possible to switch to another output
   currently showing an empty workspace.
 - All menu switching commands (`switch-window`, `switch-workspace`, and
@@ -36,7 +38,7 @@ swayr v0.9.0
   to force a non-match), a shortcut followed by a colon, and some string as
   required by the shortcut.  The following shortcuts are supported.
   - `w:<workspace>`: Switches to a possibly non-existing workspace.
-    `<workspace>` must be a digit, a name, or `<digit>:<name>`.  The
+    `<workspace>` must be a digit, a name or `<digit>:<name>`.  The
     `<digit>:<name>` format is explained in `man 5 sway`.  If that format is
     given, `swayr` will create the workspace using `workspace number
     <digit>:<name>`.  If just a digit or name is given, the `number` argument
@@ -64,7 +66,7 @@ swayr v0.8.0
   and `prev-window-of-same-layout`.
 - **Incompatible change**: All `next/prev-window` commands (including the new
   ones above) now have a mandatory subcommand determining if all or only the
-  current workspace's windows should be considered: `all-workspaces`, or
+  current workspace's windows should be considered: `all-workspaces` or
   `current-workspace`.
 - Bugfix: `prev-window` has never worked correctly.  Instead of cycling through
   all windows in last-recently-used order, it switched between the current and

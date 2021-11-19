@@ -20,14 +20,24 @@ Right now, there are these subcommands:
   selected one.
 * `switch-workspace-or-window` displays all workspaces and their windows and
    switches to the selected workspace or window.
+* `switch-workspace-container-or-window` shows workspaces, containers, and
+  their windows in the menu program and switches to the selected one.
 * `quit-window` displays all windows and quits the selected one.
 * `quit-workspace-or-window` displays all workspaces and their windows and
   allows to quit either the selected workspace (all its windows) or the
+  selected window.
+* `quit-workspace-container-or-window` shows workspaces, containers, and their
+  windows and quits all windows of the selected workspace/container or the
   selected window.
 * `move-focused-to-workspace` moves the currently focused window or container
   to another workspace selected with the menu program.  Non-matching input of
   the form `#w:<workspace>` where the hash and `w:` shortcut are optional can
   be used to move it to a new workspace.
+* `move-focused-to` moves the currently focused container or window to the
+  selected workspace, container, or window.  Non-matching input is handled like
+  with `move-focused-to-workspace`.
+* `swap-focused-with` swaps the currently focused window or container with the
+  one selected from the menu program.
 * `next-window (all-workspaces|current-workspace)` & `prev-window
   (all-workspaces|current-workspace)` focus the next/previous window in
   depth-first iteration order of the tree.  The argument `all-workspaces` or
@@ -43,7 +53,7 @@ Right now, there are these subcommands:
 * `next-window-of-same-layout` & `prev-window-of-same-layout` is like
   `next-floating-window` / `prev-floating-window` if the current window is
   floating, it is like `next-tabbed-or-stacked-window` /
-  `prev-tabbed-or-stacked-window` if the current window is in a tabbed, or
+  `prev-tabbed-or-stacked-window` if the current window is in a tabbed or
   stacked container, it is like `next-tiled-window` / `prev-tiled-window` if
   the current windows is in a tiled container, and is like `next-window` /
   `prev-window` otherwise.
@@ -86,7 +96,7 @@ nothing.  The input should start with any number of `#` (in order to be able to
 force a non-match), a shortcut followed by a colon, and some string as required
 by the shortcut.  The following shortcuts are supported.
 - `w:<workspace>`: Switches to a possibly non-existing workspace.
-  `<workspace>` must be a digit, a name, or `<digit>:<name>`.  The
+  `<workspace>` must be a digit, a name or `<digit>:<name>`.  The
   `<digit>:<name>` format is explained in `man 5 sway`.  If that format is
   given, `swayr` will create the workspace using `workspace number
   <digit>:<name>`.  If just a digit or name is given, the `number` argument is
@@ -202,7 +212,7 @@ programs such as [dmenu](https://tools.suckless.org/dmenu/),
 [bemenu](https://github.com/Cloudef/bemenu),
 [rofi](https://github.com/davatorium/rofi), a script spawning a terminal with
 [fzf](https://github.com/junegunn/fzf), or whatever.  The only requirement is
-that the launcher needs to be able to read the items to choose from from stdin,
+that the launcher needs to be able to read the items to choose from from stdin
 and spit out the selected item to stdout.
 
 The default config looks like this:
@@ -217,22 +227,26 @@ args = [
     '--insensitive',
     '--cache-file=/dev/null',
     '--parse-search',
+    '--height=40%',
     '--prompt={prompt}',
 ]
 
 [format]
-window_format = '{urgency_start}<b>“{title}”</b>{urgency_end} — <i>{app_name}</i> on workspace {workspace_name}   <span alpha="20000">({id})</span>'
-workspace_format = '<b>Workspace {name}</b>   <span alpha="20000">({id})</span>'
-html_escape = true
+window_format = 'img:{app_icon}:text:{indent}<i>{app_name}</i> — {urgency_start}<b>“{title}”</b>{urgency_end} on workspace {workspace_name} <i>{marks}</i>    <span alpha="20000">({id})</span>'
+workspace_format = '{indent}<b>Workspace {name} [{layout}]</b>    <span alpha="20000">({id})</span>'
+container_format = '{indent}<b>Container [{layout}]</b> on workspace {workspace_name} <i>{marks}</i>    <span alpha="20000">({id})</span>'
+indent = '    '
 urgency_start = '<span background="darkred" foreground="yellow">'
 urgency_end = '</span>'
+html_escape = true
 icon_dirs = [
     '/usr/share/icons/hicolor/scalable/apps',
-    '/usr/share/icons/Adwaita/48x48/apps',
+    '/usr/share/icons/hicolor/64x64/apps',
     '/usr/share/icons/hicolor/48x48/apps',
+    '/usr/share/icons/Adwaita/64x64/apps',
+    '/usr/share/icons/Adwaita/48x48/apps',
     '/usr/share/pixmaps',
 ]
-fallback_icon = '/usr/share/pixmaps/archlinux-logo.png'
 
 [layout]
 auto_tile = false
@@ -254,9 +268,9 @@ In the following, all sections are explained.
 ### The menu section
 
 In the `[menu]` section, you can specify the menu program using the
-`executable` name or full path, and the `args` (flags and options) it should
-get passed.  If some argument contains the placeholder `{prompt}`, it is
-replaced with a prompt such as "Switch to window" depending on context.
+`executable` name or full path and the `args` (flags and options) it should get
+passed.  If some argument contains the placeholder `{prompt}`, it is replaced
+with a prompt such as "Switch to window" depending on context.
 
 ### The format section
 
@@ -265,19 +279,29 @@ choices are to be layed out.  `wofi` supports [pango
 markup](https://docs.gtk.org/Pango/pango_markup.html) which makes it possible
 to style the text using HTML and CSS.  The following formats are supported
 right now.
-* `window_format` defines how windows are displayed.  The placeholder `{title}`
-  is replaced with the window's title, `{app_name}` with the application name,
-  `{marks}` with a comma-separated list of the window's marks, `{app_icon}`
-  with the application's icon (a path to a PNG or SVG file), `{workspace_name}`
-  with the name or number of the workspace the window is shown, and `{id}` is
-  the window's sway-internal con id.  There are also the placeholders
-  `{urcency_start}` and `{urgency_end}` which get replaced by the empty string
-  if the window has no urgency flag, and with the values of the same-named
-  formats if the window has the urgency flag set.  That makes it possible to
-  highlight urgent windows as shown in the default config.
-* `workspace_format` defines how workspaces are displayed.  There are the
-  placeholders `{name}` which gets replaced by the workspace's number or name,
-  and `{id}` which gets replaced by the sway-internal con id of the workspace.
+* `workspace_format` defines how workspaces are displayed, `container_format`
+  defines how non-workspace containers are displayed, and `window_format`
+  defines how application windows are displayed.
+* In these formats, the following placeholders can be used:
+  * `{name}` gets replaced by the workspace number, or name or a window's
+    title.  The placeholder `{title}` is an obsolete synonym which will be
+    removed in a later version.
+  * `{layout}` shows the workspace or container's layout.
+  * `{id}` gets replaced by the sway-internal con id.
+  * `{indent}` gets replaced with N times the new `format.indent` value where N
+    is the depth in the shown menu input.
+  * `{app_name}` gets replaced with a window's application name.
+  * `{marks}` shows a comma-separated list of the container's or window's
+     marks.
+  * `{app_icon}` shows the application's icon (a path to a PNG or SVG file).
+  * `{workspace_name}` gets replaced with the name or number of the workspace
+    the container or window belongs to.
+  * The placeholders `{urcency_start}` and `{urgency_end}` get replaced by the
+    empty string if the window has no urgency flag and with the values of the
+    same-named formats if the window has the urgency flag set.  That makes it
+    possible to highlight urgent windows as shown in the default config.
+* `indent` is a string which is repeatedly inserted at the `{indent}`
+  placeholder in formats.
 * `html_escape` defines if the strings replacing the placeholders above (except
   for `{urgency_start}` and `{urgency_end}`) should be HTML-escaped.
 * `urgency_start` is a string which replaces the `{urgency_start}` placeholder
@@ -291,8 +315,9 @@ right now.
 
 It is crucial that during selection (using wofi or some other menu program)
 each window has a different display string.  Therefore, it is highly
-recommended to include the `{id}` placeholder at least in `window_format`.
-Otherwise, e.g., two terminals (of the same terminal app) with the same working
+recommended to include the `{id}` placeholder at least in `container_format`
+and `window_format`.  Otherwise, e.g., two vertical splits on the same
+workspace or two terminals (of the same terminal app) with the same working
 directory (and therefore, the same title) wouldn't be distinguishable.
 
 **Hint for wofi**: `wofi` supports icons with the syntax

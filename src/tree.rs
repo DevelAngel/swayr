@@ -471,10 +471,6 @@ impl DisplayFormat for DisplayNode<'_> {
                 &maybe_html_escape(html_escape, self.node.get_app_name()),
             )
             .replace(
-                "{name}",
-                &maybe_html_escape(html_escape, self.node.get_name()),
-            )
-            .replace(
                 "{workspace_name}",
                 &maybe_html_escape(
                     html_escape,
@@ -511,6 +507,10 @@ impl DisplayFormat for DisplayNode<'_> {
             )
             .replace(
                 "{title}",
+                &maybe_html_escape(html_escape, self.node.get_name()),
+            )
+            .replace(
+                "{name}",
                 &maybe_html_escape(html_escape, self.node.get_name()),
             )
     }
