@@ -30,6 +30,23 @@ use std::sync::Arc;
 use std::sync::RwLock;
 use swayipc as s;
 
+pub fn run_sway_command_1(cmd: &str) {
+    println!("Running sway command: {}", cmd);
+    match s::Connection::new() {
+        Ok(mut con) => {
+            if let Err(err) = con.run_command(cmd) {
+                eprintln!("Could not run sway command: {}", err)
+            }
+        }
+        Err(err) => panic!("{}", err),
+    }
+}
+
+pub fn run_sway_command(args: &[&str]) {
+    let cmd = args.join(" ");
+    run_sway_command_1(&cmd);
+}
+
 #[derive(clap::Parser, Debug, Deserialize, Serialize, PartialEq, Clone)]
 pub enum ConsiderFloating {
     /// Include floating windows.
@@ -153,6 +170,8 @@ pub enum SwayrCommand {
     ExecuteSwaymsgCommand,
     /// Select and execute a swayr command.
     ExecuteSwayrCommand,
+    /// Configure outputs.
+    ConfigureOutputs,
 }
 
 impl SwayrCommand {
@@ -340,11 +359,12 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
         SwayrCommand::ToggleTabShuffleTileWorkspace { floating } => {
             toggle_tab_tile_current_workspace(floating)
         }
+        SwayrCommand::ConfigureOutputs => configure_outputs(),
         SwayrCommand::ExecuteSwaymsgCommand => exec_swaymsg_command(),
         SwayrCommand::ExecuteSwayrCommand => {
             let mut cmds = vec![
-                SwayrCommand::ExecuteSwaymsgCommand,
                 SwayrCommand::MoveFocusedToWorkspace,
+                SwayrCommand::MoveFocusedTo,
                 SwayrCommand::SwapFocusedWith,
                 SwayrCommand::QuitWindow,
                 SwayrCommand::QuitWorkspaceOrWindow,
@@ -352,6 +372,8 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
                 SwayrCommand::SwitchWorkspace,
                 SwayrCommand::SwitchWorkspaceOrWindow,
                 SwayrCommand::SwitchToUrgentOrLRUWindow,
+                SwayrCommand::ConfigureOutputs,
+                SwayrCommand::ExecuteSwaymsgCommand,
             ];
             for f in [
                 ConsiderFloating::ExcludeFloating,
@@ -420,6 +442,13 @@ pub fn get_tree(include_scratchpad: bool) -> s::Node {
             }
             root
         }
+        Err(err) => panic!("{}", err),
+    }
+}
+
+pub fn get_outputs() -> Vec<s::Output> {
+    match s::Connection::new() {
+        Ok(mut con) => con.get_outputs().expect("Got no outputs"),
         Err(err) => panic!("{}", err),
     }
 }
@@ -856,49 +885,48 @@ fn toggle_tab_tile_current_workspace(floating: &ConsiderFloating) {
     }
 }
 
-fn get_swaymsg_commands<'a>() -> Vec<SwaymsgCmd<'a>> {
-    let mut cmds = vec![];
+fn get_swaymsg_commands() -> Vec<SwaymsgCmd> {
+    let mut cmds: Vec<String> = vec![];
 
     for b in &["none", "normal", "csd", "pixel"] {
-        cmds.push(vec!["border", b]);
+        cmds.push(format!["border {}", b]);
     }
 
-    cmds.push(vec!["exit"]);
-    cmds.push(vec!["floating", "toggle"]);
-    cmds.push(vec!["focus", "child"]);
-    cmds.push(vec!["focus", "parent"]);
-    cmds.push(vec!["focus", "tiling"]);
-    cmds.push(vec!["focus", "floating"]);
-    cmds.push(vec!["focus", "mode_toggle"]);
-
-    cmds.push(vec!["fullscreen", "toggle"]);
+    cmds.push("exit".to_string());
+    cmds.push("floating toggle".to_string());
+    cmds.push("focus child".to_string());
+    cmds.push("focus parent".to_string());
+    cmds.push("focus tiling".to_string());
+    cmds.push("focus floating".to_string());
+    cmds.push("focus mode_toggle".to_string());
+    cmds.push("fullscreen toggle".to_string());
+    cmds.push("reload".to_string());
+    cmds.push("sticky toggle".to_string());
+    cmds.push("kill".to_string());
+    cmds.push("tiling_drag toggle".to_string());
 
     for x in &["focus", "fullscreen", "open", "none", "visible"] {
-        cmds.push(vec!["inhibit_idle", x])
+        cmds.push(format!["inhibit_idle {}", x])
     }
 
     for l in &["default", "splith", "splitv", "stacking", "tiling"] {
-        cmds.push(vec!["layout", l])
+        cmds.push(format!["layout {}", l])
     }
-
-    cmds.push(vec!["reload"]);
 
     for e in &["enable", "disable"] {
-        cmds.push(vec!["shortcuts_inhibitor", e])
+        cmds.push(format!["shortcuts_inhibitor {}", e])
     }
 
-    cmds.push(vec!["sticky", "toggle"]);
-
     for x in &["yes", "no", "always"] {
-        cmds.push(vec!["focus_follows_mouse", x])
+        cmds.push(format!["focus_follows_mouse {}", x])
     }
 
     for x in &["smart", "urgent", "focus", "none"] {
-        cmds.push(vec!["focus_on_window_activation", x])
+        cmds.push(format!["focus_on_window_activation {}", x])
     }
 
     for x in &["yes", "no", "force", "workspace"] {
-        cmds.push(vec!["focus_wrapping", x])
+        cmds.push(format!["focus_wrapping {}", x])
     }
 
     for x in &[
@@ -909,56 +937,50 @@ fn get_swaymsg_commands<'a>() -> Vec<SwaymsgCmd<'a>> {
         "smart",
         "smart_no_gaps",
     ] {
-        cmds.push(vec!["hide_edge_borders", x])
+        cmds.push(format!["hide_edge_borders {}", x])
     }
 
-    cmds.push(vec!["kill"]);
-
     for x in &["on", "no_gaps", "off"] {
-        cmds.push(vec!["smart_borders", x])
+        cmds.push(format!["smart_borders {}", x])
     }
 
     for x in &["on", "off"] {
-        cmds.push(vec!["smart_gaps", x])
+        cmds.push(format!["smart_gaps {}", x])
     }
 
     for x in &["output", "container", "none"] {
-        cmds.push(vec!["mouse_warping", x])
+        cmds.push(format!["mouse_warping {}", x])
     }
 
     for x in &["smart", "ignore", "leave_fullscreen"] {
-        cmds.push(vec!["popup_during_fullscreen", x])
+        cmds.push(format!["popup_during_fullscreen {}", x])
     }
 
     for x in &["yes", "no"] {
-        cmds.push(vec!["show_marks", x]);
-        cmds.push(vec!["workspace_auto_back_and_forth", x]);
+        cmds.push(format!["show_marks {}", x]);
+        cmds.push(format!["workspace_auto_back_and_forth {}", x]);
     }
 
-    cmds.push(vec!["tiling_drag", "toggle"]);
-
     for x in &["left", "center", "right"] {
-        cmds.push(vec!["title_align", x]);
+        cmds.push(format!["title_align {}", x]);
     }
 
     for x in &["enable", "disable", "allow", "deny"] {
-        cmds.push(vec!["urgent", x])
+        cmds.push(format!["urgent {}", x])
     }
 
     cmds.sort();
 
-    cmds.iter()
-        .map(|v| SwaymsgCmd { cmd: v.to_vec() })
-        .collect()
+    cmds.into_iter().map(|c| SwaymsgCmd { cmd: c }).collect()
 }
 
-struct SwaymsgCmd<'a> {
-    cmd: Vec<&'a str>,
+struct SwaymsgCmd {
+    cmd: String,
 }
 
-impl DisplayFormat for SwaymsgCmd<'_> {
+impl DisplayFormat for SwaymsgCmd {
     fn format_for_display(&self, _: &cfg::Config) -> std::string::String {
-        self.cmd.join(" ")
+        self.cmd.clone()
     }
 
     fn get_indent_level(&self) -> usize {
@@ -970,26 +992,66 @@ pub fn exec_swaymsg_command() {
     let cmds = get_swaymsg_commands();
     let cmd = util::select_from_menu("Execute swaymsg command", &cmds);
     match cmd {
-        Ok(cmd) => run_sway_command(&cmd.cmd),
+        Ok(cmd) => run_sway_command_1(&cmd.cmd),
         Err(cmd) if !cmd.is_empty() => {
             let cmd = chop_sway_shortcut(&cmd);
-            run_sway_command(
-                &cmd.split_ascii_whitespace().collect::<Vec<&str>>(),
-            );
+            run_sway_command_1(cmd);
         }
         Err(_) => (),
     }
 }
 
-pub fn run_sway_command(args: &[&str]) {
-    let cmd = args.join(" ");
-    println!("Running sway command: {}", cmd);
-    match s::Connection::new() {
-        Ok(mut con) => {
-            if let Err(err) = con.run_command(cmd) {
-                eprintln!("Could not run sway command: {}", err)
+pub fn configure_outputs() {
+    let outputs = get_outputs();
+
+    let mut cmds = vec![];
+    for o in outputs {
+        cmds.push(format!("output {} toggle", o.name));
+
+        for mode in o.modes {
+            cmds.push(format!(
+                "output {} mode {}x{}",
+                o.name, mode.width, mode.height
+            ));
+        }
+
+        for on_off in ["on", "off"] {
+            cmds.push(format!("output {} dpms {}", o.name, on_off));
+            cmds.push(format!("output {} adaptive_sync {}", o.name, on_off));
+        }
+
+        for transform in [
+            "normal",
+            "90",
+            "180",
+            "270",
+            "360",
+            "flipped",
+            "flipped-90",
+            "flipped-180",
+            "flipped-270",
+        ] {
+            for dir in ["clockwise", "anticlockwise"] {
+                cmds.push(format!(
+                    "output {} transform {} {}",
+                    o.name, transform, dir
+                ));
             }
         }
-        Err(err) => panic!("{}", err),
+
+        for pix in ["rgb", "bgr", "vrbg", "vbgr", "none"] {
+            cmds.push(format!("output {} subpixel {}", o.name, pix));
+        }
+
+        for pix in ["linear", "nearest", "smart"] {
+            cmds.push(format!("output {} scale_filter {}", o.name, pix));
+        }
+    }
+    cmds.sort();
+    let cmds: Vec<SwaymsgCmd> =
+        cmds.into_iter().map(|c| SwaymsgCmd { cmd: c }).collect();
+
+    while let Ok(cmd) = util::select_from_menu("Output command", &cmds) {
+        run_sway_command_1(&cmd.cmd);
     }
 }

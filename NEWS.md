@@ -1,3 +1,10 @@
+swayr v0.11.0
+=============
+
+- New command: `configure-outputs` lets you repeatedly issue output commands
+  until you abort the menu program.
+  
+
 swayr v0.10.0
 =============
 

@@ -247,6 +247,12 @@ impl<'a> Tree<'a> {
             .expect("No current Workspace")
     }
 
+    pub fn get_outputs(&self) -> Vec<DisplayNode> {
+        let outputs: Vec<&s::Node> =
+            self.root.iter().filter(|n| !n.is_scratchpad()).collect();
+        self.as_display_nodes(&outputs, IndentLevel::Fixed(0))
+    }
+
     pub fn get_workspaces(&self) -> Vec<DisplayNode> {
         let mut v = self.sorted_nodes_of_type(Type::Workspace);
         if !v.is_empty() {
