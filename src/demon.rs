@@ -42,31 +42,41 @@ pub fn run_demon() {
 }
 
 fn connect_and_subscribe() -> s::Fallible<s::EventStream> {
-    s::Connection::new()?
-        .subscribe(&[s::EventType::Window, s::EventType::Workspace])
+    s::Connection::new()?.subscribe(&[
+        s::EventType::Window,
+        s::EventType::Workspace,
+        s::EventType::Shutdown,
+    ])
 }
 
 pub fn monitor_sway_events(
     extra_props: Arc<RwLock<HashMap<i64, t::ExtraProps>>>,
 ) {
     let config = config::load_config();
+    let mut resets = 0;
+    let max_resets = 10;
 
     'reset: loop {
+        if resets >= max_resets {
+            break;
+        }
+        resets += 1;
+
         println!("Connecting to sway for subscribing to events...");
         match connect_and_subscribe() {
             Err(err) => {
                 eprintln!("Could not connect and subscribe: {}", err);
                 std::thread::sleep(std::time::Duration::from_secs(3));
-                break 'reset;
             }
             Ok(iter) => {
                 for ev_result in iter {
-                    let handled;
+                    let show_extra_props_state;
+                    resets = 0;
                     match ev_result {
                         Ok(ev) => match ev {
                             s::Event::Window(win_ev) => {
                                 let extra_props_clone = extra_props.clone();
-                                handled = handle_window_event(
+                                show_extra_props_state = handle_window_event(
                                     win_ev,
                                     extra_props_clone,
                                     &config,
@@ -74,23 +84,30 @@ pub fn monitor_sway_events(
                             }
                             s::Event::Workspace(ws_ev) => {
                                 let extra_props_clone = extra_props.clone();
-                                handled = handle_workspace_event(
+                                show_extra_props_state = handle_workspace_event(
                                     ws_ev,
                                     extra_props_clone,
                                 );
                             }
-                            _ => handled = false,
+                            s::Event::Shutdown(sd_ev) => {
+                                println!(
+                                    "Sway shuts down with reason '{:?}'.",
+                                    sd_ev.change
+                                );
+                                break 'reset;
+                            }
+                            _ => show_extra_props_state = false,
                         },
                         Err(e) => {
                             eprintln!("Error while receiving events: {}", e);
                             std::thread::sleep(std::time::Duration::from_secs(
                                 3,
                             ));
+                            show_extra_props_state = false;
                             eprintln!("Resetting!");
-                            break 'reset;
                         }
                     }
-                    if handled {
+                    if show_extra_props_state {
                         println!(
                             "New extra_props state:\n{:#?}",
                             *extra_props.read().unwrap()
@@ -100,6 +117,7 @@ pub fn monitor_sway_events(
             }
         }
     }
+    println!("Swayr demon shutting down.")
 }
 
 fn handle_window_event(
