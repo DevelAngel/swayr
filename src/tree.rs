@@ -93,19 +93,24 @@ impl NodeMethods for s::Node {
                 if self.node_type == s::NodeType::Con
                     && self.name.is_none()
                     && self.app_id.is_none()
+                    && self.pid.is_none()
+                    && self.shell.is_none()
                     && self.window_properties.is_none()
                     && self.layout != s::NodeLayout::None
                 {
                     Type::Container
                 } else if (self.node_type == s::NodeType::Con
                     || self.node_type == s::NodeType::FloatingCon)
-                    && self.name.is_some()
+                    // Apparently there can be windows without app_id, name,
+                    // and window_properties.class, e.g., dolphin-emu-nogui.
+                    && self.pid.is_some()
+                    && self.shell.is_some()
                 {
                     Type::Window
                 } else {
                     panic!(
-                        "Don't know type of node with id {} and node_type {:?}",
-                        self.id, self.node_type
+                        "Don't know type of node with id {} and node_type {:?}\n{:?}",
+                        self.id, self.node_type, self
                     )
                 }
             }
