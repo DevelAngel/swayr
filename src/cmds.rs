@@ -719,7 +719,10 @@ pub fn focus_window_in_direction(
     if consider_wins == &ConsiderWindows::CurrentWorkspace {
         let cur_ws = tree.get_current_workspace();
         wins.retain(|w| {
-            tree.get_workspace_node(w.node.id).unwrap().id == cur_ws.id
+            tree.get_parent_node_of_type(w.node.id, t::Type::Workspace)
+                .unwrap()
+                .id
+                == cur_ws.id
         });
     }
 

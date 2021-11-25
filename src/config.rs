@@ -216,20 +216,23 @@ impl Default for Format {
     fn default() -> Self {
         Format {
             workspace_format: Some(
-                "{indent}<b>Workspace {name} [{layout}]</b>    \
+                "{indent}<b>Workspace {name} [{layout}]</b> \
+                 on output {output_name}    \
                  <span alpha=\"20000\">({id})</span>"
                     .to_string(),
             ),
             container_format: Some(
                 "{indent}<b>Container [{layout}]</b> \
-                 on workspace {workspace_name} <i>{marks}</i>    \
+                 <i>{marks}</i> \
+                 on workspace {workspace_name}    \
                  <span alpha=\"20000\">({id})</span>"
                     .to_string(),
             ),
             window_format: Some(
                 "img:{app_icon}:text:{indent}<i>{app_name}</i> — \
                  {urgency_start}<b>“{title}”</b>{urgency_end} \
-                 on workspace {workspace_name} <i>{marks}</i>    \
+                 <i>{marks}</i> \
+                 on workspace {workspace_name} / {output_name}    \
                  <span alpha=\"20000\">({id})</span>"
                     .to_string(),
             ),

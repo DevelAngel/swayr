@@ -3,7 +3,8 @@ swayr v0.11.0
 
 - New command: `configure-outputs` lets you repeatedly issue output commands
   until you abort the menu program.
-  
+- Formats can now include a `{output_name}` placeholder which is replaced by
+  the name of the output containing the shown workspace, container or window.
 
 swayr v0.10.0
 =============

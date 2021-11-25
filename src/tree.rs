@@ -196,12 +196,16 @@ impl<'a> Tree<'a> {
         self.id_parent.get(&id).map(|pid| self.get_node_by_id(*pid))
     }
 
-    pub fn get_workspace_node(&self, id: i64) -> Option<&&s::Node> {
+    pub fn get_parent_node_of_type(
+        &self,
+        id: i64,
+        t: Type,
+    ) -> Option<&&s::Node> {
         let n = self.get_node_by_id(id);
-        if n.get_type() == Type::Workspace {
+        if n.get_type() == t {
             Some(n)
         } else if let Some(pid) = self.id_parent.get(&id) {
-            self.get_workspace_node(*pid)
+            self.get_parent_node_of_type(*pid, t)
         } else {
             None
         }
@@ -482,12 +486,12 @@ impl DisplayFormat for DisplayNode<'_> {
                 &maybe_html_escape(html_escape, self.node.get_app_name()),
             )
             .replace(
-                "{workspace_name}",
+                "{output_name}",
                 &maybe_html_escape(
                     html_escape,
                     self.tree
-                        .get_workspace_node(self.node.id)
-                        .map_or("<no_workspace>", |w| w.get_name()),
+                        .get_parent_node_of_type(self.node.id, Type::Output)
+                        .map_or("<no_output>", |w| w.get_name()),
                 ),
             )
             .replace(
@@ -495,7 +499,7 @@ impl DisplayFormat for DisplayNode<'_> {
                 &maybe_html_escape(
                     html_escape,
                     self.tree
-                        .get_workspace_node(self.node.id)
+                        .get_parent_node_of_type(self.node.id, Type::Workspace)
                         .map_or("<no_workspace>", |w| w.get_name()),
                 ),
             )
