@@ -1,6 +1,9 @@
 swayr v0.11.0
 =============
 
+- New command: `switch-output` shows all outputs in the menu and focuses the
+  selected one.  Since outputs must now be printable in the menu program,
+  there's a new `format.output_format` spec.
 - New command: `configure-outputs` lets you repeatedly issue output commands
   until you abort the menu program.
 - Formats can now include a `{output_name}` placeholder which is replaced by

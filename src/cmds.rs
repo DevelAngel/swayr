@@ -71,6 +71,8 @@ pub enum SwayrCommand {
     SwitchWindow,
     /// Switch to the selected workspace.
     SwitchWorkspace,
+    /// Switch to the selected workspace.
+    SwitchOutput,
     /// Switch to the selected workspace or focus the selected window.
     SwitchWorkspaceOrWindow,
     /// Switch to the selected workspace or focus the selected container, or
@@ -241,6 +243,7 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
         SwayrCommand::SwitchWorkspace => {
             switch_workspace(&*props.read().unwrap())
         }
+        SwayrCommand::SwitchOutput => switch_output(&*props.read().unwrap()),
         SwayrCommand::SwitchWorkspaceOrWindow => {
             switch_workspace_or_window(&*props.read().unwrap())
         }
@@ -370,6 +373,7 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
                 SwayrCommand::QuitWorkspaceOrWindow,
                 SwayrCommand::SwitchWindow,
                 SwayrCommand::SwitchWorkspace,
+                SwayrCommand::SwitchOutput,
                 SwayrCommand::SwitchWorkspaceOrWindow,
                 SwayrCommand::SwitchToUrgentOrLRUWindow,
                 SwayrCommand::ConfigureOutputs,
@@ -515,6 +519,11 @@ fn handle_non_matching_input(input: &str) {
 fn select_and_focus(prompt: &str, choices: &[t::DisplayNode]) {
     match util::select_from_menu(prompt, choices) {
         Ok(tn) => match tn.node.get_type() {
+            t::Type::Output => {
+                if !tn.node.is_scratchpad() {
+                    run_sway_command(&["focus output", tn.node.get_name()]);
+                }
+            }
             t::Type::Workspace => {
                 if !tn.node.is_scratchpad() {
                     run_sway_command(&["workspace", tn.node.get_name()]);
@@ -543,6 +552,12 @@ pub fn switch_workspace(extra_props: &HashMap<i64, t::ExtraProps>) {
     let root = get_tree(false);
     let tree = t::get_tree(&root, extra_props);
     select_and_focus("Select workspace", &tree.get_workspaces());
+}
+
+pub fn switch_output(extra_props: &HashMap<i64, t::ExtraProps>) {
+    let root = get_tree(false);
+    let tree = t::get_tree(&root, extra_props);
+    select_and_focus("Select output", &tree.get_outputs());
 }
 
 pub fn switch_workspace_or_window(extra_props: &HashMap<i64, t::ExtraProps>) {

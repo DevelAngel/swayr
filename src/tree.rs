@@ -257,8 +257,11 @@ impl<'a> Tree<'a> {
     }
 
     pub fn get_outputs(&self) -> Vec<DisplayNode> {
-        let outputs: Vec<&s::Node> =
-            self.root.iter().filter(|n| !n.is_scratchpad()).collect();
+        let outputs: Vec<&s::Node> = self
+            .root
+            .iter()
+            .filter(|n| n.get_type() == Type::Output && !n.is_scratchpad())
+            .collect();
         self.as_display_nodes(&outputs, IndentLevel::Fixed(0))
     }
 
@@ -450,7 +453,7 @@ impl DisplayFormat for DisplayNode<'_> {
 
         let fmt = match self.node.get_type() {
             Type::Root => String::from("Cannot format Root"),
-            Type::Output => String::from("Cannot format Output"),
+            Type::Output => cfg.get_format_output_format(),
             Type::Workspace => cfg.get_format_workspace_format(),
             Type::Container => cfg.get_format_container_format(),
             Type::Window => cfg.get_format_window_format(),

@@ -63,12 +63,12 @@ impl Config {
             .expect("No menu.args defined.")
     }
 
-    pub fn get_format_window_format(&self) -> String {
+    pub fn get_format_output_format(&self) -> String {
         self.format
             .as_ref()
-            .and_then(|f| f.window_format.clone())
-            .or_else(|| Format::default().window_format)
-            .expect("No format.window_format defined.")
+            .and_then(|f| f.output_format.clone())
+            .or_else(|| Format::default().output_format)
+            .expect("No format.output_format defined.")
     }
 
     pub fn get_format_workspace_format(&self) -> String {
@@ -85,6 +85,14 @@ impl Config {
             .and_then(|f| f.container_format.clone())
             .or_else(|| Format::default().container_format)
             .expect("No format.container_format defined.")
+    }
+
+    pub fn get_format_window_format(&self) -> String {
+        self.format
+            .as_ref()
+            .and_then(|f| f.window_format.clone())
+            .or_else(|| Format::default().window_format)
+            .expect("No format.window_format defined.")
     }
 
     pub fn get_format_indent(&self) -> String {
@@ -161,9 +169,10 @@ pub struct Menu {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Format {
-    window_format: Option<String>,
+    output_format: Option<String>,
     workspace_format: Option<String>,
     container_format: Option<String>,
+    window_format: Option<String>,
     indent: Option<String>,
     urgency_start: Option<String>,
     urgency_end: Option<String>,
@@ -215,6 +224,11 @@ impl Default for Menu {
 impl Default for Format {
     fn default() -> Self {
         Format {
+            output_format: Some(
+                "{indent}<b>Output {name}</b>    \
+                 <span alpha=\"20000\">({id})</span>"
+                    .to_string(),
+            ),
             workspace_format: Some(
                 "{indent}<b>Workspace {name} [{layout}]</b> \
                  on output {output_name}    \
