@@ -174,9 +174,9 @@ pub struct Tree<'a> {
 
 #[derive(Copy, Clone, PartialEq, Eq)]
 enum IndentLevel {
-    Fixed(u32),
+    Fixed(usize),
     WorkspacesZeroWindowsOne,
-    TreeDepth(u8),
+    TreeDepth(usize),
 }
 
 pub struct DisplayNode<'a> {
@@ -342,6 +342,19 @@ impl<'a> Tree<'a> {
         for c in children {
             self.push_subtree_sorted(c, Rc::clone(&v));
         }
+    }
+
+    pub fn get_outputs_workspaces_containers_and_windows(
+        &self,
+    ) -> Vec<DisplayNode> {
+        let outputs = self.sorted_nodes_of_type(Type::Output);
+        let v: Rc<RefCell<Vec<&s::Node>>> = Rc::new(RefCell::new(vec![]));
+        for o in outputs {
+            self.push_subtree_sorted(o, Rc::clone(&v));
+        }
+
+        let x = self.as_display_nodes(&*v.borrow(), IndentLevel::TreeDepth(1));
+        x
     }
 
     pub fn get_workspaces_containers_and_windows(&self) -> Vec<DisplayNode> {
@@ -550,7 +563,11 @@ impl DisplayFormat for DisplayNode<'_> {
                     depth += 1;
                     node = p;
                 }
-                depth - offset as usize
+                if offset > depth {
+                    0
+                } else {
+                    depth - offset as usize
+                }
             }
         }
     }

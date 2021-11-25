@@ -138,7 +138,7 @@ pub enum SwayrCommand {
     /// Move the currently focused window or container to the selected
     /// workspace.
     MoveFocusedToWorkspace,
-    /// Move the currently focused window or container to the selected
+    /// Move the currently focused window or container to the selected output,
     /// workspace, container or window.
     MoveFocusedTo,
     /// Swap the currently focused window or container with the selected
@@ -653,9 +653,19 @@ fn move_focused_to_container_or_window(id: i64) {
 fn select_and_move_focused_to(prompt: &str, choices: &[t::DisplayNode]) {
     match util::select_from_menu(prompt, choices) {
         Ok(tn) => match tn.node.get_type() {
+            t::Type::Output => {
+                if tn.node.is_scratchpad() {
+                    run_sway_command_1("move container to scratchpad")
+                } else {
+                    run_sway_command(&[
+                        "move container to output",
+                        &tn.node.get_name(),
+                    ])
+                }
+            }
             t::Type::Workspace => {
                 if tn.node.is_scratchpad() {
-                    run_sway_command(&["move", "container", "to", "scratchpad"])
+                    run_sway_command_1("move container to scratchpad")
                 } else {
                     move_focused_to_workspace_1(tn.node.get_name())
                 }
@@ -686,7 +696,7 @@ pub fn move_focused_to(extra_props: &HashMap<i64, t::ExtraProps>) {
     let tree = t::get_tree(&root, extra_props);
     select_and_move_focused_to(
         "Move focused container to workspace or container",
-        &tree.get_workspaces_containers_and_windows(),
+        &tree.get_outputs_workspaces_containers_and_windows(),
     );
 }
 

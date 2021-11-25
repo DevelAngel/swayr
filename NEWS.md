@@ -6,6 +6,9 @@ swayr v0.11.0
   there's a new `format.output_format` spec.
 - New command: `configure-outputs` lets you repeatedly issue output commands
   until you abort the menu program.
+- `move-focused-to` now also supports outputs, i.e., you can move the currently
+  focused container to some output which means it's moved to the workspace
+  currently active on that output.
 - Formats can now include a `{output_name}` placeholder which is replaced by
   the name of the output containing the shown workspace, container or window.
 
