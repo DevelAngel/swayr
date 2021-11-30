@@ -127,6 +127,7 @@ respective package maintainers!  Refer to the [repology
 site](https://repology.org/project/swayr/versions) for details.
 
 [![Packaging status](https://repology.org/badge/vertical-allrepos/swayr.svg)](https://repology.org/project/swayr/versions)
+[![AUR swayr-git package status](https://repology.org/badge/version-for-repo/aur/swayr.svg?allow_ignored=yes&header=AUR swayr-git)](https://repology.org/project/swayr/versions)
 
 ### Building with cargo
 
