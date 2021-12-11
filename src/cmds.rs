@@ -78,6 +78,9 @@ pub enum SwayrCommand {
     /// Switch to the selected workspace or focus the selected container, or
     /// window.
     SwitchWorkspaceContainerOrWindow,
+    /// Switch to the selected output or workspace or focus the selected
+    /// container, or window.
+    SwitchTo,
     /// Quit the selected window.
     QuitWindow,
     /// Quit all windows of selected workspace or the selected window.
@@ -250,6 +253,7 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
         SwayrCommand::SwitchWorkspaceContainerOrWindow => {
             switch_workspace_container_or_window(&*props.read().unwrap())
         }
+        SwayrCommand::SwitchTo => switch_to(&*props.read().unwrap()),
         SwayrCommand::QuitWindow => quit_window(&*props.read().unwrap()),
         SwayrCommand::QuitWorkspaceOrWindow => {
             quit_workspace_or_window(&*props.read().unwrap())
@@ -577,6 +581,15 @@ pub fn switch_workspace_container_or_window(
     select_and_focus(
         "Select workspace, container or window",
         &tree.get_workspaces_containers_and_windows(),
+    );
+}
+
+pub fn switch_to(extra_props: &HashMap<i64, t::ExtraProps>) {
+    let root = get_tree(true);
+    let tree = t::get_tree(&root, extra_props);
+    select_and_focus(
+        "Select output, workspace, container or window",
+        &tree.get_outputs_workspaces_containers_and_windows(),
     );
 }
 

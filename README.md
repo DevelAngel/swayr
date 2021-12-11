@@ -23,6 +23,8 @@ Right now, there are these subcommands:
    switches to the selected workspace or window.
 * `switch-workspace-container-or-window` shows workspaces, containers, and
   their windows in the menu program and switches to the selected one.
+* `switch-to` shows outputs, workspaces, containers, and their windows in the
+  menu program and switches to the selected one.
 * `quit-window` displays all windows and quits the selected one.
 * `quit-workspace-or-window` displays all workspaces and their windows and
   allows to quit either the selected workspace (all its windows) or the

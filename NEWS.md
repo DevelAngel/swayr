@@ -1,3 +1,11 @@
+swayr v0.11.1
+=============
+
+- Well, bumping the micro version usually indicates a bugfix release but I've
+  forgotten to add the `switch-to` command in version 0.11.0.  It's the
+  canonical "switch to anything" command, i.e., it offers outputs, workspaces,
+  containers, and windows.
+
 swayr v0.11.0
 =============
 
