@@ -3,13 +3,14 @@ swayr v0.11.0
 
 - New command: `switch-output` shows all outputs in the menu and focuses the
   selected one.  Since outputs must now be printable in the menu program,
-  there's a new `format.output_format` spec.
+  there's a new `format.output_format` spec where you can use the output's
+  `{name}` and `{id}` to identify it in the menu program.
 - New command: `configure-outputs` lets you repeatedly issue output commands
   until you abort the menu program.
 - `move-focused-to` now also supports outputs, i.e., you can move the currently
   focused container to some output which means it's moved to the workspace
   currently active on that output.
-- Formats can now include a `{output_name}` placeholder which is replaced by
+- Formats can now include an `{output_name}` placeholder which is replaced by
   the name of the output containing the shown workspace, container or window.
 
 swayr v0.10.0
