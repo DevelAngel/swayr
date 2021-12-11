@@ -297,7 +297,7 @@ right now.
   * `{app_icon}` shows the application's icon (a path to a PNG or SVG file).
   * `{workspace_name}` gets replaced with the name or number of the workspace
     the container or window belongs to.
-  * The placeholders `{urcency_start}` and `{urgency_end}` get replaced by the
+  * The placeholders `{urgency_start}` and `{urgency_end}` get replaced by the
     empty string if the window has no urgency flag and with the values of the
     same-named formats if the window has the urgency flag set.  That makes it
     possible to highlight urgent windows as shown in the default config.
