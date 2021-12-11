@@ -18,6 +18,7 @@ Right now, there are these subcommands:
   last-recently-used, focused last and focuses the selected.
 * `switch-workspace` displays all workspaces in LRU order and switches to the
   selected one.
+* `switch-output` shows all outputs in the menu and focuses the selected one.
 * `switch-workspace-or-window` displays all workspaces and their windows and
    switches to the selected workspace or window.
 * `switch-workspace-container-or-window` shows workspaces, containers, and
@@ -34,8 +35,8 @@ Right now, there are these subcommands:
   the form `#w:<workspace>` where the hash and `w:` shortcut are optional can
   be used to move it to a new workspace.
 * `move-focused-to` moves the currently focused container or window to the
-  selected workspace, container, or window.  Non-matching input is handled like
-  with `move-focused-to-workspace`.
+  selected output, workspace, container, window.  Non-matching input is handled
+  like with `move-focused-to-workspace`.
 * `swap-focused-with` swaps the currently focused window or container with the
   one selected from the menu program.
 * `next-window (all-workspaces|current-workspace)` & `prev-window
@@ -80,6 +81,8 @@ Right now, there are these subcommands:
   between a tabbed and tiled layout, i.e., it calls `shuffle-tile-workspace` if
   it is currently tabbed, and calls `shuffle-tile-workspace` if it is currently
   tiled.
+* `configure-outputs` lets you repeatedly issue output configuration commands
+  until you abort the menu program.
 * `execute-swaymsg-command` displays most swaymsg which don't require
   additional input and executes the selected one.  That's handy especially for
   less often used commands not bound to a key.  Non-matching input will be
@@ -233,9 +236,10 @@ args = [
 ]
 
 [format]
-window_format = 'img:{app_icon}:text:{indent}<i>{app_name}</i> — {urgency_start}<b>“{title}”</b>{urgency_end} on workspace {workspace_name} <i>{marks}</i>    <span alpha="20000">({id})</span>'
+output_format = '{indent}<b>Output {name}</b>    <span alpha=\"20000\">({id})</span>'
 workspace_format = '{indent}<b>Workspace {name} [{layout}]</b>    <span alpha="20000">({id})</span>'
 container_format = '{indent}<b>Container [{layout}]</b> on workspace {workspace_name} <i>{marks}</i>    <span alpha="20000">({id})</span>'
+window_format = 'img:{app_icon}:text:{indent}<i>{app_name}</i> — {urgency_start}<b>“{title}”</b>{urgency_end} on workspace {workspace_name} <i>{marks}</i>    <span alpha="20000">({id})</span>'
 indent = '    '
 urgency_start = '<span background="darkred" foreground="yellow">'
 urgency_end = '</span>'
@@ -280,13 +284,14 @@ choices are to be layed out.  `wofi` supports [pango
 markup](https://docs.gtk.org/Pango/pango_markup.html) which makes it possible
 to style the text using HTML and CSS.  The following formats are supported
 right now.
-* `workspace_format` defines how workspaces are displayed, `container_format`
-  defines how non-workspace containers are displayed, and `window_format`
-  defines how application windows are displayed.
+* `output_format` defines how outputs (monitors) are displayed in the menu
+  program, `workspace_format` defines how workspaces are displayed,
+  `container_format` defines how non-workspace containers are displayed, and
+  `window_format` defines how application windows are displayed.
 * In these formats, the following placeholders can be used:
-  * `{name}` gets replaced by the workspace number, or name or a window's
-    title.  The placeholder `{title}` is an obsolete synonym which will be
-    removed in a later version.
+  * `{name}` gets replaced by the output name, the workspace number or name or
+    a window's title.  The placeholder `{title}` is an obsolete synonym which
+    will be removed in a later version.
   * `{layout}` shows the workspace or container's layout.
   * `{id}` gets replaced by the sway-internal con id.
   * `{indent}` gets replaced with N times the new `format.indent` value where N
