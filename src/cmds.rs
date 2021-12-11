@@ -659,7 +659,7 @@ fn select_and_move_focused_to(prompt: &str, choices: &[t::DisplayNode]) {
                 } else {
                     run_sway_command(&[
                         "move container to output",
-                        &tn.node.get_name(),
+                        tn.node.get_name(),
                     ])
                 }
             }

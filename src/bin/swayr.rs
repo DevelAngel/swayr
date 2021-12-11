@@ -20,11 +20,7 @@ use clap::Parser;
 /// Windows are sorted urgent first, then windows in LRU order, focused window
 /// last.  Licensed under the GPLv3 (or later).
 #[derive(clap::Parser)]
-#[clap(
-    name = "swayr -- a window switcher (and more) for sway",
-    version = clap::crate_version!(),
-    author = "Tassilo Horn <tsdh@gnu.org>"
-)]
+#[clap(about, version, author)]
 struct Opts {
     #[clap(subcommand)]
     command: swayr::cmds::SwayrCommand,
