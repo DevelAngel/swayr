@@ -807,7 +807,7 @@ pub fn focus_window_of_same_layout_in_direction(
     let root = get_tree(false);
     let tree = t::get_tree(&root, extra_props);
     let wins = tree.get_windows();
-    let cur_win = wins.get(0);
+    let cur_win = wins.iter().find(|w| w.node.focused);
 
     if let Some(cur_win) = cur_win {
         focus_window_in_direction(
