@@ -82,7 +82,14 @@ pub enum SwayrCommand {
     /// container, or window.
     SwitchTo,
     /// Quit the selected window.
-    QuitWindow,
+    QuitWindow {
+        #[clap(
+            short,
+            long,
+            help = "Kill the window's process rather than just quitting it"
+        )]
+        kill: bool,
+    },
     /// Quit all windows of selected workspace or the selected window.
     QuitWorkspaceOrWindow,
     /// Quit all windows of selected workspace, or container or the selected
@@ -254,7 +261,9 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
             switch_workspace_container_or_window(&*props.read().unwrap())
         }
         SwayrCommand::SwitchTo => switch_to(&*props.read().unwrap()),
-        SwayrCommand::QuitWindow => quit_window(&*props.read().unwrap()),
+        SwayrCommand::QuitWindow { kill } => {
+            quit_window(&*props.read().unwrap(), *kill)
+        }
         SwayrCommand::QuitWorkspaceOrWindow => {
             quit_workspace_or_window(&*props.read().unwrap())
         }
@@ -373,7 +382,6 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
                 SwayrCommand::MoveFocusedToWorkspace,
                 SwayrCommand::MoveFocusedTo,
                 SwayrCommand::SwapFocusedWith,
-                SwayrCommand::QuitWindow,
                 SwayrCommand::QuitWorkspaceOrWindow,
                 SwayrCommand::SwitchWindow,
                 SwayrCommand::SwitchWorkspace,
@@ -400,6 +408,11 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
                     floating: f.clone(),
                 });
             }
+
+            for kill in [false, true] {
+                cmds.push(SwayrCommand::QuitWindow { kill });
+            }
+
             for w in [
                 ConsiderWindows::AllWorkspaces,
                 ConsiderWindows::CurrentWorkspace,
@@ -593,7 +606,21 @@ pub fn switch_to(extra_props: &HashMap<i64, t::ExtraProps>) {
     );
 }
 
-fn select_and_quit(prompt: &str, choices: &[t::DisplayNode]) {
+fn kill_process_by_pid(pid: Option<i32>) {
+    if let Some(pid) = pid {
+        if let Err(err) = std::process::Command::new("kill")
+            .arg("-9")
+            .arg(format!("{}", pid))
+            .output()
+        {
+            eprintln!("Error killing process {}: {}", pid, err)
+        }
+    } else {
+        eprintln!("Cannot kill window with no pid.");
+    }
+}
+
+fn select_and_quit(prompt: &str, choices: &[t::DisplayNode], kill: bool) {
     if let Ok(tn) = util::select_from_menu(prompt, choices) {
         match tn.node.get_type() {
             t::Type::Workspace | t::Type::Container => {
@@ -603,7 +630,13 @@ fn select_and_quit(prompt: &str, choices: &[t::DisplayNode]) {
                     quit_window_by_id(win.id)
                 }
             }
-            t::Type::Window => quit_window_by_id(tn.node.id),
+            t::Type::Window => {
+                if kill {
+                    kill_process_by_pid(tn.node.pid)
+                } else {
+                    quit_window_by_id(tn.node.id)
+                }
+            }
             t => {
                 eprintln!("Cannot handle {:?} in quit_workspace_or_window", t)
             }
@@ -611,10 +644,10 @@ fn select_and_quit(prompt: &str, choices: &[t::DisplayNode]) {
     }
 }
 
-pub fn quit_window(extra_props: &HashMap<i64, t::ExtraProps>) {
+pub fn quit_window(extra_props: &HashMap<i64, t::ExtraProps>, kill: bool) {
     let root = get_tree(true);
     let tree = t::get_tree(&root, extra_props);
-    select_and_quit("Quit window", &tree.get_windows());
+    select_and_quit("Quit window", &tree.get_windows(), kill);
 }
 
 pub fn quit_workspace_or_window(extra_props: &HashMap<i64, t::ExtraProps>) {
@@ -623,6 +656,7 @@ pub fn quit_workspace_or_window(extra_props: &HashMap<i64, t::ExtraProps>) {
     select_and_quit(
         "Quit workspace or window",
         &tree.get_workspaces_and_windows(),
+        false,
     );
 }
 
@@ -634,6 +668,7 @@ pub fn quit_workspace_container_or_window(
     select_and_quit(
         "Quit workspace, container or window",
         &tree.get_workspaces_containers_and_windows(),
+        false,
     );
 }
 

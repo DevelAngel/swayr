@@ -1,3 +1,10 @@
+swayr v0.12.0
+=============
+
+- The `quit-window` command now has an optional `--kill` / `-k` flag.  If
+  given, the process of the window to be quit will be killed using `kill -9
+  <pid>` instead of just sending sending the `kill` IPC message to sway.
+
 swayr v0.11.1
 =============
 
