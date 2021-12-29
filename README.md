@@ -25,7 +25,10 @@ Right now, there are these subcommands:
   their windows in the menu program and switches to the selected one.
 * `switch-to` shows outputs, workspaces, containers, and their windows in the
   menu program and switches to the selected one.
-* `quit-window` displays all windows and quits the selected one.
+* `quit-window` displays all windows and quits the selected one.  An optional
+  `--kill` / `-k` flag may be specified in which case the window's process will
+  be killed using `kill -9 <pid>` rather than only sending a `kill` IPC message
+  to sway.
 * `quit-workspace-or-window` displays all workspaces and their windows and
   allows to quit either the selected workspace (all its windows) or the
   selected window.
