@@ -1,0 +1,1 @@
+- Switch from lazy_static to once_cell once the latter is in stable rust.
