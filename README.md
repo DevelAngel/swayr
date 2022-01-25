@@ -324,6 +324,11 @@ right now.
 * `fallback_icon` is a path to some PNG/SVG icon which will be used as
   `{app_icon}` if no application-specific icon can be determined.
 
+The placeholders `{app_name}`, `{name}`, `{output_name}`, and `{workspace_name}`
+allow to specify the maximum string length using format `{<name>:<len>}` (e.g.
+`{app_name:10}`).  If the string is longer than the specified length, it will
+be truncated and an ellipsis ("…") will be inserted at the end.
+
 It is crucial that during selection (using wofi or some other menu program)
 each window has a different display string.  Therefore, it is highly
 recommended to include the `{id}` placeholder at least in `container_format`

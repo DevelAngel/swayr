@@ -1,3 +1,12 @@
+swayr v0.13.0
+=============
+
+- The placeholders `{app_name}`, `{name}`, `{output_name}`, and
+  `{workspace_name}` allow to specify the maximum string length using format
+  `{<name>:<len>}` (e.g. `{app_name:10}`).  If the string is longer than the
+  specified length, it will be truncated and an ellipsis ("…") will be inserted
+  at the end.
+
 swayr v0.12.0
 =============
 

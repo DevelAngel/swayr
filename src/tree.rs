@@ -429,6 +429,11 @@ lazy_static! {
         regex::Regex::new("(.+)(-[0-9.]+)").unwrap();
 }
 
+lazy_static! {
+    static ref PLACEHOLDER_RX: regex::Regex =
+        regex::Regex::new(r"\{(?P<name>[^}:]+)(?::(?P<width>\d+))?\}").unwrap();
+}
+
 fn maybe_html_escape(do_it: bool, text: &str) -> String {
     if do_it {
         text.replace("<", "&lt;")
@@ -470,8 +475,8 @@ impl DisplayFormat for DisplayNode<'_> {
             Type::Container => cfg.get_format_container_format(),
             Type::Window => cfg.get_format_window_format(),
         };
-        fmt.replace("{indent}", &indent.repeat(self.get_indent_level()))
-            .replace("{layout}", format!("{:?}", self.node.layout).as_str())
+        let fmt = fmt
+            .replace("{indent}", &indent.repeat(self.get_indent_level()))
             .replace("{id}", format!("{}", self.node.id).as_str())
             .replace(
                 "{marks}",
@@ -497,28 +502,6 @@ impl DisplayFormat for DisplayNode<'_> {
                 },
             )
             .replace(
-                "{app_name}",
-                &maybe_html_escape(html_escape, self.node.get_app_name()),
-            )
-            .replace(
-                "{output_name}",
-                &maybe_html_escape(
-                    html_escape,
-                    self.tree
-                        .get_parent_node_of_type(self.node.id, Type::Output)
-                        .map_or("<no_output>", |w| w.get_name()),
-                ),
-            )
-            .replace(
-                "{workspace_name}",
-                &maybe_html_escape(
-                    html_escape,
-                    self.tree
-                        .get_parent_node_of_type(self.node.id, Type::Workspace)
-                        .map_or("<no_workspace>", |w| w.get_name()),
-                ),
-            )
-            .replace(
                 "{app_icon}",
                 util::get_icon(self.node.get_app_name(), &icon_dirs)
                     .or_else(|| {
@@ -534,15 +517,34 @@ impl DisplayFormat for DisplayNode<'_> {
                     .map(|i| i.to_string_lossy().into_owned())
                     .unwrap_or_else(String::new)
                     .as_str(),
-            )
-            .replace(
-                "{title}",
-                &maybe_html_escape(html_escape, self.node.get_name()),
-            )
-            .replace(
-                "{name}",
-                &maybe_html_escape(html_escape, self.node.get_name()),
-            )
+            );
+        PLACEHOLDER_RX.replace_all(&fmt, |caps: &regex::Captures| {
+            let value = match &caps["name"] {
+                "app_name" => self.node.get_app_name(),
+                "name" | "title" => self.node.get_name(),
+                "output_name" => {
+                    self.tree
+                        .get_parent_node_of_type(self.node.id, Type::Output)
+                        .map_or("<no_output>", |w| w.get_name())
+                },
+                "workspace_name" => {
+                    self.tree
+                        .get_parent_node_of_type(self.node.id, Type::Workspace)
+                        .map_or("<no_workspace>", |w| w.get_name())
+                },
+                _ => &caps[0],
+            };
+            let width = caps.name("width")
+                .map_or("0", |m| m.as_str())
+                .parse::<usize>()
+                .unwrap();
+
+            if width > 0 && value.len() > width {
+                maybe_html_escape(html_escape, &format!("{}…", &value[..width - 1]))
+            } else {
+                maybe_html_escape(html_escape, &value)
+            }
+        }).into()
     }
 
     fn get_indent_level(&self) -> usize {
