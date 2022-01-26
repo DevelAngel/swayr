@@ -518,33 +518,38 @@ impl DisplayFormat for DisplayNode<'_> {
                     .unwrap_or_else(String::new)
                     .as_str(),
             );
-        PLACEHOLDER_RX.replace_all(&fmt, |caps: &regex::Captures| {
-            let value = match &caps["name"] {
-                "app_name" => self.node.get_app_name(),
-                "name" | "title" => self.node.get_name(),
-                "output_name" => {
-                    self.tree
-                        .get_parent_node_of_type(self.node.id, Type::Output)
-                        .map_or("<no_output>", |w| w.get_name())
-                },
-                "workspace_name" => {
-                    self.tree
-                        .get_parent_node_of_type(self.node.id, Type::Workspace)
-                        .map_or("<no_workspace>", |w| w.get_name())
-                },
-                _ => &caps[0],
-            };
-            let width = caps.name("width")
-                .map_or("0", |m| m.as_str())
-                .parse::<usize>()
-                .unwrap();
 
-            if width > 0 && value.len() > width {
-                maybe_html_escape(html_escape, &format!("{}…", &value[..width - 1]))
-            } else {
-                maybe_html_escape(html_escape, &value)
-            }
-        }).into()
+        PLACEHOLDER_RX
+            .replace_all(&fmt, |caps: &regex::Captures| {
+                let value = match &caps["name"] {
+                    "app_name" => self.node.get_app_name(),
+                    "name" | "title" => self.node.get_name(),
+                    "output_name" => self
+                        .tree
+                        .get_parent_node_of_type(self.node.id, Type::Output)
+                        .map_or("<no_output>", |w| w.get_name()),
+                    "workspace_name" => self
+                        .tree
+                        .get_parent_node_of_type(self.node.id, Type::Workspace)
+                        .map_or("<no_workspace>", |w| w.get_name()),
+                    _ => &caps[0],
+                };
+                let width = caps
+                    .name("width")
+                    .map_or("0", |m| m.as_str())
+                    .parse::<usize>()
+                    .unwrap();
+
+                if width > 0 && value.len() > width {
+                    maybe_html_escape(
+                        html_escape,
+                        &format!("{}…", &value[..width - 1]),
+                    )
+                } else {
+                    maybe_html_escape(html_escape, value)
+                }
+            })
+            .into()
     }
 
     fn get_indent_level(&self) -> usize {
