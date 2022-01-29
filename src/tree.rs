@@ -160,9 +160,8 @@ impl NodeMethods for s::Node {
 /// Extra properties gathered by swayrd for windows and workspaces.
 #[derive(Copy, Clone, Debug, Deserialize, Serialize)]
 pub struct ExtraProps {
-    /// Milliseconds since UNIX epoch.
-    pub last_focus_time: u128,
-    pub last_focus_time_for_next_prev_seq: u128,
+    pub last_focus_tick: u64,
+    pub last_focus_tick_for_next_prev_seq: u64,
 }
 
 pub struct Tree<'a> {
@@ -211,14 +210,14 @@ impl<'a> Tree<'a> {
         }
     }
 
-    pub fn last_focus_time(&self, id: i64) -> u128 {
-        self.extra_props.get(&id).map_or(0, |wp| wp.last_focus_time)
+    pub fn last_focus_tick(&self, id: i64) -> u64 {
+        self.extra_props.get(&id).map_or(0, |wp| wp.last_focus_tick)
     }
 
-    pub fn last_focus_time_for_next_prev_seq(&self, id: i64) -> u128 {
+    pub fn last_focus_tick_for_next_prev_seq(&self, id: i64) -> u64 {
         self.extra_props
             .get(&id)
-            .map_or(0, |wp| wp.last_focus_time_for_next_prev_seq)
+            .map_or(0, |wp| wp.last_focus_tick_for_next_prev_seq)
     }
 
     fn sorted_nodes_of_type_1(
@@ -321,8 +320,8 @@ impl<'a> Tree<'a> {
             } else if !a.urgent && b.urgent {
                 cmp::Ordering::Greater
             } else {
-                let lru_a = self.last_focus_time(a.id);
-                let lru_b = self.last_focus_time(b.id);
+                let lru_a = self.last_focus_tick(a.id);
+                let lru_b = self.last_focus_tick(b.id);
                 lru_a.cmp(&lru_b).reverse()
             }
         });

@@ -26,7 +26,6 @@ use std::os::unix::net::{UnixListener, UnixStream};
 use std::sync::Arc;
 use std::sync::RwLock;
 use std::thread;
-use std::time::{SystemTime, UNIX_EPOCH};
 use swayipc as s;
 
 pub fn run_demon() {
@@ -53,6 +52,7 @@ pub fn monitor_sway_events(
     extra_props: Arc<RwLock<HashMap<i64, t::ExtraProps>>>,
 ) {
     let config = config::load_config();
+    let mut focus_counter = 0;
     let mut resets = 0;
     let max_resets = 10;
 
@@ -76,17 +76,21 @@ pub fn monitor_sway_events(
                         Ok(ev) => match ev {
                             s::Event::Window(win_ev) => {
                                 let extra_props_clone = extra_props.clone();
+                                focus_counter += 1;
                                 show_extra_props_state = handle_window_event(
                                     win_ev,
                                     extra_props_clone,
                                     &config,
+                                    focus_counter,
                                 );
                             }
                             s::Event::Workspace(ws_ev) => {
                                 let extra_props_clone = extra_props.clone();
+                                focus_counter += 1;
                                 show_extra_props_state = handle_workspace_event(
                                     ws_ev,
                                     extra_props_clone,
+                                    focus_counter,
                                 );
                             }
                             s::Event::Shutdown(sd_ev) => {
@@ -124,6 +128,7 @@ fn handle_window_event(
     ev: Box<s::WindowEvent>,
     extra_props: Arc<RwLock<HashMap<i64, t::ExtraProps>>>,
     config: &config::Config,
+    focus_val: u64,
 ) -> bool {
     let s::WindowEvent {
         change, container, ..
@@ -131,13 +136,13 @@ fn handle_window_event(
     match change {
         s::WindowChange::Focus => {
             layout::maybe_auto_tile(config);
-            update_last_focus_time(container.id, extra_props);
+            update_last_focus_tick(container.id, extra_props, focus_val);
             println!("Handled window event type {:?}", change);
             true
         }
         s::WindowChange::New => {
             layout::maybe_auto_tile(config);
-            update_last_focus_time(container.id, extra_props);
+            update_last_focus_tick(container.id, extra_props, focus_val);
             println!("Handled window event type {:?}", change);
             true
         }
@@ -162,6 +167,7 @@ fn handle_window_event(
 fn handle_workspace_event(
     ev: Box<s::WorkspaceEvent>,
     extra_props: Arc<RwLock<HashMap<i64, t::ExtraProps>>>,
+    focus_val: u64,
 ) -> bool {
     let s::WorkspaceEvent {
         change,
@@ -171,11 +177,12 @@ fn handle_workspace_event(
     } = *ev;
     match change {
         s::WorkspaceChange::Init | s::WorkspaceChange::Focus => {
-            update_last_focus_time(
+            update_last_focus_tick(
                 current
                     .expect("No current in Init or Focus workspace event")
                     .id,
                 extra_props,
+                focus_val,
             );
             println!("Handled workspace event type {:?}", change);
             true
@@ -192,19 +199,20 @@ fn handle_workspace_event(
     }
 }
 
-fn update_last_focus_time(
+fn update_last_focus_tick(
     id: i64,
     extra_props: Arc<RwLock<HashMap<i64, t::ExtraProps>>>,
+    focus_val: u64,
 ) {
     let mut write_lock = extra_props.write().unwrap();
     if let Some(wp) = write_lock.get_mut(&id) {
-        wp.last_focus_time = get_epoch_time_as_millis();
+        wp.last_focus_tick = focus_val;
     } else {
         write_lock.insert(
             id,
             t::ExtraProps {
-                last_focus_time: get_epoch_time_as_millis(),
-                last_focus_time_for_next_prev_seq: 0,
+                last_focus_tick: focus_val,
+                last_focus_tick_for_next_prev_seq: 0,
             },
         );
     }
@@ -215,13 +223,6 @@ fn remove_extra_props(
     extra_props: Arc<RwLock<HashMap<i64, t::ExtraProps>>>,
 ) {
     extra_props.write().unwrap().remove(&id);
-}
-
-fn get_epoch_time_as_millis() -> u128 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .expect("Couldn't get epoch time!")
-        .as_millis()
 }
 
 pub fn serve_client_requests(

@@ -238,7 +238,7 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
         if !before {
             let mut map = props.write().unwrap();
             for val in map.values_mut() {
-                val.last_focus_time_for_next_prev_seq = val.last_focus_time;
+                val.last_focus_tick_for_next_prev_seq = val.last_focus_tick;
             }
         }
     } else {
@@ -806,8 +806,8 @@ pub fn focus_window_in_direction(
     }
 
     wins.sort_by(|a, b| {
-        let lru_a = tree.last_focus_time_for_next_prev_seq(a.node.id);
-        let lru_b = tree.last_focus_time_for_next_prev_seq(b.node.id);
+        let lru_a = tree.last_focus_tick_for_next_prev_seq(a.node.id);
+        let lru_b = tree.last_focus_tick_for_next_prev_seq(b.node.id);
         lru_a.cmp(&lru_b).reverse()
     });
 
