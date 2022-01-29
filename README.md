@@ -324,11 +324,13 @@ right now.
 * `fallback_icon` is a path to some PNG/SVG icon which will be used as
   `{app_icon}` if no application-specific icon can be determined.
 
-The placeholders `{app_name}`, `{name}`, `{output_name}`, and
-`{workspace_name}` allow to specify the maximum string length using format
-`{<name>:<len>}` (e.g.  `{app_name:10}`).  If the string is longer than the
-specified length, it will be truncated and an ellipsis ("…") will be inserted
-at the end.
+The placeholders `{id}`, `{app_name}`, `{name}`/`{title}`, `{output_name}`,
+`{workspace_name}`, and `{marks}` may optionally provide a format string as
+specified by [Rust's std::fmt](https://doc.rust-lang.org/std/fmt/).  The syntax
+is `{<placeholder>:<fmt_str>}`.  For example, `{app_name:{:>10.10}}` would mean
+that the application name is printed with exactly 10 characters.  If it's
+shorter, it will be right-aligned (the `>`) and padded with spaces, if it's
+longer, it'll be cut after the 10th character.
 
 It is crucial that during selection (using wofi or some other menu program)
 each window has a different display string.  Therefore, it is highly

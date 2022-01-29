@@ -1,4 +1,4 @@
-// Copyright (C) 2021  Tassilo Horn <tsdh@gnu.org>
+// Copyright (C) 2021-2022  Tassilo Horn <tsdh@gnu.org>
 //
 // This program is free software: you can redistribute it and/or modify it
 // under the terms of the GNU General Public License as published by the Free
@@ -28,5 +28,6 @@ pub mod cmds;
 pub mod config;
 pub mod demon;
 pub mod layout;
+pub mod rtfmt;
 pub mod tree;
 pub mod util;

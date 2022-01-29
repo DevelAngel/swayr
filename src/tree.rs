@@ -1,4 +1,4 @@
-// Copyright (C) 2021  Tassilo Horn <tsdh@gnu.org>
+// Copyright (C) 2021-2022  Tassilo Horn <tsdh@gnu.org>
 //
 // This program is free software: you can redistribute it and/or modify it
 // under the terms of the GNU General Public License as published by the Free
@@ -16,6 +16,7 @@
 //! Convenience data structures built from the IPC structs.
 
 use crate::config;
+use crate::rtfmt;
 use crate::util;
 use crate::util::DisplayFormat;
 use lazy_static::lazy_static;
@@ -427,20 +428,18 @@ pub fn get_tree<'a>(
 lazy_static! {
     static ref APP_NAME_AND_VERSION_RX: regex::Regex =
         regex::Regex::new("(.+)(-[0-9.]+)").unwrap();
-}
-
-lazy_static! {
     static ref PLACEHOLDER_RX: regex::Regex =
-        regex::Regex::new(r"\{(?P<name>[^}:]+)(?::(?P<width>\d+))?\}").unwrap();
+        regex::Regex::new(r"\{(?P<name>[^}:]+)(?::(?P<fmtstr>\{[^}]*\}))?\}")
+            .unwrap();
 }
 
-fn maybe_html_escape(do_it: bool, text: &str) -> String {
+fn maybe_html_escape(do_it: bool, text: String) -> String {
     if do_it {
         text.replace("<", "&lt;")
             .replace(">", "&gt;")
             .replace("&", "&amp;")
     } else {
-        text.to_string()
+        text
     }
 }
 
@@ -477,14 +476,6 @@ impl DisplayFormat for DisplayNode<'_> {
         };
         let fmt = fmt
             .replace("{indent}", &indent.repeat(self.get_indent_level()))
-            .replace("{id}", format!("{}", self.node.id).as_str())
-            .replace(
-                "{marks}",
-                &maybe_html_escape(
-                    html_escape,
-                    &format_marks(&self.node.marks),
-                ),
-            )
             .replace(
                 "{urgency_start}",
                 if self.node.urgent {
@@ -522,32 +513,24 @@ impl DisplayFormat for DisplayNode<'_> {
         PLACEHOLDER_RX
             .replace_all(&fmt, |caps: &regex::Captures| {
                 let value = match &caps["name"] {
-                    "app_name" => self.node.get_app_name(),
-                    "name" | "title" => self.node.get_name(),
+                    "id" => self.node.id.to_string(),
+                    "app_name" => self.node.get_app_name().to_string(),
+                    "name" | "title" => self.node.get_name().to_string(),
                     "output_name" => self
                         .tree
                         .get_parent_node_of_type(self.node.id, Type::Output)
-                        .map_or("<no_output>", |w| w.get_name()),
+                        .map_or("<no_output>", |w| w.get_name())
+                        .to_string(),
                     "workspace_name" => self
                         .tree
                         .get_parent_node_of_type(self.node.id, Type::Workspace)
-                        .map_or("<no_workspace>", |w| w.get_name()),
-                    _ => &caps[0],
+                        .map_or("<no_workspace>", |w| w.get_name())
+                        .to_string(),
+                    "marks" => format_marks(&self.node.marks),
+                    _ => caps[0].to_string(),
                 };
-                let width = caps
-                    .name("width")
-                    .map_or("0", |m| m.as_str())
-                    .parse::<usize>()
-                    .unwrap();
-
-                if width > 0 && value.len() > width {
-                    maybe_html_escape(
-                        html_escape,
-                        &format!("{}…", &value[..width - 1]),
-                    )
-                } else {
-                    maybe_html_escape(html_escape, value)
-                }
+                let fmt_str = caps.name("fmtstr").map_or("{}", |m| m.as_str());
+                maybe_html_escape(html_escape, rtfmt::format(fmt_str, &value))
             })
             .into()
     }
