@@ -89,7 +89,7 @@ pub fn format(fmt: &str, arg: &str, clipped_str: &str) -> String {
     }
 }
 
-fn remove_last_n_chars(s: &mut String, n: usize) -> () {
+fn remove_last_n_chars(s: &mut String, n: usize) {
     match s.char_indices().nth_back(n) {
         Some((pos, ch)) => s.truncate(pos + ch.len_utf8()),
         None => s.clear(),

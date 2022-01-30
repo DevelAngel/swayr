@@ -536,7 +536,7 @@ impl DisplayFormat for DisplayNode<'_> {
 
                 maybe_html_escape(
                     html_escape,
-                    rtfmt::format(fmt_str, &value, &clipped_str),
+                    rtfmt::format(fmt_str, &value, clipped_str),
                 )
             })
             .into()
