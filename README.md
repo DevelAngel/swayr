@@ -327,14 +327,14 @@ right now.
 The placeholders `{id}`, `{app_name}`, `{name}`/`{title}`, `{output_name}`,
 `{workspace_name}`, and `{marks}` may optionally provide a format string as
 specified by [Rust's std::fmt](https://doc.rust-lang.org/std/fmt/).  The syntax
-is `{<placeholder>:<fmt_str>}` or `{<placeholder>:<fmt_str>…}`.  For example,
+is `{<placeholder>:<fmt_str><clipped_str>}`.  For example,
 `{app_name:{:>10.10}}` would mean that the application name is printed with
 exactly 10 characters.  If it's shorter, it will be right-aligned (the `>`) and
 padded with spaces, if it's longer, it'll be cut after the 10th character.
-Another example, `{app_name:{:.10}…}` would mean that the application name is
+Another example, `{app_name:{:.10}...}` would mean that the application name is
 truncated at 10 characters.  If it's shorter, it will be printed as-is (no
-padding), if it's longer, it'll be cut after the 9th character and the ellipsis
-(…) character will be added after it.
+padding), if it's longer, it'll be cut after the 10th character and the last
+3 characters of that substring will be replaced with `...` (`<clipped_str>`).
 
 It is crucial that during selection (using wofi or some other menu program)
 each window has a different display string.  Therefore, it is highly

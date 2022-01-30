@@ -429,7 +429,7 @@ lazy_static! {
     static ref APP_NAME_AND_VERSION_RX: regex::Regex =
         regex::Regex::new("(.+)(-[0-9.]+)").unwrap();
     static ref PLACEHOLDER_RX: regex::Regex = regex::Regex::new(
-        r"\{(?P<name>[^}:]+)(?::(?P<fmtstr>\{[^}]*\})(?P<ellipsis>…)?)?\}"
+        r"\{(?P<name>[^}:]+)(?::(?P<fmtstr>\{[^}]*\})(?P<clipstr>[^}]*))?\}"
     )
     .unwrap();
 }
@@ -531,11 +531,12 @@ impl DisplayFormat for DisplayNode<'_> {
                     _ => caps[0].to_string(),
                 };
                 let fmt_str = caps.name("fmtstr").map_or("{}", |m| m.as_str());
-                let ellipsis = caps.name("ellipsis").is_some();
+                let clipped_str =
+                    caps.name("clipstr").map_or("", |m| m.as_str());
 
                 maybe_html_escape(
                     html_escape,
-                    rtfmt::format(fmt_str, &value, ellipsis),
+                    rtfmt::format(fmt_str, &value, &clipped_str),
                 )
             })
             .into()
@@ -573,15 +574,20 @@ fn test_placeholder_rx() {
     let caps = PLACEHOLDER_RX.captures("Hello, {place}!").unwrap();
     assert_eq!(caps.name("name").unwrap().as_str(), "place");
     assert_eq!(caps.name("fmtstr"), None);
-    assert_eq!(caps.name("ellipsis"), None);
+    assert_eq!(caps.name("clipstr"), None);
 
     let caps = PLACEHOLDER_RX.captures("Hi, {place:{:>10.10}}!").unwrap();
     assert_eq!(caps.name("name").unwrap().as_str(), "place");
     assert_eq!(caps.name("fmtstr").unwrap().as_str(), "{:>10.10}");
-    assert_eq!(caps.name("ellipsis"), None);
+    assert_eq!(caps.name("clipstr").unwrap().as_str(), "");
 
     let caps = PLACEHOLDER_RX.captures("Hello, {place:{:.5}…}!").unwrap();
     assert_eq!(caps.name("name").unwrap().as_str(), "place");
     assert_eq!(caps.name("fmtstr").unwrap().as_str(), "{:.5}");
-    assert_eq!(caps.name("ellipsis").unwrap().as_str(), "…");
+    assert_eq!(caps.name("clipstr").unwrap().as_str(), "…");
+
+    let caps = PLACEHOLDER_RX.captures("Hello, {place:{:.5}...}!").unwrap();
+    assert_eq!(caps.name("name").unwrap().as_str(), "place");
+    assert_eq!(caps.name("fmtstr").unwrap().as_str(), "{:.5}");
+    assert_eq!(caps.name("clipstr").unwrap().as_str(), "...");
 }

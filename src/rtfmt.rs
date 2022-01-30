@@ -73,15 +73,15 @@ impl<'a> std::convert::TryInto<usize> for &FmtArg<'a> {
     }
 }
 
-pub fn format(fmt: &str, arg: &str, ellipsis: bool) -> String {
+pub fn format(fmt: &str, arg: &str, clipped_str: &str) -> String {
     let args = &[FmtArg::Str(arg)];
 
     if let Ok(pf) = ParsedFormat::parse(fmt, args, &NoNamedArguments) {
         let mut s = format!("{}", pf);
 
-        if ellipsis && !s.contains(arg) {
-            s.pop();
-            s.push('…');
+        if !clipped_str.is_empty() && !s.contains(arg) {
+            remove_last_n_chars(&mut s, clipped_str.chars().count());
+            s.push_str(clipped_str);
         }
         s
     } else {
@@ -89,13 +89,22 @@ pub fn format(fmt: &str, arg: &str, ellipsis: bool) -> String {
     }
 }
 
+fn remove_last_n_chars(s: &mut String, n: usize) -> () {
+    match s.char_indices().nth_back(n) {
+        Some((pos, ch)) => s.truncate(pos + ch.len_utf8()),
+        None => s.clear(),
+    }
+}
+
 #[test]
 fn test_format() {
-    assert_eq!(format("{:.10}", "sway", false), "sway");
-    assert_eq!(format("{:.10}", "sway", true), "sway");
-    assert_eq!(format("{:.4}", "𝔰𝔴𝔞𝔶", true), "𝔰𝔴𝔞𝔶");
+    assert_eq!(format("{:.10}", "sway", ""), "sway");
+    assert_eq!(format("{:.10}", "sway", "…"), "sway");
+    assert_eq!(format("{:.4}", "𝔰𝔴𝔞𝔶", "……"), "𝔰𝔴𝔞𝔶");
 
-    assert_eq!(format("{:.3}", "sway", false), "swa");
-    assert_eq!(format("{:.3}", "sway", true), "sw…");
-    assert_eq!(format("{:.3}", "𝔰𝔴𝔞𝔶", true), "𝔰𝔴…");
+    assert_eq!(format("{:.3}", "sway", ""), "swa");
+    assert_eq!(format("{:.3}", "sway", "…"), "sw…");
+    assert_eq!(format("{:.5}", "𝔰𝔴𝔞𝔶 𝔴𝔦𝔫𝔡𝔬𝔴", "…?"), "𝔰𝔴𝔞…?");
+    assert_eq!(format("{:.5}", "sway window", "..."), "sw...");
+    assert_eq!(format("{:.2}", "sway", "..."), "...");
 }
