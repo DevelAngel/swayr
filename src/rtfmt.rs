@@ -73,11 +73,29 @@ impl<'a> std::convert::TryInto<usize> for &FmtArg<'a> {
     }
 }
 
-pub fn format(fmt: &str, arg: &str) -> String {
+pub fn format(fmt: &str, arg: &str, ellipsis: bool) -> String {
     let args = &[FmtArg::Str(arg)];
+
     if let Ok(pf) = ParsedFormat::parse(fmt, args, &NoNamedArguments) {
-        format!("{}", pf)
+        let mut s = format!("{}", pf);
+
+        if ellipsis && !s.contains(arg) {
+            s.pop();
+            s.push('…');
+        }
+        s
     } else {
         format!("Invalid format string: {}", fmt)
     }
+}
+
+#[test]
+fn test_format() {
+    assert_eq!(format("{:.10}", "sway", false), "sway");
+    assert_eq!(format("{:.10}", "sway", true), "sway");
+    assert_eq!(format("{:.4}", "𝔰𝔴𝔞𝔶", true), "𝔰𝔴𝔞𝔶");
+
+    assert_eq!(format("{:.3}", "sway", false), "swa");
+    assert_eq!(format("{:.3}", "sway", true), "sw…");
+    assert_eq!(format("{:.3}", "𝔰𝔴𝔞𝔶", true), "𝔰𝔴…");
 }
