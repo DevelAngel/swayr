@@ -1,10 +1,10 @@
 swayr v0.13.0
 =============
 
-- The placeholders `{id}`, `{app_name}`, `{name}`/`{title}`, `{output_name}`,
-  `{workspace_name}`, and `{marks}` may optionally provide a format string as
-  specified by [Rust's std::fmt](https://doc.rust-lang.org/std/fmt/).  The
-  syntax is `{<placeholder>:<fmt_str><clipped_str>}`.  For example,
+- All the placeholders except `{app_icon}`, `{indent}`, `{urgency_start}`, and
+  `{urgency_end}` may optionally provide a format string as specified by
+  [Rust's std::fmt](https://doc.rust-lang.org/std/fmt/).  The syntax is
+  `{<placeholder>:<fmt_str><clipped_str>}`.  For example,
   `{app_name:{:>10.10}}` would mean that the application name is printed with
   exactly 10 characters.  If it's shorter, it will be right-aligned (the `>`)
   and padded with spaces, if it's longer, it'll be cut after the 10th

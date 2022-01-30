@@ -516,6 +516,7 @@ impl DisplayFormat for DisplayNode<'_> {
                 let value = match &caps["name"] {
                     "id" => self.node.id.to_string(),
                     "app_name" => self.node.get_app_name().to_string(),
+                    "layout" => format!("{:?}", self.node.layout),
                     "name" | "title" => self.node.get_name().to_string(),
                     "output_name" => self
                         .tree
