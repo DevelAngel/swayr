@@ -212,7 +212,7 @@ fn update_last_focus_tick(
             id,
             t::ExtraProps {
                 last_focus_tick: focus_val,
-                last_focus_tick_for_next_prev_seq: 0,
+                last_focus_tick_for_next_prev_seq: focus_val,
             },
         );
     }
