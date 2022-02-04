@@ -146,9 +146,9 @@ checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
 
 [[package]]
 name = "libc"
-version = "0.2.116"
+version = "0.2.117"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "565dbd88872dbe4cc8a46e527f26483c1d1f7afa6b884a3bd6cd893d4f98da74"
+checksum = "e74d72e0f9b65b5b4ca49a346af3976df0f9c61d550727f349ecd559f251a26c"
 
 [[package]]
 name = "memchr"
@@ -291,9 +291,9 @@ checksum = "f497285884f3fcff424ffc933e56d7cbca511def0c9831a7f9b5f6153e3cc89b"
 
 [[package]]
 name = "rt-format"
-version = "0.2.0"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "93323b19fb32e6df2d1d3d9e86ae0f3ad72ec0d4c23f6ef7d3fcb898d888b0b0"
+checksum = "47343e4f2a81ef78a44ae1b1b8667ae11e5f89a6c1a3d788bd51b243e03387c4"
 dependencies = [
  "lazy_static",
  "regex",
@@ -366,7 +366,7 @@ dependencies = [
 
 [[package]]
 name = "swayr"
-version = "0.13.0-beta.2"
+version = "0.13.0"
 dependencies = [
  "clap",
  "directories",
