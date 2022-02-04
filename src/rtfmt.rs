@@ -66,13 +66,6 @@ impl<'a> FormatArgument for FmtArg<'a> {
     }
 }
 
-impl<'a> std::convert::TryInto<usize> for &FmtArg<'a> {
-    type Error = ();
-    fn try_into(self) -> Result<usize, Self::Error> {
-        Err(())
-    }
-}
-
 pub fn format(fmt: &str, arg: &str, clipped_str: &str) -> String {
     let args = &[FmtArg::Str(arg)];
 
