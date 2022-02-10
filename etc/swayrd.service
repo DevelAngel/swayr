@@ -1,0 +1,16 @@
+[Unit]
+Description=Window switcher for Sway
+Documentation=https://sr.ht/~tsdh/swayr/
+PartOf=sway-session.target
+After=sway-session.target
+
+[Service]
+Type=simple
+Environment=RUST_BACKTRACE=1
+ExecStart=/usr/bin/swayrd
+Restart=on-failure
+# Remove or override this to send debug output to the journal
+StandardOutput=null
+
+[Install]
+WantedBy=sway-session.target
