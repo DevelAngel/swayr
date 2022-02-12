@@ -62,10 +62,10 @@ pub fn monitor_sway_events(
         }
         resets += 1;
 
-        println!("Connecting to sway for subscribing to events...");
+        log::debug!("Connecting to sway for subscribing to events...");
         match connect_and_subscribe() {
             Err(err) => {
-                eprintln!("Could not connect and subscribe: {}", err);
+                log::warn!("Could not connect and subscribe: {}", err);
                 std::thread::sleep(std::time::Duration::from_secs(3));
             }
             Ok(iter) => {
@@ -94,7 +94,7 @@ pub fn monitor_sway_events(
                                 );
                             }
                             s::Event::Shutdown(sd_ev) => {
-                                println!(
+                                log::debug!(
                                     "Sway shuts down with reason '{:?}'.",
                                     sd_ev.change
                                 );
@@ -103,16 +103,16 @@ pub fn monitor_sway_events(
                             _ => show_extra_props_state = false,
                         },
                         Err(e) => {
-                            eprintln!("Error while receiving events: {}", e);
+                            log::warn!("Error while receiving events: {}", e);
                             std::thread::sleep(std::time::Duration::from_secs(
                                 3,
                             ));
                             show_extra_props_state = false;
-                            eprintln!("Resetting!");
+                            log::warn!("Resetting!");
                         }
                     }
                     if show_extra_props_state {
-                        println!(
+                        log::debug!(
                             "New extra_props state:\n{:#?}",
                             *extra_props.read().unwrap()
                         );
@@ -121,7 +121,7 @@ pub fn monitor_sway_events(
             }
         }
     }
-    println!("Swayr demon shutting down.")
+    log::debug!("Swayr demon shutting down.")
 }
 
 fn handle_window_event(
@@ -137,28 +137,28 @@ fn handle_window_event(
         s::WindowChange::Focus => {
             layout::maybe_auto_tile(config);
             update_last_focus_tick(container.id, extra_props, focus_val);
-            println!("Handled window event type {:?}", change);
+            log::debug!("Handled window event type {:?}", change);
             true
         }
         s::WindowChange::New => {
             layout::maybe_auto_tile(config);
             update_last_focus_tick(container.id, extra_props, focus_val);
-            println!("Handled window event type {:?}", change);
+            log::debug!("Handled window event type {:?}", change);
             true
         }
         s::WindowChange::Close => {
             remove_extra_props(container.id, extra_props);
             layout::maybe_auto_tile(config);
-            println!("Handled window event type {:?}", change);
+            log::debug!("Handled window event type {:?}", change);
             true
         }
         s::WindowChange::Move | s::WindowChange::Floating => {
             layout::maybe_auto_tile(config);
-            println!("Handled window event type {:?}", change);
+            log::debug!("Handled window event type {:?}", change);
             false // We don't affect the extra_props state here.
         }
         _ => {
-            println!("Unhandled window event type {:?}", change);
+            log::debug!("Unhandled window event type {:?}", change);
             false
         }
     }
@@ -184,7 +184,7 @@ fn handle_workspace_event(
                 extra_props,
                 focus_val,
             );
-            println!("Handled workspace event type {:?}", change);
+            log::debug!("Handled workspace event type {:?}", change);
             true
         }
         s::WorkspaceChange::Empty => {
@@ -192,7 +192,7 @@ fn handle_workspace_event(
                 current.expect("No current in Empty workspace event").id,
                 extra_props,
             );
-            println!("Handled workspace event type {:?}", change);
+            log::debug!("Handled workspace event type {:?}", change);
             true
         }
         _ => false,
@@ -229,8 +229,8 @@ pub fn serve_client_requests(
     extra_props: Arc<RwLock<HashMap<i64, t::ExtraProps>>>,
 ) {
     match std::fs::remove_file(util::get_swayr_socket_path()) {
-        Ok(()) => println!("Deleted stale socket from previous run."),
-        Err(e) => eprintln!("Could not delete socket:\n{:?}", e),
+        Ok(()) => log::debug!("Deleted stale socket from previous run."),
+        Err(e) => log::error!("Could not delete socket:\n{:?}", e),
     }
 
     match UnixListener::bind(util::get_swayr_socket_path()) {
@@ -241,14 +241,14 @@ pub fn serve_client_requests(
                         handle_client_request(stream, extra_props.clone());
                     }
                     Err(err) => {
-                        eprintln!("Error handling client request: {}", err);
+                        log::error!("Error handling client request: {}", err);
                         break;
                     }
                 }
             }
         }
         Err(err) => {
-            eprintln!("Could not bind socket: {}", err)
+            log::error!("Could not bind socket: {}", err)
         }
     }
 }
@@ -265,12 +265,12 @@ fn handle_client_request(
                 extra_props,
             });
         } else {
-            eprintln!(
+            log::error!(
                 "Could not serialize following string to SwayrCommand.\n{}",
                 cmd_str
             );
         }
     } else {
-        eprintln!("Could not read command from client.");
+        log::error!("Could not read command from client.");
     }
 }

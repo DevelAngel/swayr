@@ -31,11 +31,11 @@ use std::sync::RwLock;
 use swayipc as s;
 
 pub fn run_sway_command_1(cmd: &str) {
-    println!("Running sway command: {}", cmd);
+    log::debug!("Running sway command: {}", cmd);
     match s::Connection::new() {
         Ok(mut con) => {
             if let Err(err) = con.run_command(cmd) {
-                eprintln!("Could not run sway command: {}", err)
+                log::error!("Could not run sway command: {}", err)
             }
         }
         Err(err) => panic!("{}", err),
@@ -482,7 +482,7 @@ pub fn switch_to_urgent_or_lru_window(
     if let Some(win) = tree.get_windows().get(0) {
         focus_window_by_id(win.node.id)
     } else {
-        println!("No window to switch to.")
+        log::debug!("No window to switch to.")
     }
 }
 
@@ -550,7 +550,7 @@ fn select_and_focus(prompt: &str, choices: &[t::DisplayNode]) {
                 focus_window_by_id(tn.node.id)
             }
             t => {
-                eprintln!("Cannot handle {:?} in select_and_focus", t)
+                log::error!("Cannot handle {:?} in select_and_focus", t)
             }
         },
         Err(non_matching_input) => {
@@ -613,10 +613,10 @@ fn kill_process_by_pid(pid: Option<i32>) {
             .arg(format!("{}", pid))
             .output()
         {
-            eprintln!("Error killing process {}: {}", pid, err)
+            log::error!("Error killing process {}: {}", pid, err)
         }
     } else {
-        eprintln!("Cannot kill window with no pid.");
+        log::error!("Cannot kill window with no pid.");
     }
 }
 
@@ -638,7 +638,7 @@ fn select_and_quit(prompt: &str, choices: &[t::DisplayNode], kill: bool) {
                 }
             }
             t => {
-                eprintln!("Cannot handle {:?} in quit_workspace_or_window", t)
+                log::error!("Cannot handle {:?} in quit_workspace_or_window", t)
             }
         }
     }
@@ -721,7 +721,7 @@ fn select_and_move_focused_to(prompt: &str, choices: &[t::DisplayNode]) {
             t::Type::Container | t::Type::Window => {
                 move_focused_to_container_or_window(tn.node.id)
             }
-            t => eprintln!("Cannot move focused to {:?}", t),
+            t => log::error!("Cannot move focused to {:?}", t),
         },
         Err(input) => {
             let ws_name = chop_workspace_shortcut(&input);
@@ -765,7 +765,7 @@ pub fn swap_focused_with(extra_props: &HashMap<i64, t::ExtraProps>) {
                     &format!("{}", tn.node.id),
                 ])
             }
-            t => eprintln!("Cannot move focused to {:?}", t),
+            t => log::error!("Cannot move focused to {:?}", t),
         },
         Err(input) => {
             let ws_name = chop_workspace_shortcut(&input);
@@ -914,7 +914,7 @@ fn tile_current_workspace(floating: &ConsiderFloating, shuffle: bool) {
         }),
     ) {
         Ok(_) => (),
-        Err(err) => eprintln!("Error retiling workspace: {:?}", err),
+        Err(err) => log::error!("Error retiling workspace: {:?}", err),
     }
 }
 
@@ -946,7 +946,7 @@ fn tab_current_workspace(floating: &ConsiderFloating) {
         }),
     ) {
         Ok(_) => (),
-        Err(err) => eprintln!("Error retiling workspace: {:?}", err),
+        Err(err) => log::error!("Error retiling workspace: {:?}", err),
     }
 }
 

@@ -26,7 +26,7 @@ pub fn auto_tile(res_to_min_width: &HashMap<i32, i32>) {
     if let Ok(mut con) = s::Connection::new() {
         if let Ok(tree) = con.get_tree() {
             for output in &tree.nodes {
-                println!("output: {:?}", output.name);
+                log::debug!("output: {:?}", output.name);
 
                 // Assert our assumption that all children of the tree's root
                 // must be outputs.
@@ -46,10 +46,10 @@ pub fn auto_tile(res_to_min_width: &HashMap<i32, i32>) {
                         t == t::Type::Workspace || t == t::Type::Container
                     }) {
                         if container.is_scratchpad() {
-                            println!("  Skipping scratchpad");
+                            log::debug!("  Skipping scratchpad");
                             continue;
                         }
-                        println!(
+                        log::debug!(
                             "  container: {:?}, layout {:?}, {} nodes",
                             container.node_type,
                             container.layout,
@@ -63,7 +63,7 @@ pub fn auto_tile(res_to_min_width: &HashMap<i32, i32>) {
                             // Width if we'd split once more.
                             let estimated_width =
                                 child_win.rect.width as f32 / 2.0;
-                            println!(
+                            log::debug!(
                                 "    child_win: {:?}, estimated width after splith {} px",
                                 child_win.app_id, estimated_width
                             );
@@ -81,7 +81,7 @@ pub fn auto_tile(res_to_min_width: &HashMap<i32, i32>) {
                             };
 
                             if let Some(split) = split {
-                                println!(
+                                log::debug!(
                                     "Auto-tiling performing {} on window {} \
                                      because estimated width after another \
                                      split is {} and the minimum window width \
@@ -96,36 +96,38 @@ pub fn auto_tile(res_to_min_width: &HashMap<i32, i32>) {
                                     child_win.id, split
                                 )) {
                                     Ok(_) => (),
-                                    Err(e) => eprintln!(
+                                    Err(e) => log::error!(
                                         "Couldn't set {} on con {}: {:?}",
-                                        split, child_win.id, e
+                                        split,
+                                        child_win.id,
+                                        e
                                     ),
                                 }
                             }
                         }
                     }
                 } else {
-                    eprintln!("No layout.auto_tile_min_window_width_per_output_width \
+                    log::error!("No layout.auto_tile_min_window_width_per_output_width \
                                setting for output_width {}", output_width);
                 }
             }
         } else {
-            eprintln!("Couldn't call get_tree during auto_tile.");
+            log::error!("Couldn't call get_tree during auto_tile.");
         }
     } else {
-        eprintln!("Couldn't get connection for auto_tile");
+        log::error!("Couldn't get connection for auto_tile");
     }
 }
 
 pub fn maybe_auto_tile(config: &config::Config) {
     if config.is_layout_auto_tile() {
-        println!("\nauto_tile: start");
+        log::debug!("\nauto_tile: start");
         auto_tile(
             &config
                 .get_layout_auto_tile_min_window_width_per_output_width_as_map(
                 ),
         );
-        println!("auto_tile: end\n");
+        log::debug!("auto_tile: end\n");
     }
 }
 

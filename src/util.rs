@@ -34,14 +34,14 @@ pub fn get_swayr_socket_path() -> String {
         match xdg_runtime_dir {
             Ok(val) => val,
             Err(_e) => {
-                eprintln!("Couldn't get XDG_RUNTIME_DIR!");
+                log::error!("Couldn't get XDG_RUNTIME_DIR!");
                 String::from("/tmp")
             }
         },
         match wayland_display {
             Ok(val) => val,
             Err(_e) => {
-                eprintln!("Couldn't get WAYLAND_DISPLAY!");
+                log::error!("Couldn't get WAYLAND_DISPLAY!");
                 String::from("unknown")
             }
         }
@@ -96,7 +96,7 @@ fn desktop_entries() -> Vec<Box<p::Path>> {
 fn find_icon(icon_name: &str, icon_dirs: &[String]) -> Option<Box<p::Path>> {
     let p = p::Path::new(icon_name);
     if p.is_file() {
-        println!("(1) Icon name '{}' -> {}", icon_name, p.display());
+        log::debug!("(1) Icon name '{}' -> {}", icon_name, p.display());
         return Some(p.to_path_buf().into_boxed_path());
     }
 
@@ -106,7 +106,7 @@ fn find_icon(icon_name: &str, icon_dirs: &[String]) -> Option<Box<p::Path>> {
             pb.push(icon_name.to_owned() + "." + ext);
             let icon_file = pb.as_path();
             if icon_file.is_file() {
-                println!(
+                log::debug!(
                     "(2) Icon name '{}' -> {}",
                     icon_name,
                     icon_file.display()
@@ -116,7 +116,7 @@ fn find_icon(icon_name: &str, icon_dirs: &[String]) -> Option<Box<p::Path>> {
         }
     }
 
-    println!("(3) No icon for name {}", icon_name);
+    log::debug!("(3) No icon for name {}", icon_name);
     None
 }
 
@@ -187,7 +187,7 @@ fn get_app_id_to_icon_map(
         }
     }
 
-    println!(
+    log::debug!(
         "Desktop entries to icon files ({} entries):\n{:#?}",
         map.len(),
         map
@@ -278,7 +278,7 @@ where
             .as_mut()
             .expect("Failed to open the menu program's stdin");
         let input = strs.join("\n");
-        //println!("Menu program {} input:\n{}", menu_exec, input);
+        //log::debug!("Menu program {} input:\n{}", menu_exec, input);
         stdin
             .write_all(input.as_bytes())
             .expect("Failed to write to the menu program's stdin");

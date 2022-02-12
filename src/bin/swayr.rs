@@ -16,6 +16,7 @@
 //! The `swayr` binary.
 
 use clap::Parser;
+use env_logger::Env;
 
 /// Windows are sorted urgent first, then windows in LRU order, focused window
 /// last.  Licensed under the GPLv3 (or later).
@@ -27,8 +28,10 @@ struct Opts {
 }
 
 fn main() {
+    env_logger::Builder::from_env(Env::default().default_filter_or("warn"))
+        .init();
     let opts: Opts = Opts::parse();
     if let Err(err) = swayr::client::send_swayr_cmd(opts.command) {
-        eprintln!("Could not send command: {}", err);
+        log::error!("Could not send command: {}", err);
     }
 }
