@@ -172,8 +172,10 @@ exec env RUST_BACKTRACE=1 RUST_LOG=swayr=debug swayrd > /tmp/swayrd.log 2>&1
 The setting of `RUST_BACKTRACE=1`, `RUST_LOG=swayr=debug` and the redirection
 of the output to some logfile is optional but helps a lot when something
 doesn't work.  Especially, if you encounter a crash in certain situations and
-you want to report a bug, it would be utmost helpful if you could reproduce
-the issue with backtrace and logging and attach that to your bug report.
+you want to report a bug, it would be utmost helpful if you could reproduce the
+issue with backtrace and logging at the `debug` level and attach that to your
+bug report.  (Valid log levels are: `trace`, `debug`, `info`, `warn`, `error`,
+`off`.)
 
 Next to starting the demon, you want to bind swayr commands to some keys like
 so:

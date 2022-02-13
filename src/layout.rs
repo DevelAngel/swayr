@@ -121,13 +121,13 @@ pub fn auto_tile(res_to_min_width: &HashMap<i32, i32>) {
 
 pub fn maybe_auto_tile(config: &config::Config) {
     if config.is_layout_auto_tile() {
-        log::debug!("\nauto_tile: start");
+        log::debug!("auto_tile: start");
         auto_tile(
             &config
                 .get_layout_auto_tile_min_window_width_per_output_width_as_map(
                 ),
         );
-        log::debug!("auto_tile: end\n");
+        log::debug!("auto_tile: end");
     }
 }
 
