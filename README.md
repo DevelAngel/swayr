@@ -174,8 +174,8 @@ of the output to some logfile is optional but helps a lot when something
 doesn't work.  Especially, if you encounter a crash in certain situations and
 you want to report a bug, it would be utmost helpful if you could reproduce the
 issue with backtrace and logging at the `debug` level and attach that to your
-bug report.  (Valid log levels are: `trace`, `debug`, `info`, `warn`, `error`,
-`off`.)
+bug report.  Valid log levels in the order from logging more to logging less
+are: `trace`, `debug`, `info`, `warn`, `error`, `off`.
 
 Next to starting the demon, you want to bind swayr commands to some keys like
 so:

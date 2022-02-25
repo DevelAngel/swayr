@@ -1,6 +1,6 @@
 [package]
 name = "swayr"
-version = "0.13.0"
+version = "0.14.0"
 description = "A LRU window-switcher (and more) for the sway window manager"
 homepage = "https://sr.ht/~tsdh/swayr/"
 repository = "https://git.sr.ht/~tsdh/swayr"

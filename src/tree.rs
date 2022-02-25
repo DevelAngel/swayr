@@ -436,9 +436,9 @@ lazy_static! {
 
 fn maybe_html_escape(do_it: bool, text: String) -> String {
     if do_it {
-        text.replace("<", "&lt;")
-            .replace(">", "&gt;")
-            .replace("&", "&amp;")
+        text.replace('<', "&lt;")
+            .replace('>', "&gt;")
+            .replace('&', "&amp;")
     } else {
         text
     }

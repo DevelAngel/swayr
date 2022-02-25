@@ -1,3 +1,13 @@
+swayr v0.14.0
+=============
+
+- Instead of just printing everything to stdout and stderr, there's now proper
+  logging with timestamps and filtering.  You can define the log level using an
+  environment variable like so: `env RUST_LOG=swayr=debug swayrd`.  That would
+  start swayr with log level `debug`.  Valid log levels in the order from
+  logging more to logging less are: `trace`, `debug`, `info`, `warn`, `error`,
+  `off`.
+
 swayr v0.13.0
 =============
 

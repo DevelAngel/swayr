@@ -35,7 +35,7 @@ fn tilde_expand_file_names(file_names: Vec<String>) -> Vec<String> {
     for file_name in file_names {
         if file_name.starts_with('~') {
             ret.push(file_name.replacen(
-                "~",
+                '~',
                 &std::env::var("HOME").expect("$HOME not defined"),
                 1,
             ));
