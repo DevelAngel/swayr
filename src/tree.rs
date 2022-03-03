@@ -105,7 +105,11 @@ impl NodeMethods for s::Node {
                     // Apparently there can be windows without app_id, name,
                     // and window_properties.class, e.g., dolphin-emu-nogui.
                     && self.pid.is_some()
-                    && self.shell.is_some()
+                // FIXME: While technically correct, old sway versions (up to
+                // at least sway-1.4) don't expose shell in IPC.  So comment in
+                // again when all major distros have a recent enough sway
+                // package.
+                //&& self.shell.is_some()
                 {
                     Type::Window
                 } else {
