@@ -67,6 +67,10 @@ pub enum ConsiderWindows {
 pub enum SwayrCommand {
     /// Switch to next urgent window (if any) or to last recently used window.
     SwitchToUrgentOrLRUWindow,
+    /// Switch to the given app (given by app_id or window class) if that's not
+    /// currently focused.  If it is, switch to the next urgent window (if any)
+    /// or to last recently used window.
+    SwitchToAppOrUrgentOrLRUWindow { name: String },
     /// Focus the selected window.
     SwitchWindow,
     /// Switch to the selected workspace.
@@ -248,6 +252,12 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
     match args.cmd {
         SwayrCommand::SwitchToUrgentOrLRUWindow => {
             switch_to_urgent_or_lru_window(&*props.read().unwrap())
+        }
+        SwayrCommand::SwitchToAppOrUrgentOrLRUWindow { name } => {
+            switch_to_app_or_urgent_or_lru_window(
+                Some(name),
+                &*props.read().unwrap(),
+            )
         }
         SwayrCommand::SwitchWindow => switch_window(&*props.read().unwrap()),
         SwayrCommand::SwitchWorkspace => {
@@ -477,12 +487,26 @@ pub fn get_outputs() -> Vec<s::Output> {
 pub fn switch_to_urgent_or_lru_window(
     extra_props: &HashMap<i64, t::ExtraProps>,
 ) {
+    switch_to_app_or_urgent_or_lru_window(None, extra_props)
+}
+
+pub fn switch_to_app_or_urgent_or_lru_window(
+    name: Option<&str>,
+    extra_props: &HashMap<i64, t::ExtraProps>,
+) {
     let root = get_tree(false);
     let tree = t::get_tree(&root, extra_props);
-    if let Some(win) = tree.get_windows().get(0) {
-        focus_window_by_id(win.node.id)
+    let wins = tree.get_windows();
+    let app_win =
+        name.and_then(|n| wins.iter().find(|w| w.node.get_app_name() == n));
+    if app_win.is_none() || app_win.unwrap().node.is_current() {
+        if let Some(win) = wins.get(0) {
+            focus_window_by_id(win.node.id)
+        } else {
+            log::debug!("No window to switch to.")
+        }
     } else {
-        log::debug!("No window to switch to.")
+        focus_window_by_id(app_win.unwrap().node.id)
     }
 }
 

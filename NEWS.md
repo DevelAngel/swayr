@@ -1,3 +1,11 @@
+swayr v0.15.0
+=============
+
+- There's a new command `switch-to-app-or-urgent-or-lru-window` which given an
+  application ID or window class switches to a matching window unless that's
+  already the current window.  In that case, it acts just like
+  `switch-to-urgent-or-lru-window`.
+
 swayr v0.14.0
 =============
 
