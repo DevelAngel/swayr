@@ -499,14 +499,17 @@ pub fn switch_to_app_or_urgent_or_lru_window(
     let wins = tree.get_windows();
     let app_win =
         name.and_then(|n| wins.iter().find(|w| w.node.get_app_name() == n));
-    if app_win.is_none() || app_win.unwrap().node.is_current() {
-        if let Some(win) = wins.get(0) {
-            focus_window_by_id(win.node.id)
-        } else {
-            log::debug!("No window to switch to.")
+    match app_win {
+        Some(app_win) if !app_win.node.is_current() => {
+            focus_window_by_id(app_win.node.id)
         }
-    } else {
-        focus_window_by_id(app_win.unwrap().node.id)
+        _ => {
+            if let Some(win) = wins.get(0) {
+                focus_window_by_id(win.node.id)
+            } else {
+                log::debug!("No window to switch to.")
+            }
+        }
     }
 }
 
