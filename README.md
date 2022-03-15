@@ -14,6 +14,9 @@ sends them to the demon which executes them.
 Right now, there are these subcommands:
 * `switch-to-urgent-or-lru-window` switches to the next window with urgency
   hint (if any) or to the last recently used window.
+* `switch-to-app-or-urgent-or-lru-window` switches to a specific window matched
+  by application ID or window class unless it's already focused.  In that case,
+  it acts just like `switch-to-urgent-or-lru-window`.
 * `switch-window` displays all windows in the order urgent first, then
   last-recently-used, focused last and focuses the selected.
 * `switch-workspace` displays all workspaces in LRU order and switches to the
