@@ -22,3 +22,9 @@ rand = "0.8.4"
 rt-format = "0.3.0"
 log = "0.4"
 env_logger = { version = "0.9.0", default-features = false, features = ["termcolor", "atty", "humantime"] }  # without regex
+
+[profile.dev]
+lto = "thin"
+
+[profile.release]
+lto = "thin"
