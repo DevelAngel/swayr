@@ -16,7 +16,15 @@ Right now, there are these subcommands:
   hint (if any) or to the last recently used window.
 * `switch-to-app-or-urgent-or-lru-window` switches to a specific window matched
   by application ID or window class unless it's already focused.  In that case,
-  it acts just like `switch-to-urgent-or-lru-window`.
+  it acts just like `switch-to-urgent-or-lru-window`.  For example, you can
+  provide "firefox" as argument to this command to have a convenient firefox
+  <-> last-recently-used window toggle.
+* `switch-to-mark-or-urgent-or-lru-window` switches to a specific window
+  matched by mark (`con_mark`) unless it's already focused.  In that case, it
+  acts just like `switch-to-urgent-or-lru-window`.  For example, you can assign
+  a "browser" mark to your browser window (using a standard sway `for_window`
+  rule).  Then you can provide "browser" as argument to this command to have a
+  convenient browser <-> last-recently-used window toggle.
 * `switch-window` displays all windows in the order urgent first, then
   last-recently-used, focused last and focuses the selected.
 * `switch-workspace` displays all workspaces in LRU order and switches to the

@@ -1,3 +1,14 @@
+swayr v0.16.0
+=============
+
+- There's the new command `switch-to-mark-or-urgent-or-lru-window` which
+  switches to a specific window matched by mark (`con_mark`) unless it's
+  already focused.  In that case, it acts just like
+  `switch-to-urgent-or-lru-window`.  For example, you can assign a "browser"
+  mark to your browser window (using a standard sway `for_window` rule).  Then
+  you can provide "browser" as argument to this command to have a convenient
+  browser <-> last-recently-used window toggle.
+
 swayr v0.15.0
 =============
 

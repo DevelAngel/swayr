@@ -68,9 +68,21 @@ pub enum SwayrCommand {
     /// Switch to next urgent window (if any) or to last recently used window.
     SwitchToUrgentOrLRUWindow,
     /// Switch to the given app (given by app_id or window class) if that's not
-    /// currently focused.  If it is, switch to the next urgent window (if any)
+    /// focused already.  If it is, switch to the next urgent window (if any)
     /// or to last recently used window.
+    ///
+    /// For example, you can provide "firefox" as argument to this command to
+    /// have a convenient firefox <-> last-recently-used window toggle.
     SwitchToAppOrUrgentOrLRUWindow { name: String },
+    /// Switch to the window with the given mark if that's not focused already.
+    /// If it is, switch to the next urgent window (if any) or to last recently
+    /// used window.
+    ///
+    /// For example, you can assign a "browser" mark to your browser window
+    /// (using a standard sway `for_window` rule).  Then you can provide
+    /// "browser" as argument to this command to have a convenient browser <->
+    /// last-recently-used window toggle.
+    SwitchToMarkOrUrgentOrLRUWindow { con_mark: String },
     /// Focus the selected window.
     SwitchWindow,
     /// Switch to the selected workspace.
@@ -256,6 +268,12 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
         SwayrCommand::SwitchToAppOrUrgentOrLRUWindow { name } => {
             switch_to_app_or_urgent_or_lru_window(
                 Some(name),
+                &*props.read().unwrap(),
+            )
+        }
+        SwayrCommand::SwitchToMarkOrUrgentOrLRUWindow { con_mark } => {
+            switch_to_mark_or_urgent_or_lru_window(
+                Some(con_mark),
                 &*props.read().unwrap(),
             )
         }
@@ -499,12 +517,31 @@ pub fn switch_to_app_or_urgent_or_lru_window(
     let wins = tree.get_windows();
     let app_win =
         name.and_then(|n| wins.iter().find(|w| w.node.get_app_name() == n));
-    match app_win {
-        Some(app_win) if !app_win.node.is_current() => {
-            focus_window_by_id(app_win.node.id)
-        }
+    focus_win_if_not_focused(app_win, wins.get(0))
+}
+
+pub fn switch_to_mark_or_urgent_or_lru_window(
+    con_mark: Option<&str>,
+    extra_props: &HashMap<i64, t::ExtraProps>,
+) {
+    let root = get_tree(false);
+    let tree = t::get_tree(&root, extra_props);
+    let wins = tree.get_windows();
+    let marked_win = con_mark.and_then(|mark| {
+        wins.iter()
+            .find(|w| w.node.marks.contains(&mark.to_owned()))
+    });
+    focus_win_if_not_focused(marked_win, wins.get(0))
+}
+
+pub fn focus_win_if_not_focused(
+    win: Option<&t::DisplayNode>,
+    other: Option<&t::DisplayNode>,
+) {
+    match win {
+        Some(win) if !win.node.is_current() => focus_window_by_id(win.node.id),
         _ => {
-            if let Some(win) = wins.get(0) {
+            if let Some(win) = other {
                 focus_window_by_id(win.node.id)
             } else {
                 log::debug!("No window to switch to.")
