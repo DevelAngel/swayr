@@ -16,7 +16,6 @@
 //! Convenience data structures built from the IPC structs.
 
 use crate::config;
-use crate::rtfmt;
 use crate::util;
 use crate::util::DisplayFormat;
 use lazy_static::lazy_static;
@@ -432,20 +431,6 @@ pub fn get_tree<'a>(
 lazy_static! {
     static ref APP_NAME_AND_VERSION_RX: regex::Regex =
         regex::Regex::new("(.+)(-[0-9.]+)").unwrap();
-    static ref PLACEHOLDER_RX: regex::Regex = regex::Regex::new(
-        r"\{(?P<name>[^}:]+)(?::(?P<fmtstr>\{[^}]*\})(?P<clipstr>[^}]*))?\}"
-    )
-    .unwrap();
-}
-
-fn maybe_html_escape(do_it: bool, text: String) -> String {
-    if do_it {
-        text.replace('<', "&lt;")
-            .replace('>', "&gt;")
-            .replace('&', "&amp;")
-    } else {
-        text
-    }
 }
 
 fn format_marks(marks: &[String]) -> String {
@@ -515,36 +500,23 @@ impl DisplayFormat for DisplayNode<'_> {
                     .as_str(),
             );
 
-        PLACEHOLDER_RX
-            .replace_all(&fmt, |caps: &regex::Captures| {
-                let value = match &caps["name"] {
-                    "id" => self.node.id.to_string(),
-                    "app_name" => self.node.get_app_name().to_string(),
-                    "layout" => format!("{:?}", self.node.layout),
-                    "name" | "title" => self.node.get_name().to_string(),
-                    "output_name" => self
-                        .tree
-                        .get_parent_node_of_type(self.node.id, Type::Output)
-                        .map_or("<no_output>", |w| w.get_name())
-                        .to_string(),
-                    "workspace_name" => self
-                        .tree
-                        .get_parent_node_of_type(self.node.id, Type::Workspace)
-                        .map_or("<no_workspace>", |w| w.get_name())
-                        .to_string(),
-                    "marks" => format_marks(&self.node.marks),
-                    _ => caps[0].to_string(),
-                };
-                let fmt_str = caps.name("fmtstr").map_or("{}", |m| m.as_str());
-                let clipped_str =
-                    caps.name("clipstr").map_or("", |m| m.as_str());
-
-                maybe_html_escape(
-                    html_escape,
-                    rtfmt::format(fmt_str, &value, clipped_str),
-                )
-            })
-            .into()
+        fmt_replace!(&fmt, html_escape, {
+            "id" => self.node.id.to_string(),
+            "app_name" => self.node.get_app_name().to_string(),
+            "layout" => format!("{:?}", self.node.layout),
+            "name" | "title" => self.node.get_name().to_string(),
+            "output_name" => self
+                .tree
+                .get_parent_node_of_type(self.node.id, Type::Output)
+                .map_or("<no_output>", |w| w.get_name())
+                .to_string(),
+            "workspace_name" => self
+                .tree
+                .get_parent_node_of_type(self.node.id, Type::Workspace)
+                .map_or("<no_workspace>", |w| w.get_name())
+                .to_string(),
+            "marks" => format_marks(&self.node.marks),
+        })
     }
 
     fn get_indent_level(&self) -> usize {

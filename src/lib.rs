@@ -23,10 +23,13 @@
 //! window/workspace creations, deletions, and focus changes using sway's JSON
 //! IPC interface.  The client `swayr` offers subcommands, see `swayr --help`.
 
+pub mod bar;
 pub mod client;
 pub mod cmds;
 pub mod config;
 pub mod demon;
+#[macro_use]
+pub mod fmt_replace;
 pub mod layout;
 pub mod rtfmt;
 pub mod tree;
