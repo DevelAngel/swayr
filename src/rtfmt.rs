@@ -22,18 +22,47 @@ use rt_format::{
 };
 use std::fmt;
 
-enum FmtArg<'a> {
-    Str(&'a str),
+pub enum FmtArg {
+    I64(i64),
+    String(String),
 }
 
-impl<'a> FormatArgument for FmtArg<'a> {
+impl From<i64> for FmtArg {
+    fn from(x: i64) -> FmtArg {
+        FmtArg::I64(x)
+    }
+}
+
+impl From<&str> for FmtArg {
+    fn from(x: &str) -> FmtArg {
+        FmtArg::String(x.to_string())
+    }
+}
+
+impl From<String> for FmtArg {
+    fn from(x: String) -> FmtArg {
+        FmtArg::String(x)
+    }
+}
+
+impl ToString for FmtArg {
+    fn to_string(&self) -> String {
+        match self {
+            FmtArg::String(x) => x.clone(),
+            FmtArg::I64(x) => x.to_string(),
+        }
+    }
+}
+
+impl FormatArgument for FmtArg {
     fn supports_format(&self, spec: &Specifier) -> bool {
         spec.format == Format::Display
     }
 
     fn fmt_display(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Self::Str(val) => fmt::Display::fmt(&val, f),
+            Self::String(val) => fmt::Display::fmt(&val, f),
+            Self::I64(val) => fmt::Display::fmt(&val, f),
         }
     }
 
@@ -66,13 +95,13 @@ impl<'a> FormatArgument for FmtArg<'a> {
     }
 }
 
-pub fn format(fmt: &str, arg: &str, clipped_str: &str) -> String {
-    let args = &[FmtArg::Str(arg)];
+pub fn format(fmt: &str, arg: FmtArg, clipped_str: &str) -> String {
+    let arg_string = arg.to_string();
 
-    if let Ok(pf) = ParsedFormat::parse(fmt, args, &NoNamedArguments) {
+    if let Ok(pf) = ParsedFormat::parse(fmt, &[arg], &NoNamedArguments) {
         let mut s = format!("{}", pf);
 
-        if !clipped_str.is_empty() && !s.contains(arg) {
+        if !clipped_str.is_empty() && !s.contains(arg_string.as_str()) {
             remove_last_n_chars(&mut s, clipped_str.chars().count());
             s.push_str(clipped_str);
         }

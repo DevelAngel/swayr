@@ -41,14 +41,14 @@ macro_rules! fmt_replace {
                 let value: String = match &caps["name"] {
                     $(
                         $( | $pat )+ => {
-                            let val = $exp;
+                            let val = $crate::rtfmt::FmtArg::from($exp);
                             let fmt_str = caps.name("fmtstr")
                                 .map_or("{}", |m| m.as_str());
                             let clipped_str = caps.name("clipstr")
                                 .map_or("", |m| m.as_str());
                             $crate::fmt_replace::maybe_html_escape(
                                 $html_escape,
-                                crate::rtfmt::format(fmt_str, &val, clipped_str),
+                                $crate::rtfmt::format(fmt_str, val, clipped_str),
                             )
                         }
                     )+

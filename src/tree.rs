@@ -465,7 +465,10 @@ impl DisplayFormat for DisplayNode<'_> {
             Type::Window => cfg.get_format_window_format(),
         };
         let fmt = fmt
-            .replace("{indent}", &indent.repeat(self.get_indent_level()))
+            .replace(
+                "{indent}",
+                indent.repeat(self.get_indent_level()).as_str(),
+            )
             .replace(
                 "{urgency_start}",
                 if self.node.urgent {
@@ -501,20 +504,18 @@ impl DisplayFormat for DisplayNode<'_> {
             );
 
         fmt_replace!(&fmt, html_escape, {
-            "id" => self.node.id.to_string(),
-            "app_name" => self.node.get_app_name().to_string(),
+            "id" => self.node.id,
+            "app_name" => self.node.get_app_name(),
             "layout" => format!("{:?}", self.node.layout),
-            "name" | "title" => self.node.get_name().to_string(),
+            "name" | "title" => self.node.get_name(),
             "output_name" => self
                 .tree
                 .get_parent_node_of_type(self.node.id, Type::Output)
-                .map_or("<no_output>", |w| w.get_name())
-                .to_string(),
+                .map_or("<no_output>", |w| w.get_name()),
             "workspace_name" => self
                 .tree
                 .get_parent_node_of_type(self.node.id, Type::Workspace)
-                .map_or("<no_workspace>", |w| w.get_name())
-                .to_string(),
+                .map_or("<no_workspace>", |w| w.get_name()),
             "marks" => format_marks(&self.node.marks),
         })
     }
