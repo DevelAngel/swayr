@@ -34,7 +34,7 @@ pub struct NodeIter<'a> {
 }
 
 impl<'a> NodeIter<'a> {
-    fn new(node: &'a s::Node) -> NodeIter {
+    pub fn new(node: &'a s::Node) -> NodeIter {
         NodeIter { stack: vec![node] }
     }
 }

@@ -16,37 +16,10 @@
 //! The window `swayrbar` module.
 
 use crate::bar::module::BarModuleFn;
+use crate::tree::NodeIter;
 use std::cell::RefCell;
 use swaybar_types as s;
 use swayipc as ipc;
-
-pub struct NodeIter<'a> {
-    stack: Vec<&'a ipc::Node>,
-}
-
-impl<'a> NodeIter<'a> {
-    fn new(node: &'a ipc::Node) -> NodeIter {
-        NodeIter { stack: vec![node] }
-    }
-}
-
-impl<'a> Iterator for NodeIter<'a> {
-    type Item = &'a ipc::Node;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if let Some(node) = self.stack.pop() {
-            for n in &node.floating_nodes {
-                self.stack.push(n);
-            }
-            for n in &node.nodes {
-                self.stack.push(n);
-            }
-            Some(node)
-        } else {
-            None
-        }
-    }
-}
 
 pub struct BarModuleWindow {
     pub instance: String,
