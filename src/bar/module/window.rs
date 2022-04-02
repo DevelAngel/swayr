@@ -16,24 +16,18 @@
 //! The window `swayrbar` module.
 
 use crate::bar::module::BarModuleFn;
-use crate::tree::NodeIter;
-use std::cell::RefCell;
+use crate::ipc;
+use crate::ipc::NodeMethods;
 use swaybar_types as s;
-use swayipc as ipc;
 
 pub struct BarModuleWindow {
     pub instance: String,
-    connection: RefCell<swayipc::Connection>,
 }
 
 impl BarModuleFn for BarModuleWindow {
     fn init() -> Box<dyn BarModuleFn> {
         Box::new(BarModuleWindow {
             instance: "0".to_string(),
-            connection: RefCell::new(
-                ipc::Connection::new()
-                    .expect("Couldn't get a sway IPC connection"),
-            ),
         })
     }
 
@@ -46,19 +40,14 @@ impl BarModuleFn for BarModuleWindow {
     }
 
     fn build(&self) -> s::Block {
-        let x: String = match self.connection.borrow_mut().get_tree() {
-            Ok(root) => {
-                let o: Option<&ipc::Node> =
-                    NodeIter::new(&root).find(|n| n.focused);
-                o.map(|w| w.name.clone().unwrap_or_default())
-                    .unwrap_or_else(String::new)
-            }
-            Err(err) => format!("{}", err),
-        };
+        let root = ipc::get_root_node(false);
+        let focused_win = root.iter().find(|n| n.focused);
+        let app_name = focused_win.map_or("", |w| w.get_app_name());
+        let title = focused_win.map_or("", |w| w.get_name());
         s::Block {
             name: Some(Self::name()),
             instance: Some(self.instance.clone()),
-            full_text: x,
+            full_text: title.to_string() + " — " + app_name,
             align: Some(s::Align::Right),
             markup: Some(s::Markup::Pango),
             short_text: None,

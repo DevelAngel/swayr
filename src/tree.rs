@@ -16,6 +16,8 @@
 //! Convenience data structures built from the IPC structs.
 
 use crate::config;
+use crate::ipc;
+use crate::ipc::NodeMethods;
 use crate::util;
 use crate::util::DisplayFormat;
 use once_cell::sync::Lazy;
@@ -25,162 +27,7 @@ use std::cell::RefCell;
 use std::cmp;
 use std::collections::HashMap;
 use std::rc::Rc;
-use std::sync::Mutex;
 use swayipc as s;
-
-static SWAY_IPC_CONNECTION: Lazy<Mutex<RefCell<s::Connection>>> =
-    Lazy::new(|| {
-        Mutex::new(RefCell::new(
-            s::Connection::new().expect("Could not open sway IPC connection."),
-        ))
-    });
-
-pub fn get_root_node(include_scratchpad: bool) -> s::Node {
-    let mut root = match SWAY_IPC_CONNECTION.lock() {
-        Ok(cell) => cell.borrow_mut().get_tree().expect("Couldn't get tree"),
-        Err(err) => panic!("{}", err),
-    };
-
-    if !include_scratchpad {
-        root.nodes.retain(|o| !o.is_scratchpad());
-    }
-    root
-}
-
-/// Immutable Node Iterator
-///
-/// Iterates nodes in depth-first order, tiled nodes before floating nodes.
-pub struct NodeIter<'a> {
-    stack: Vec<&'a s::Node>,
-}
-
-impl<'a> NodeIter<'a> {
-    pub fn new(node: &'a s::Node) -> NodeIter {
-        NodeIter { stack: vec![node] }
-    }
-}
-
-impl<'a> Iterator for NodeIter<'a> {
-    type Item = &'a s::Node;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if let Some(node) = self.stack.pop() {
-            for n in &node.floating_nodes {
-                self.stack.push(n);
-            }
-            for n in &node.nodes {
-                self.stack.push(n);
-            }
-            Some(node)
-        } else {
-            None
-        }
-    }
-}
-
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub enum Type {
-    Root,
-    Output,
-    Workspace,
-    Container,
-    Window,
-}
-
-/// Extension methods for [`swayipc::Node`].
-pub trait NodeMethods {
-    fn iter(&self) -> NodeIter;
-    fn get_type(&self) -> Type;
-    fn get_app_name(&self) -> &str;
-    fn nodes_of_type(&self, t: Type) -> Vec<&s::Node>;
-    fn get_name(&self) -> &str;
-    fn is_scratchpad(&self) -> bool;
-    fn is_floating(&self) -> bool;
-    fn is_current(&self) -> bool;
-}
-
-impl NodeMethods for s::Node {
-    fn iter(&self) -> NodeIter {
-        NodeIter::new(self)
-    }
-
-    fn get_type(&self) -> Type {
-        match self.node_type {
-            s::NodeType::Root => Type::Root,
-            s::NodeType::Output => Type::Output,
-            s::NodeType::Workspace => Type::Workspace,
-            s::NodeType::FloatingCon => Type::Window,
-            _ => {
-                if self.node_type == s::NodeType::Con
-                    && self.name.is_none()
-                    && self.app_id.is_none()
-                    && self.pid.is_none()
-                    && self.shell.is_none()
-                    && self.window_properties.is_none()
-                    && self.layout != s::NodeLayout::None
-                {
-                    Type::Container
-                } else if (self.node_type == s::NodeType::Con
-                    || self.node_type == s::NodeType::FloatingCon)
-                    // Apparently there can be windows without app_id, name,
-                    // and window_properties.class, e.g., dolphin-emu-nogui.
-                    && self.pid.is_some()
-                // FIXME: While technically correct, old sway versions (up to
-                // at least sway-1.4) don't expose shell in IPC.  So comment in
-                // again when all major distros have a recent enough sway
-                // package.
-                //&& self.shell.is_some()
-                {
-                    Type::Window
-                } else {
-                    panic!(
-                        "Don't know type of node with id {} and node_type {:?}\n{:?}",
-                        self.id, self.node_type, self
-                    )
-                }
-            }
-        }
-    }
-
-    fn get_name(&self) -> &str {
-        if let Some(name) = &self.name {
-            name.as_ref()
-        } else {
-            "<unnamed>"
-        }
-    }
-
-    fn get_app_name(&self) -> &str {
-        if let Some(app_id) = &self.app_id {
-            app_id
-        } else if let Some(wp_class) = self
-            .window_properties
-            .as_ref()
-            .and_then(|wp| wp.class.as_ref())
-        {
-            wp_class
-        } else {
-            "<unknown_app>"
-        }
-    }
-
-    fn is_scratchpad(&self) -> bool {
-        let name = self.get_name();
-        name.eq("__i3") || name.eq("__i3_scratch")
-    }
-
-    fn nodes_of_type(&self, t: Type) -> Vec<&s::Node> {
-        self.iter().filter(|n| n.get_type() == t).collect()
-    }
-
-    fn is_floating(&self) -> bool {
-        self.node_type == s::NodeType::FloatingCon
-    }
-
-    fn is_current(&self) -> bool {
-        self.iter().any(|n| n.focused)
-    }
-}
 
 /// Extra properties gathered by swayrd for windows and workspaces.
 #[derive(Copy, Clone, Debug, Deserialize, Serialize)]
@@ -223,7 +70,7 @@ impl<'a> Tree<'a> {
     pub fn get_parent_node_of_type(
         &self,
         id: i64,
-        t: Type,
+        t: ipc::Type,
     ) -> Option<&&s::Node> {
         let n = self.get_node_by_id(id);
         if n.get_type() == t {
@@ -248,14 +95,14 @@ impl<'a> Tree<'a> {
     fn sorted_nodes_of_type_1(
         &self,
         node: &'a s::Node,
-        t: Type,
+        t: ipc::Type,
     ) -> Vec<&s::Node> {
         let mut v: Vec<&s::Node> = node.nodes_of_type(t);
         self.sort_by_urgency_and_lru_time_1(&mut v);
         v
     }
 
-    fn sorted_nodes_of_type(&self, t: Type) -> Vec<&s::Node> {
+    fn sorted_nodes_of_type(&self, t: ipc::Type) -> Vec<&s::Node> {
         self.sorted_nodes_of_type_1(self.root, t)
     }
 
@@ -276,7 +123,7 @@ impl<'a> Tree<'a> {
     pub fn get_current_workspace(&self) -> &s::Node {
         self.root
             .iter()
-            .find(|n| n.get_type() == Type::Workspace && n.is_current())
+            .find(|n| n.get_type() == ipc::Type::Workspace && n.is_current())
             .expect("No current Workspace")
     }
 
@@ -284,13 +131,13 @@ impl<'a> Tree<'a> {
         let outputs: Vec<&s::Node> = self
             .root
             .iter()
-            .filter(|n| n.get_type() == Type::Output && !n.is_scratchpad())
+            .filter(|n| n.get_type() == ipc::Type::Output && !n.is_scratchpad())
             .collect();
         self.as_display_nodes(&outputs, IndentLevel::Fixed(0))
     }
 
     pub fn get_workspaces(&self) -> Vec<DisplayNode> {
-        let mut v = self.sorted_nodes_of_type(Type::Workspace);
+        let mut v = self.sorted_nodes_of_type(ipc::Type::Workspace);
         if !v.is_empty() {
             v.rotate_left(1);
         }
@@ -298,7 +145,7 @@ impl<'a> Tree<'a> {
     }
 
     pub fn get_windows(&self) -> Vec<DisplayNode> {
-        let mut v = self.sorted_nodes_of_type(Type::Window);
+        let mut v = self.sorted_nodes_of_type(ipc::Type::Window);
         // Rotate, but only non-urgent windows.  Those should stay at the front
         // as they are the most likely switch candidates.
         let mut x;
@@ -322,12 +169,12 @@ impl<'a> Tree<'a> {
     }
 
     pub fn get_workspaces_and_windows(&self) -> Vec<DisplayNode> {
-        let workspaces = self.sorted_nodes_of_type(Type::Workspace);
+        let workspaces = self.sorted_nodes_of_type(ipc::Type::Workspace);
         let mut first = true;
         let mut v = vec![];
         for ws in workspaces {
             v.push(ws);
-            let mut wins = self.sorted_nodes_of_type_1(ws, Type::Window);
+            let mut wins = self.sorted_nodes_of_type_1(ws, ipc::Type::Window);
             if first && !wins.is_empty() {
                 wins.rotate_left(1);
                 first = false;
@@ -371,7 +218,7 @@ impl<'a> Tree<'a> {
     pub fn get_outputs_workspaces_containers_and_windows(
         &self,
     ) -> Vec<DisplayNode> {
-        let outputs = self.sorted_nodes_of_type(Type::Output);
+        let outputs = self.sorted_nodes_of_type(ipc::Type::Output);
         let v: Rc<RefCell<Vec<&s::Node>>> = Rc::new(RefCell::new(vec![]));
         for o in outputs {
             self.push_subtree_sorted(o, Rc::clone(&v));
@@ -382,7 +229,7 @@ impl<'a> Tree<'a> {
     }
 
     pub fn get_workspaces_containers_and_windows(&self) -> Vec<DisplayNode> {
-        let workspaces = self.sorted_nodes_of_type(Type::Workspace);
+        let workspaces = self.sorted_nodes_of_type(ipc::Type::Workspace);
         let v: Rc<RefCell<Vec<&s::Node>>> = Rc::new(RefCell::new(vec![]));
         for ws in workspaces {
             self.push_subtree_sorted(ws, Rc::clone(&v));
@@ -477,11 +324,11 @@ impl DisplayFormat for DisplayNode<'_> {
             APP_NAME_AND_VERSION_RX.replace(self.node.get_app_name(), "$1");
 
         let fmt = match self.node.get_type() {
-            Type::Root => String::from("Cannot format Root"),
-            Type::Output => cfg.get_format_output_format(),
-            Type::Workspace => cfg.get_format_workspace_format(),
-            Type::Container => cfg.get_format_container_format(),
-            Type::Window => cfg.get_format_window_format(),
+            ipc::Type::Root => String::from("Cannot format Root"),
+            ipc::Type::Output => cfg.get_format_output_format(),
+            ipc::Type::Workspace => cfg.get_format_workspace_format(),
+            ipc::Type::Container => cfg.get_format_container_format(),
+            ipc::Type::Window => cfg.get_format_window_format(),
         };
         let fmt = fmt
             .replace(
@@ -529,11 +376,11 @@ impl DisplayFormat for DisplayNode<'_> {
             "name" | "title" => self.node.get_name(),
             "output_name" => self
                 .tree
-                .get_parent_node_of_type(self.node.id, Type::Output)
+                .get_parent_node_of_type(self.node.id, ipc::Type::Output)
                 .map_or("<no_output>", |w| w.get_name()),
             "workspace_name" => self
                 .tree
-                .get_parent_node_of_type(self.node.id, Type::Workspace)
+                .get_parent_node_of_type(self.node.id, ipc::Type::Workspace)
                 .map_or("<no_workspace>", |w| w.get_name()),
             "marks" => format_marks(&self.node.marks),
         })
@@ -544,8 +391,8 @@ impl DisplayFormat for DisplayNode<'_> {
             IndentLevel::Fixed(level) => level as usize,
             IndentLevel::WorkspacesZeroWindowsOne => {
                 match self.node.get_type(){
-                    Type::Workspace => 0,
-                    Type::Window => 1,
+                    ipc::Type::Workspace => 0,
+                    ipc::Type::Window => 1,
                     _ => panic!("Only Workspaces and Windows expected. File a bug report!")
                 }
             }

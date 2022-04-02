@@ -43,7 +43,7 @@ impl BarModuleFn for BarModuleSysInfo {
     }
 
     fn build(&self) -> s::Block {
-        let x = String::from("{cpu_usage_avg}");
+        let x = self.system.borrow().load_average().one.to_string();
         self.system.borrow_mut().refresh_specifics(
             sysinfo::RefreshKind::new().with_cpu().with_memory(),
         );

@@ -30,6 +30,7 @@ pub mod config;
 pub mod demon;
 #[macro_use]
 pub mod fmt_replace;
+pub mod ipc;
 pub mod layout;
 pub mod rtfmt;
 pub mod tree;

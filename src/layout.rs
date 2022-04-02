@@ -16,8 +16,8 @@
 //! Functions and data structures of the swayrd demon.
 
 use crate::config;
-use crate::tree as t;
-use crate::tree::NodeMethods;
+use crate::ipc;
+use crate::ipc::NodeMethods;
 use std::collections::HashMap;
 use swayipc as s;
 
@@ -42,7 +42,7 @@ pub fn auto_tile(res_to_min_width: &HashMap<i32, i32>) {
                 if let Some(min_window_width) = min_window_width {
                     for container in output.iter().filter(|n| {
                         let t = n.get_type();
-                        t == t::Type::Workspace || t == t::Type::Container
+                        t == ipc::Type::Workspace || t == ipc::Type::Container
                     }) {
                         if container.is_scratchpad() {
                             log::debug!("  Skipping scratchpad");
@@ -57,7 +57,7 @@ pub fn auto_tile(res_to_min_width: &HashMap<i32, i32>) {
                         for child_win in container
                             .nodes
                             .iter()
-                            .filter(|n| n.get_type() == t::Type::Window)
+                            .filter(|n| n.get_type() == ipc::Type::Window)
                         {
                             // Width if we'd split once more.
                             let estimated_width =
@@ -138,16 +138,17 @@ pub fn relayout_current_workspace(
         dyn Fn(&mut [&s::Node], &mut s::Connection) -> s::Fallible<()>,
     >,
 ) -> s::Fallible<()> {
-    let root = t::get_root_node(false);
+    let root = ipc::get_root_node(false);
     let workspaces: Vec<&s::Node> = root
         .iter()
-        .filter(|n| n.get_type() == t::Type::Workspace)
+        .filter(|n| n.get_type() == ipc::Type::Workspace)
         .collect();
     if let Some(cur_ws) = workspaces.iter().find(|ws| ws.is_current()) {
         if let Ok(mut con) = s::Connection::new() {
             let mut moved_wins: Vec<&s::Node> = vec![];
             let mut focused_win = None;
-            for win in cur_ws.iter().filter(|n| n.get_type() == t::Type::Window)
+            for win in
+                cur_ws.iter().filter(|n| n.get_type() == ipc::Type::Window)
             {
                 if win.focused {
                     focused_win = Some(win);

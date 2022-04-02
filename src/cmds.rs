@@ -16,9 +16,10 @@
 //! Functions and data structures of the swayr client.
 
 use crate::config as cfg;
+use crate::ipc;
+use crate::ipc::NodeMethods;
 use crate::layout;
 use crate::tree as t;
-use crate::tree::NodeMethods;
 use crate::util;
 use crate::util::DisplayFormat;
 use once_cell::sync::Lazy;
@@ -500,7 +501,7 @@ pub fn switch_to_app_or_urgent_or_lru_window(
     name: Option<&str>,
     extra_props: &HashMap<i64, t::ExtraProps>,
 ) {
-    let root = t::get_root_node(false);
+    let root = ipc::get_root_node(false);
     let tree = t::get_tree(&root, extra_props);
     let wins = tree.get_windows();
     let app_win =
@@ -512,7 +513,7 @@ pub fn switch_to_mark_or_urgent_or_lru_window(
     con_mark: Option<&str>,
     extra_props: &HashMap<i64, t::ExtraProps>,
 ) {
-    let root = t::get_root_node(false);
+    let root = ipc::get_root_node(false);
     let tree = t::get_tree(&root, extra_props);
     let wins = tree.get_windows();
     let marked_win = con_mark.and_then(|mark| {
@@ -584,17 +585,17 @@ fn handle_non_matching_input(input: &str) {
 fn select_and_focus(prompt: &str, choices: &[t::DisplayNode]) {
     match util::select_from_menu(prompt, choices) {
         Ok(tn) => match tn.node.get_type() {
-            t::Type::Output => {
+            ipc::Type::Output => {
                 if !tn.node.is_scratchpad() {
                     run_sway_command(&["focus output", tn.node.get_name()]);
                 }
             }
-            t::Type::Workspace => {
+            ipc::Type::Workspace => {
                 if !tn.node.is_scratchpad() {
                     run_sway_command(&["workspace", tn.node.get_name()]);
                 }
             }
-            t::Type::Window | t::Type::Container => {
+            ipc::Type::Window | ipc::Type::Container => {
                 focus_window_by_id(tn.node.id)
             }
             t => {
@@ -608,25 +609,25 @@ fn select_and_focus(prompt: &str, choices: &[t::DisplayNode]) {
 }
 
 pub fn switch_window(extra_props: &HashMap<i64, t::ExtraProps>) {
-    let root = t::get_root_node(true);
+    let root = ipc::get_root_node(true);
     let tree = t::get_tree(&root, extra_props);
     select_and_focus("Select window", &tree.get_windows());
 }
 
 pub fn switch_workspace(extra_props: &HashMap<i64, t::ExtraProps>) {
-    let root = t::get_root_node(false);
+    let root = ipc::get_root_node(false);
     let tree = t::get_tree(&root, extra_props);
     select_and_focus("Select workspace", &tree.get_workspaces());
 }
 
 pub fn switch_output(extra_props: &HashMap<i64, t::ExtraProps>) {
-    let root = t::get_root_node(false);
+    let root = ipc::get_root_node(false);
     let tree = t::get_tree(&root, extra_props);
     select_and_focus("Select output", &tree.get_outputs());
 }
 
 pub fn switch_workspace_or_window(extra_props: &HashMap<i64, t::ExtraProps>) {
-    let root = t::get_root_node(true);
+    let root = ipc::get_root_node(true);
     let tree = t::get_tree(&root, extra_props);
     select_and_focus(
         "Select workspace or window",
@@ -637,7 +638,7 @@ pub fn switch_workspace_or_window(extra_props: &HashMap<i64, t::ExtraProps>) {
 pub fn switch_workspace_container_or_window(
     extra_props: &HashMap<i64, t::ExtraProps>,
 ) {
-    let root = t::get_root_node(true);
+    let root = ipc::get_root_node(true);
     let tree = t::get_tree(&root, extra_props);
     select_and_focus(
         "Select workspace, container or window",
@@ -646,7 +647,7 @@ pub fn switch_workspace_container_or_window(
 }
 
 pub fn switch_to(extra_props: &HashMap<i64, t::ExtraProps>) {
-    let root = t::get_root_node(true);
+    let root = ipc::get_root_node(true);
     let tree = t::get_tree(&root, extra_props);
     select_and_focus(
         "Select output, workspace, container or window",
@@ -671,14 +672,14 @@ fn kill_process_by_pid(pid: Option<i32>) {
 fn select_and_quit(prompt: &str, choices: &[t::DisplayNode], kill: bool) {
     if let Ok(tn) = util::select_from_menu(prompt, choices) {
         match tn.node.get_type() {
-            t::Type::Workspace | t::Type::Container => {
+            ipc::Type::Workspace | ipc::Type::Container => {
                 for win in
-                    tn.node.iter().filter(|n| n.get_type() == t::Type::Window)
+                    tn.node.iter().filter(|n| n.get_type() == ipc::Type::Window)
                 {
                     quit_window_by_id(win.id)
                 }
             }
-            t::Type::Window => {
+            ipc::Type::Window => {
                 if kill {
                     kill_process_by_pid(tn.node.pid)
                 } else {
@@ -693,13 +694,13 @@ fn select_and_quit(prompt: &str, choices: &[t::DisplayNode], kill: bool) {
 }
 
 pub fn quit_window(extra_props: &HashMap<i64, t::ExtraProps>, kill: bool) {
-    let root = t::get_root_node(true);
+    let root = ipc::get_root_node(true);
     let tree = t::get_tree(&root, extra_props);
     select_and_quit("Quit window", &tree.get_windows(), kill);
 }
 
 pub fn quit_workspace_or_window(extra_props: &HashMap<i64, t::ExtraProps>) {
-    let root = t::get_root_node(true);
+    let root = ipc::get_root_node(true);
     let tree = t::get_tree(&root, extra_props);
     select_and_quit(
         "Quit workspace or window",
@@ -711,7 +712,7 @@ pub fn quit_workspace_or_window(extra_props: &HashMap<i64, t::ExtraProps>) {
 pub fn quit_workspace_container_or_window(
     extra_props: &HashMap<i64, t::ExtraProps>,
 ) {
-    let root = t::get_root_node(true);
+    let root = ipc::get_root_node(true);
     let tree = t::get_tree(&root, extra_props);
     select_and_quit(
         "Quit workspace, container or window",
@@ -749,7 +750,7 @@ fn move_focused_to_container_or_window(id: i64) {
 fn select_and_move_focused_to(prompt: &str, choices: &[t::DisplayNode]) {
     match util::select_from_menu(prompt, choices) {
         Ok(tn) => match tn.node.get_type() {
-            t::Type::Output => {
+            ipc::Type::Output => {
                 if tn.node.is_scratchpad() {
                     run_sway_command_1("move container to scratchpad")
                 } else {
@@ -759,14 +760,14 @@ fn select_and_move_focused_to(prompt: &str, choices: &[t::DisplayNode]) {
                     ])
                 }
             }
-            t::Type::Workspace => {
+            ipc::Type::Workspace => {
                 if tn.node.is_scratchpad() {
                     run_sway_command_1("move container to scratchpad")
                 } else {
                     move_focused_to_workspace_1(tn.node.get_name())
                 }
             }
-            t::Type::Container | t::Type::Window => {
+            ipc::Type::Container | ipc::Type::Window => {
                 move_focused_to_container_or_window(tn.node.id)
             }
             t => log::error!("Cannot move focused to {:?}", t),
@@ -779,7 +780,7 @@ fn select_and_move_focused_to(prompt: &str, choices: &[t::DisplayNode]) {
 }
 
 pub fn move_focused_to_workspace(extra_props: &HashMap<i64, t::ExtraProps>) {
-    let root = t::get_root_node(true);
+    let root = ipc::get_root_node(true);
     let tree = t::get_tree(&root, extra_props);
     select_and_move_focused_to(
         "Move focused container to workspace",
@@ -788,7 +789,7 @@ pub fn move_focused_to_workspace(extra_props: &HashMap<i64, t::ExtraProps>) {
 }
 
 pub fn move_focused_to(extra_props: &HashMap<i64, t::ExtraProps>) {
-    let root = t::get_root_node(true);
+    let root = ipc::get_root_node(true);
     let tree = t::get_tree(&root, extra_props);
     select_and_move_focused_to(
         "Move focused container to workspace or container",
@@ -797,14 +798,14 @@ pub fn move_focused_to(extra_props: &HashMap<i64, t::ExtraProps>) {
 }
 
 pub fn swap_focused_with(extra_props: &HashMap<i64, t::ExtraProps>) {
-    let root = t::get_root_node(true);
+    let root = ipc::get_root_node(true);
     let tree = t::get_tree(&root, extra_props);
     match util::select_from_menu(
         "Swap focused with",
         &tree.get_workspaces_containers_and_windows(),
     ) {
         Ok(tn) => match tn.node.get_type() {
-            t::Type::Workspace | t::Type::Container | t::Type::Window => {
+            ipc::Type::Workspace | ipc::Type::Container | ipc::Type::Window => {
                 run_sway_command(&[
                     "swap",
                     "container",
@@ -833,14 +834,14 @@ pub fn focus_window_in_direction(
     extra_props: &HashMap<i64, t::ExtraProps>,
     pred: Box<dyn Fn(&t::DisplayNode) -> bool>,
 ) {
-    let root = t::get_root_node(false);
+    let root = ipc::get_root_node(false);
     let tree = t::get_tree(&root, extra_props);
     let mut wins = tree.get_windows();
 
     if consider_wins == &ConsiderWindows::CurrentWorkspace {
         let cur_ws = tree.get_current_workspace();
         wins.retain(|w| {
-            tree.get_parent_node_of_type(w.node.id, t::Type::Workspace)
+            tree.get_parent_node_of_type(w.node.id, ipc::Type::Workspace)
                 .unwrap()
                 .id
                 == cur_ws.id
@@ -887,7 +888,7 @@ pub fn focus_window_of_same_layout_in_direction(
     consider_wins: &ConsiderWindows,
     extra_props: &HashMap<i64, t::ExtraProps>,
 ) {
-    let root = t::get_root_node(false);
+    let root = ipc::get_root_node(false);
     let tree = t::get_tree(&root, extra_props);
     let wins = tree.get_windows();
     let cur_win = wins.iter().find(|w| w.node.focused);
@@ -999,8 +1000,8 @@ fn tab_current_workspace(floating: &ConsiderFloating) {
 }
 
 fn toggle_tab_tile_current_workspace(floating: &ConsiderFloating) {
-    let tree = t::get_root_node(false);
-    let workspaces = tree.nodes_of_type(t::Type::Workspace);
+    let tree = ipc::get_root_node(false);
+    let workspaces = tree.nodes_of_type(ipc::Type::Workspace);
     let cur_ws = workspaces.iter().find(|w| w.is_current()).unwrap();
     if cur_ws.layout == s::NodeLayout::Tabbed {
         tile_current_workspace(floating, true);
