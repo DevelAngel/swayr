@@ -13,14 +13,15 @@
 // You should have received a copy of the GNU General Public License along with
 // this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
+use regex::Regex;
 
-lazy_static! {
-    pub static ref PLACEHOLDER_RX: regex::Regex = regex::Regex::new(
-        r"\{(?P<name>[^}:]+)(?::(?P<fmtstr>\{[^}]*\})(?P<clipstr>[^}]*))?\}"
+pub static PLACEHOLDER_RX: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(
+        r"\{(?P<name>[^}:]+)(?::(?P<fmtstr>\{[^}]*\})(?P<clipstr>[^}]*))?\}",
     )
-    .unwrap();
-}
+    .unwrap()
+});
 
 pub fn maybe_html_escape(do_it: bool, text: String) -> String {
     if do_it {

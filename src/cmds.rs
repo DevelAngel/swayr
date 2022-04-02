@@ -21,8 +21,9 @@ use crate::tree as t;
 use crate::tree::NodeMethods;
 use crate::util;
 use crate::util::DisplayFormat;
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use rand::prelude::SliceRandom;
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::atomic;
@@ -537,10 +538,8 @@ pub fn focus_win_if_not_focused(
     }
 }
 
-lazy_static! {
-    static ref DIGIT_AND_NAME: regex::Regex =
-        regex::Regex::new(r"^(\d):(.*)").unwrap();
-}
+static DIGIT_AND_NAME: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"^(\d):(.*)").unwrap());
 
 fn create_workspace(ws_name: &str) {
     if DIGIT_AND_NAME.is_match(ws_name) {
@@ -550,12 +549,10 @@ fn create_workspace(ws_name: &str) {
     }
 }
 
-lazy_static! {
-    static ref SPECIAL_WORKSPACE: regex::Regex =
-        regex::Regex::new(r"^#*w:(.*)").unwrap();
-    static ref SPECIAL_SWAY: regex::Regex =
-        regex::Regex::new(r"^#*s:(.*)").unwrap();
-}
+static SPECIAL_WORKSPACE: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"^#*w:(.*)").unwrap());
+static SPECIAL_SWAY: Lazy<regex::Regex> =
+    Lazy::new(|| Regex::new(r"^#*s:(.*)").unwrap());
 
 fn chop_workspace_shortcut(input: &str) -> &str {
     match SPECIAL_WORKSPACE.captures(input) {

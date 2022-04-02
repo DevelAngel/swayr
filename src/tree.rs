@@ -18,25 +18,33 @@
 use crate::config;
 use crate::util;
 use crate::util::DisplayFormat;
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
 use std::cmp;
 use std::collections::HashMap;
 use std::rc::Rc;
+use std::sync::Mutex;
 use swayipc as s;
 
+static SWAY_IPC_CONNECTION: Lazy<Mutex<RefCell<s::Connection>>> =
+    Lazy::new(|| {
+        Mutex::new(RefCell::new(
+            s::Connection::new().expect("Could not open sway IPC connection."),
+        ))
+    });
+
 pub fn get_root_node(include_scratchpad: bool) -> s::Node {
-    match s::Connection::new() {
-        Ok(mut con) => {
-            let mut root = con.get_tree().expect("Got no root node");
-            if !include_scratchpad {
-                root.nodes.retain(|o| !o.is_scratchpad());
-            }
-            root
-        }
+    let mut root = match SWAY_IPC_CONNECTION.lock() {
+        Ok(cell) => cell.borrow_mut().get_tree().expect("Couldn't get tree"),
         Err(err) => panic!("{}", err),
+    };
+
+    if !include_scratchpad {
+        root.nodes.retain(|o| !o.is_scratchpad());
     }
+    root
 }
 
 /// Immutable Node Iterator
@@ -441,10 +449,8 @@ pub fn get_tree<'a>(
     }
 }
 
-lazy_static! {
-    static ref APP_NAME_AND_VERSION_RX: regex::Regex =
-        regex::Regex::new("(.+)(-[0-9.]+)").unwrap();
-}
+static APP_NAME_AND_VERSION_RX: Lazy<Regex> =
+    Lazy::new(|| Regex::new("(.+)(-[0-9.]+)").unwrap());
 
 fn format_marks(marks: &[String]) -> String {
     if marks.is_empty() {

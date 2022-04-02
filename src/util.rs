@@ -15,12 +15,15 @@
 
 //! Utility functions including selection between choices using a menu program.
 
+use once_cell::sync::Lazy;
+use regex::Regex;
+
 use crate::config as cfg;
-use lazy_static::lazy_static;
 use std::collections::HashMap;
 use std::io::{BufRead, Write};
 use std::path as p;
 use std::process as proc;
+use std::sync::Mutex;
 
 pub fn get_swayr_socket_path() -> String {
     // We prefer checking the env variable instead of
@@ -120,12 +123,10 @@ fn find_icon(icon_name: &str, icon_dirs: &[String]) -> Option<Box<p::Path>> {
     None
 }
 
-lazy_static! {
-    static ref WM_CLASS_OR_ICON_RX: regex::Regex =
-        regex::Regex::new(r"(StartupWMClass|Icon)=(.+)").unwrap();
-    static ref REV_DOMAIN_NAME_RX: regex::Regex =
-        regex::Regex::new(r"^(?:[a-zA-Z0-9-]+\.)+([a-zA-Z0-9-]+)$").unwrap();
-}
+static WM_CLASS_OR_ICON_RX: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"(StartupWMClass|Icon)=(.+)").unwrap());
+static REV_DOMAIN_NAME_RX: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"^(?:[a-zA-Z0-9-]+\.)+([a-zA-Z0-9-]+)$").unwrap());
 
 fn get_app_id_to_icon_map(
     icon_dirs: &[String],
@@ -195,10 +196,10 @@ fn get_app_id_to_icon_map(
     map
 }
 
-lazy_static! {
-    static ref APP_ID_TO_ICON_MAP: std::sync::Mutex<Option<HashMap<String, Box<p::Path>>>> =
-        std::sync::Mutex::new(None);
-}
+// Well, this type definition is pretty useless since it's only used in
+// get_icon anyway but clippy suggested it...
+type AppIdToIconMap = Lazy<Mutex<Option<HashMap<String, Box<p::Path>>>>>;
+static APP_ID_TO_ICON_MAP: AppIdToIconMap = Lazy::new(|| Mutex::new(None));
 
 pub fn get_icon(app_id: &str, icon_dirs: &[String]) -> Option<Box<p::Path>> {
     let mut opt = APP_ID_TO_ICON_MAP.lock().unwrap();
