@@ -16,21 +16,66 @@
 //! The date `swayrbar` module.
 
 use crate::bar::module::BarModuleFn;
+use crate::fmt_replace::fmt_replace;
 use std::cell::RefCell;
+use std::sync::Once;
 use swaybar_types as s;
-use sysinfo;
+use sysinfo as si;
 use sysinfo::SystemExt;
 
 pub struct BarModuleSysInfo {
     pub instance: String,
-    system: RefCell<sysinfo::System>,
+    system: RefCell<si::System>,
+}
+
+struct Updater {
+    cpu: Once,
+    memory: Once,
+}
+
+impl Updater {
+    fn new() -> Updater {
+        Updater {
+            cpu: Once::new(),
+            memory: Once::new(),
+        }
+    }
+
+    fn refresh_cpu(&self, sys: &RefCell<si::System>) {
+        self.cpu.call_once(|| sys.borrow_mut().refresh_cpu());
+    }
+
+    fn refresh_memory(&self, sys: &RefCell<si::System>) {
+        self.memory.call_once(|| sys.borrow_mut().refresh_memory());
+    }
+}
+
+#[derive(Debug)]
+enum LoadAvg {
+    One,
+    Five,
+    Fifteen,
+}
+
+fn get_load_average(
+    sys: &RefCell<si::System>,
+    avg: LoadAvg,
+    upd: &Updater,
+) -> f64 {
+    upd.refresh_cpu(sys);
+    let load_avg = sys.borrow().load_average();
+    match avg {
+        LoadAvg::One => load_avg.one,
+        LoadAvg::Five => load_avg.five,
+        LoadAvg::Fifteen => load_avg.fifteen,
+    }
 }
 
 impl BarModuleFn for BarModuleSysInfo {
     fn init() -> Box<dyn BarModuleFn> {
         Box::new(BarModuleSysInfo {
             instance: "0".to_string(),
-            system: RefCell::new(sysinfo::System::new_all()),
+            system: RefCell::new(si::System::new_all()),
         })
     }
 
@@ -43,15 +88,19 @@ impl BarModuleFn for BarModuleSysInfo {
     }
 
     fn build(&self) -> s::Block {
-        let x = self.system.borrow().load_average().one.to_string();
-        self.system.borrow_mut().refresh_specifics(
-            sysinfo::RefreshKind::new().with_cpu().with_memory(),
-        );
-
+        let fmt = "⚡ {load_avg_1} / {load_avg_5} / {load_avg_15}";
+        let updater = Updater::new();
         s::Block {
             name: Some(Self::name()),
             instance: Some(self.instance.clone()),
-            full_text: x,
+            full_text: fmt_replace!(fmt, true, {
+                "load_avg_1" => get_load_average(&self.system,
+                                                 LoadAvg::One, &updater),
+                "load_avg_5" => get_load_average(&self.system,
+                                                 LoadAvg::Five, &updater),
+                "load_avg_15" => get_load_average(&self.system,
+                                                  LoadAvg::Fifteen, &updater),
+            }),
             align: Some(s::Align::Right),
             markup: Some(s::Markup::Pango),
             short_text: None,

@@ -16,6 +16,7 @@
 //! Convenience data structures built from the IPC structs.
 
 use crate::config;
+use crate::fmt_replace::fmt_replace;
 use crate::ipc;
 use crate::ipc::NodeMethods;
 use crate::util;

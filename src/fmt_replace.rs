@@ -60,6 +60,8 @@ macro_rules! fmt_replace {
     };
 }
 
+pub(crate) use fmt_replace;
+
 #[test]
 fn foo() {
     let foo = "{a}, {b}";
