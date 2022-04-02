@@ -26,6 +26,19 @@ use std::collections::HashMap;
 use std::rc::Rc;
 use swayipc as s;
 
+pub fn get_root_node(include_scratchpad: bool) -> s::Node {
+    match s::Connection::new() {
+        Ok(mut con) => {
+            let mut root = con.get_tree().expect("Got no root node");
+            if !include_scratchpad {
+                root.nodes.retain(|o| !o.is_scratchpad());
+            }
+            root
+        }
+        Err(err) => panic!("{}", err),
+    }
+}
+
 /// Immutable Node Iterator
 ///
 /// Iterates nodes in depth-first order, tiled nodes before floating nodes.

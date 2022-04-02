@@ -15,7 +15,6 @@
 
 //! Functions and data structures of the swayrd demon.
 
-use crate::cmds;
 use crate::config;
 use crate::tree as t;
 use crate::tree::NodeMethods;
@@ -139,7 +138,7 @@ pub fn relayout_current_workspace(
         dyn Fn(&mut [&s::Node], &mut s::Connection) -> s::Fallible<()>,
     >,
 ) -> s::Fallible<()> {
-    let root = cmds::get_tree(false);
+    let root = t::get_root_node(false);
     let workspaces: Vec<&s::Node> = root
         .iter()
         .filter(|n| n.get_type() == t::Type::Workspace)

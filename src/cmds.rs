@@ -482,19 +482,6 @@ fn quit_window_by_id(id: i64) {
     run_sway_command(&[format!("[con_id={}]", id).as_str(), "kill"]);
 }
 
-pub fn get_tree(include_scratchpad: bool) -> s::Node {
-    match s::Connection::new() {
-        Ok(mut con) => {
-            let mut root = con.get_tree().expect("Got no root node");
-            if !include_scratchpad {
-                root.nodes.retain(|o| !o.is_scratchpad());
-            }
-            root
-        }
-        Err(err) => panic!("{}", err),
-    }
-}
-
 pub fn get_outputs() -> Vec<s::Output> {
     match s::Connection::new() {
         Ok(mut con) => con.get_outputs().expect("Got no outputs"),
@@ -512,7 +499,7 @@ pub fn switch_to_app_or_urgent_or_lru_window(
     name: Option<&str>,
     extra_props: &HashMap<i64, t::ExtraProps>,
 ) {
-    let root = get_tree(false);
+    let root = t::get_root_node(false);
     let tree = t::get_tree(&root, extra_props);
     let wins = tree.get_windows();
     let app_win =
@@ -524,7 +511,7 @@ pub fn switch_to_mark_or_urgent_or_lru_window(
     con_mark: Option<&str>,
     extra_props: &HashMap<i64, t::ExtraProps>,
 ) {
-    let root = get_tree(false);
+    let root = t::get_root_node(false);
     let tree = t::get_tree(&root, extra_props);
     let wins = tree.get_windows();
     let marked_win = con_mark.and_then(|mark| {
@@ -624,25 +611,25 @@ fn select_and_focus(prompt: &str, choices: &[t::DisplayNode]) {
 }
 
 pub fn switch_window(extra_props: &HashMap<i64, t::ExtraProps>) {
-    let root = get_tree(true);
+    let root = t::get_root_node(true);
     let tree = t::get_tree(&root, extra_props);
     select_and_focus("Select window", &tree.get_windows());
 }
 
 pub fn switch_workspace(extra_props: &HashMap<i64, t::ExtraProps>) {
-    let root = get_tree(false);
+    let root = t::get_root_node(false);
     let tree = t::get_tree(&root, extra_props);
     select_and_focus("Select workspace", &tree.get_workspaces());
 }
 
 pub fn switch_output(extra_props: &HashMap<i64, t::ExtraProps>) {
-    let root = get_tree(false);
+    let root = t::get_root_node(false);
     let tree = t::get_tree(&root, extra_props);
     select_and_focus("Select output", &tree.get_outputs());
 }
 
 pub fn switch_workspace_or_window(extra_props: &HashMap<i64, t::ExtraProps>) {
-    let root = get_tree(true);
+    let root = t::get_root_node(true);
     let tree = t::get_tree(&root, extra_props);
     select_and_focus(
         "Select workspace or window",
@@ -653,7 +640,7 @@ pub fn switch_workspace_or_window(extra_props: &HashMap<i64, t::ExtraProps>) {
 pub fn switch_workspace_container_or_window(
     extra_props: &HashMap<i64, t::ExtraProps>,
 ) {
-    let root = get_tree(true);
+    let root = t::get_root_node(true);
     let tree = t::get_tree(&root, extra_props);
     select_and_focus(
         "Select workspace, container or window",
@@ -662,7 +649,7 @@ pub fn switch_workspace_container_or_window(
 }
 
 pub fn switch_to(extra_props: &HashMap<i64, t::ExtraProps>) {
-    let root = get_tree(true);
+    let root = t::get_root_node(true);
     let tree = t::get_tree(&root, extra_props);
     select_and_focus(
         "Select output, workspace, container or window",
@@ -709,13 +696,13 @@ fn select_and_quit(prompt: &str, choices: &[t::DisplayNode], kill: bool) {
 }
 
 pub fn quit_window(extra_props: &HashMap<i64, t::ExtraProps>, kill: bool) {
-    let root = get_tree(true);
+    let root = t::get_root_node(true);
     let tree = t::get_tree(&root, extra_props);
     select_and_quit("Quit window", &tree.get_windows(), kill);
 }
 
 pub fn quit_workspace_or_window(extra_props: &HashMap<i64, t::ExtraProps>) {
-    let root = get_tree(true);
+    let root = t::get_root_node(true);
     let tree = t::get_tree(&root, extra_props);
     select_and_quit(
         "Quit workspace or window",
@@ -727,7 +714,7 @@ pub fn quit_workspace_or_window(extra_props: &HashMap<i64, t::ExtraProps>) {
 pub fn quit_workspace_container_or_window(
     extra_props: &HashMap<i64, t::ExtraProps>,
 ) {
-    let root = get_tree(true);
+    let root = t::get_root_node(true);
     let tree = t::get_tree(&root, extra_props);
     select_and_quit(
         "Quit workspace, container or window",
@@ -795,7 +782,7 @@ fn select_and_move_focused_to(prompt: &str, choices: &[t::DisplayNode]) {
 }
 
 pub fn move_focused_to_workspace(extra_props: &HashMap<i64, t::ExtraProps>) {
-    let root = get_tree(true);
+    let root = t::get_root_node(true);
     let tree = t::get_tree(&root, extra_props);
     select_and_move_focused_to(
         "Move focused container to workspace",
@@ -804,7 +791,7 @@ pub fn move_focused_to_workspace(extra_props: &HashMap<i64, t::ExtraProps>) {
 }
 
 pub fn move_focused_to(extra_props: &HashMap<i64, t::ExtraProps>) {
-    let root = get_tree(true);
+    let root = t::get_root_node(true);
     let tree = t::get_tree(&root, extra_props);
     select_and_move_focused_to(
         "Move focused container to workspace or container",
@@ -813,7 +800,7 @@ pub fn move_focused_to(extra_props: &HashMap<i64, t::ExtraProps>) {
 }
 
 pub fn swap_focused_with(extra_props: &HashMap<i64, t::ExtraProps>) {
-    let root = get_tree(true);
+    let root = t::get_root_node(true);
     let tree = t::get_tree(&root, extra_props);
     match util::select_from_menu(
         "Swap focused with",
@@ -849,7 +836,7 @@ pub fn focus_window_in_direction(
     extra_props: &HashMap<i64, t::ExtraProps>,
     pred: Box<dyn Fn(&t::DisplayNode) -> bool>,
 ) {
-    let root = get_tree(false);
+    let root = t::get_root_node(false);
     let tree = t::get_tree(&root, extra_props);
     let mut wins = tree.get_windows();
 
@@ -903,7 +890,7 @@ pub fn focus_window_of_same_layout_in_direction(
     consider_wins: &ConsiderWindows,
     extra_props: &HashMap<i64, t::ExtraProps>,
 ) {
-    let root = get_tree(false);
+    let root = t::get_root_node(false);
     let tree = t::get_tree(&root, extra_props);
     let wins = tree.get_windows();
     let cur_win = wins.iter().find(|w| w.node.focused);
@@ -1015,7 +1002,7 @@ fn tab_current_workspace(floating: &ConsiderFloating) {
 }
 
 fn toggle_tab_tile_current_workspace(floating: &ConsiderFloating) {
-    let tree = get_tree(false);
+    let tree = t::get_root_node(false);
     let workspaces = tree.nodes_of_type(t::Type::Workspace);
     let cur_ws = workspaces.iter().find(|w| w.is_current()).unwrap();
     if cur_ws.layout == s::NodeLayout::Tabbed {
