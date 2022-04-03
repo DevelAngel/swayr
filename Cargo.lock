@@ -614,7 +614,7 @@ dependencies = [
 
 [[package]]
 name = "swayr"
-version = "0.16.1"
+version = "0.17.0-alpha.0"
 dependencies = [
  "battery",
  "chrono",
