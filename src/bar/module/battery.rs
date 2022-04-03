@@ -15,6 +15,7 @@
 
 //! The date `swayrbar` module.
 
+use crate::bar::config;
 use crate::bar::module::BarModuleFn;
 use crate::fmt_replace::fmt_replace;
 use battery as bat;
@@ -22,7 +23,7 @@ use std::cell::RefCell;
 use swaybar_types as s;
 
 pub struct BarModuleBattery {
-    pub instance: String,
+    config: config::ModuleConfig,
     manager: RefCell<bat::Manager>,
 }
 
@@ -42,23 +43,25 @@ fn get_refreshed_batteries(
     Ok(bats)
 }
 
-fn get_text(manager: &RefCell<bat::Manager>, fmt: &str) -> String {
+fn get_text(
+    manager: &RefCell<bat::Manager>,
+    cfg: &config::ModuleConfig,
+) -> String {
     match get_refreshed_batteries(manager) {
         Ok(bats) => {
-            fmt_replace!(&fmt, false, {
+            fmt_replace!(&cfg.format, cfg.html_escape, {
                 "state_of_charge" => bats.iter()
                     .map(|b| b.state_of_charge().value)
                     .sum::<f32>()
-                    / bats.len() as f32 * 100 as f32,
+                    / bats.len() as f32 * 100_f32,
                 "state_of_health" => bats.iter()
                     .map(|b| b.state_of_health().value)
                     .sum::<f32>()
-                    / bats.len() as f32 * 100 as f32,
-
+                    / bats.len() as f32 * 100_f32,
                 "state" => bats.iter()
                     .map(|b| format!("{:?}", b.state()))
                     .next()
-                    .unwrap_or(String::new()),
+                    .unwrap_or_default(),
             })
         }
         Err(err) => format!("{}", err),
@@ -66,30 +69,37 @@ fn get_text(manager: &RefCell<bat::Manager>, fmt: &str) -> String {
 }
 
 impl BarModuleFn for BarModuleBattery {
-    fn init() -> Box<dyn BarModuleFn> {
+    fn create(config: config::ModuleConfig) -> Box<dyn BarModuleFn> {
         Box::new(BarModuleBattery {
-            instance: "0".to_string(),
+            config,
             manager: RefCell::new(
                 bat::Manager::new().expect("Could not create Manager"),
             ),
         })
     }
 
-    fn name() -> String {
-        String::from("battery")
+    fn default_config(instance: String) -> config::ModuleConfig {
+        config::ModuleConfig {
+            module_type: Self::name().to_owned(),
+            instance,
+            format: "🔋 Bat: {state_of_charge:{:5.1}}%, {state}, Health: {state_of_health:{:5.1}}%".to_owned(),
+            html_escape: true,
+        }
     }
 
-    fn instance(&self) -> String {
-        self.instance.clone()
+    fn name() -> &'static str {
+        "battery"
+    }
+
+    fn instance(&self) -> &str {
+        &self.config.instance
     }
 
     fn build(&self) -> s::Block {
-        let fmt =
-            "🔋 Bat: {state_of_charge:{:5.1}}%, {state}, Health: {state_of_health:{:5.1}}%";
-        let text = get_text(&self.manager, fmt);
+        let text = get_text(&self.manager, &self.config);
         s::Block {
-            name: Some(Self::name()),
-            instance: Some(self.instance.clone()),
+            name: Some(Self::name().to_owned()),
+            instance: Some(self.config.instance.clone()),
             full_text: text,
             align: Some(s::Align::Right),
             markup: Some(s::Markup::Pango),

@@ -15,34 +15,42 @@
 
 //! The date `swayrbar` module.
 
+use crate::bar::module::config;
 use crate::bar::module::BarModuleFn;
 use swaybar_types as s;
 
 pub struct BarModuleDate {
-    pub instance: String,
+    config: config::ModuleConfig,
 }
 
 impl BarModuleFn for BarModuleDate {
-    fn init() -> Box<dyn BarModuleFn> {
-        Box::new(BarModuleDate {
-            instance: "0".to_string(),
-        })
+    fn default_config(instance: String) -> config::ModuleConfig {
+        config::ModuleConfig {
+            module_type: "date".to_owned(),
+            instance,
+            format: "⏰ %F %X".to_owned(),
+            html_escape: false,
+        }
     }
 
-    fn name() -> String {
-        String::from("date")
+    fn create(cfg: config::ModuleConfig) -> Box<dyn BarModuleFn> {
+        Box::new(BarModuleDate { config: cfg })
     }
 
-    fn instance(&self) -> String {
-        self.instance.clone()
+    fn name() -> &'static str {
+        "date"
+    }
+
+    fn instance(&self) -> &str {
+        &self.config.instance
     }
 
     fn build(&self) -> s::Block {
-        let d = chrono::Local::now().format("⏰ %F %X").to_string();
+        let text = chrono::Local::now().format(&self.config.format).to_string();
         s::Block {
-            name: Some(Self::name()),
-            instance: Some(self.instance.clone()),
-            full_text: d,
+            name: Some(Self::name().to_owned()),
+            instance: Some(self.config.instance.clone()),
+            full_text: text,
             align: Some(s::Align::Right),
             markup: Some(s::Markup::Pango),
             short_text: None,

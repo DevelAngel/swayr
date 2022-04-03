@@ -15,6 +15,7 @@
 
 //! The date `swayrbar` module.
 
+use crate::bar::config;
 use crate::bar::module::BarModuleFn;
 use crate::fmt_replace::fmt_replace;
 use std::cell::RefCell;
@@ -25,18 +26,18 @@ use sysinfo::ProcessorExt;
 use sysinfo::SystemExt;
 
 pub struct BarModuleSysInfo {
-    pub instance: String,
+    config: config::ModuleConfig,
     system: RefCell<si::System>,
 }
 
-struct Updater {
+struct OnceRefresher {
     cpu: Once,
     memory: Once,
 }
 
-impl Updater {
-    fn new() -> Updater {
-        Updater {
+impl OnceRefresher {
+    fn new() -> OnceRefresher {
+        OnceRefresher {
             cpu: Once::new(),
             memory: Once::new(),
         }
@@ -51,15 +52,15 @@ impl Updater {
     }
 }
 
-fn get_cpu_usage(sys: &RefCell<si::System>, upd: &Updater) -> f32 {
+fn get_cpu_usage(sys: &RefCell<si::System>, upd: &OnceRefresher) -> f32 {
     upd.refresh_cpu(sys);
     sys.borrow().global_processor_info().cpu_usage()
 }
 
-fn get_memory_usage(sys: &RefCell<si::System>, upd: &Updater) -> f64 {
+fn get_memory_usage(sys: &RefCell<si::System>, upd: &OnceRefresher) -> f64 {
     upd.refresh_memory(sys);
     let sys = sys.borrow();
-    sys.used_memory() as f64 * 100 as f64 / sys.total_memory() as f64
+    sys.used_memory() as f64 * 100_f64 / sys.total_memory() as f64
 }
 
 #[derive(Debug)]
@@ -72,7 +73,7 @@ enum LoadAvg {
 fn get_load_average(
     sys: &RefCell<si::System>,
     avg: LoadAvg,
-    upd: &Updater,
+    upd: &OnceRefresher,
 ) -> f64 {
     upd.refresh_cpu(sys);
     let load_avg = sys.borrow().load_average();
@@ -84,28 +85,27 @@ fn get_load_average(
 }
 
 impl BarModuleFn for BarModuleSysInfo {
-    fn init() -> Box<dyn BarModuleFn> {
+    fn create(config: config::ModuleConfig) -> Box<dyn BarModuleFn> {
         Box::new(BarModuleSysInfo {
-            instance: "0".to_string(),
+            config,
             system: RefCell::new(si::System::new_all()),
         })
     }
 
-    fn name() -> String {
-        String::from("sysinfo")
+    fn name() -> &'static str {
+        "sysinfo"
     }
 
-    fn instance(&self) -> String {
-        self.instance.clone()
+    fn instance(&self) -> &str {
+        &self.config.instance
     }
 
     fn build(&self) -> s::Block {
-        let fmt = "💻 CPU: {cpu_usage:{:4.1}}% Mem: {mem_usage:{:4.1}}% Load: {load_avg_1:{:4.2}} / {load_avg_5:{:4.2}} / {load_avg_15:{:4.2}}";
-        let updater = Updater::new();
+        let updater = OnceRefresher::new();
         s::Block {
-            name: Some(Self::name()),
-            instance: Some(self.instance.clone()),
-            full_text: fmt_replace!(fmt, true, {
+            name: Some(Self::name().to_owned()),
+            instance: Some(self.config.instance.clone()),
+            full_text: fmt_replace!(&self.config.format, self.config.html_escape, {
                 "cpu_usage" => get_cpu_usage(&self.system, &updater),
                 "mem_usage" => get_memory_usage(&self.system, &updater),
                 "load_avg_1" => get_load_average(&self.system,
@@ -130,5 +130,13 @@ impl BarModuleFn for BarModuleSysInfo {
             separator: Some(true),
             separator_block_width: None,
         }
+    }
+
+    fn default_config(instance: String) -> config::ModuleConfig {
+        config::ModuleConfig {
+            module_type: "sysinfo".to_owned(),
+            instance,
+            format: "💻 CPU: {cpu_usage:{:4.1}}% Mem: {mem_usage:{:4.1}}% Load: {load_avg_1:{:4.2}} / {load_avg_5:{:4.2}} / {load_avg_15:{:4.2}}".to_owned(),
+            html_escape: true }
     }
 }

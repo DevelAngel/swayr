@@ -20,6 +20,7 @@ use env_logger::Env;
 use serde_json;
 use std::thread;
 
+pub mod config;
 pub mod module;
 
 pub fn start() {
@@ -28,10 +29,18 @@ pub fn start() {
 
     thread::spawn(handle_input);
     let mods: Vec<Box<dyn BarModuleFn>> = vec![
-        crate::bar::module::window::BarModuleWindow::init(),
-        crate::bar::module::sysinfo::BarModuleSysInfo::init(),
-        crate::bar::module::battery::BarModuleBattery::init(),
-        crate::bar::module::date::BarModuleDate::init(),
+        module::window::BarModuleWindow::create(
+            module::window::BarModuleWindow::default_config("0".to_owned()),
+        ),
+        module::sysinfo::BarModuleSysInfo::create(
+            module::sysinfo::BarModuleSysInfo::default_config("0".to_owned()),
+        ),
+        module::battery::BarModuleBattery::create(
+            module::battery::BarModuleBattery::default_config("0".to_owned()),
+        ),
+        module::date::BarModuleDate::create(
+            module::date::BarModuleDate::default_config("0".to_owned()),
+        ),
     ];
     generate_status(&mods);
 }

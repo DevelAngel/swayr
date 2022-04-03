@@ -15,6 +15,7 @@
 
 //! The window `swayrbar` module.
 
+use crate::bar::config;
 use crate::bar::module::BarModuleFn;
 use crate::fmt_replace::fmt_replace;
 use crate::ipc;
@@ -22,40 +23,48 @@ use crate::ipc::NodeMethods;
 use swaybar_types as s;
 
 pub struct BarModuleWindow {
-    pub instance: String,
+    config: config::ModuleConfig,
 }
 
 impl BarModuleFn for BarModuleWindow {
-    fn init() -> Box<dyn BarModuleFn> {
-        Box::new(BarModuleWindow {
-            instance: "0".to_string(),
-        })
+    fn create(config: config::ModuleConfig) -> Box<dyn BarModuleFn> {
+        Box::new(BarModuleWindow { config })
     }
 
-    fn name() -> String {
-        String::from("window")
+    fn default_config(instance: String) -> config::ModuleConfig {
+        config::ModuleConfig {
+            module_type: Self::name().to_owned(),
+            instance,
+            format: "🪟 {title} — {app_name}".to_owned(),
+            html_escape: true,
+        }
     }
 
-    fn instance(&self) -> String {
-        self.instance.clone()
+    fn name() -> &'static str {
+        "window"
+    }
+
+    fn instance(&self) -> &str {
+        &self.config.instance
     }
 
     fn build(&self) -> s::Block {
-        let fmt = "🪟 {title} — {app_name}";
         let root = ipc::get_root_node(false);
         let focused_win = root
             .iter()
             .find(|n| n.focused && n.get_type() == ipc::Type::Window);
         let text = match focused_win {
-            Some(win) => fmt_replace!(&fmt, false, {
-                "title" |"name"  =>  win.get_name(),
-                "app_name" => win.get_app_name(),
-            }),
+            Some(win) => {
+                fmt_replace!(&self.config.format, self.config.html_escape, {
+                    "title" |"name"  =>  win.get_name(),
+                    "app_name" => win.get_app_name(),
+                })
+            }
             None => String::new(),
         };
         s::Block {
-            name: Some(Self::name()),
-            instance: Some(self.instance.clone()),
+            name: Some(Self::name().to_owned()),
+            instance: Some(self.config.instance.clone()),
             full_text: text,
             align: Some(s::Align::Left),
             markup: Some(s::Markup::Pango),

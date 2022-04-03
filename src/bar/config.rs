@@ -13,24 +13,31 @@
 // You should have received a copy of the GNU General Public License along with
 // this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::bar::config;
-use swaybar_types as s;
+//! TOML configuration for swayrbar.
 
-pub mod battery;
-pub mod date;
-pub mod sysinfo;
-pub mod window;
+use serde::{Deserialize, Serialize};
 
-pub trait BarModuleFn {
-    fn create(config: config::ModuleConfig) -> Box<dyn BarModuleFn>
-    where
-        Self: Sized;
-    fn default_config(instance: String) -> config::ModuleConfig
-    where
-        Self: Sized;
-    fn name() -> &'static str
-    where
-        Self: Sized;
-    fn instance(&self) -> &str;
-    fn build(&self) -> s::Block;
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Config {
+    pub refresh_interval: f32,
+    pub modules: Vec<String>,
+    pub module_configs: Vec<ModuleConfig>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ModuleConfig {
+    pub module_type: String,
+    pub instance: String,
+    pub format: String,
+    pub html_escape: bool,
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Config {
+            refresh_interval: 1.0,
+            modules: vec!["date/0".to_owned()],
+            module_configs: vec![],
+        }
+    }
 }
