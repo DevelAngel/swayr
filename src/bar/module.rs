@@ -15,6 +15,7 @@
 
 use swaybar_types as s;
 
+pub mod battery;
 pub mod date;
 pub mod sysinfo;
 pub mod window;

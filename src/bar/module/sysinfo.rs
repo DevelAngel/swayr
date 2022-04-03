@@ -115,7 +115,7 @@ impl BarModuleFn for BarModuleSysInfo {
                 "load_avg_15" => get_load_average(&self.system,
                                                   LoadAvg::Fifteen, &updater),
             }),
-            align: Some(s::Align::Right),
+            align: Some(s::Align::Left),
             markup: Some(s::Markup::Pango),
             short_text: None,
             color: None,

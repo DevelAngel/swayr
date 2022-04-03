@@ -30,6 +30,7 @@ pub fn start() {
     let mods: Vec<Box<dyn BarModuleFn>> = vec![
         crate::bar::module::window::BarModuleWindow::init(),
         crate::bar::module::sysinfo::BarModuleSysInfo::init(),
+        crate::bar::module::battery::BarModuleBattery::init(),
         crate::bar::module::date::BarModuleDate::init(),
     ];
     generate_status(&mods);
