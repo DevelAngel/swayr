@@ -16,6 +16,7 @@
 //! The window `swayrbar` module.
 
 use crate::bar::module::BarModuleFn;
+use crate::fmt_replace::fmt_replace;
 use crate::ipc;
 use crate::ipc::NodeMethods;
 use swaybar_types as s;
@@ -40,14 +41,22 @@ impl BarModuleFn for BarModuleWindow {
     }
 
     fn build(&self) -> s::Block {
+        let fmt = "🪟 {title} — {app_name}";
         let root = ipc::get_root_node(false);
-        let focused_win = root.iter().find(|n| n.focused);
-        let app_name = focused_win.map_or("", |w| w.get_app_name());
-        let title = focused_win.map_or("", |w| w.get_name());
+        let focused_win = root
+            .iter()
+            .find(|n| n.focused && n.get_type() == ipc::Type::Window);
+        let text = match focused_win {
+            Some(win) => fmt_replace!(&fmt, false, {
+                "title" |"name"  =>  win.get_name(),
+                "app_name" => win.get_app_name(),
+            }),
+            None => String::new(),
+        };
         s::Block {
             name: Some(Self::name()),
             instance: Some(self.instance.clone()),
-            full_text: "🪟 ".to_string() + title + " — " + app_name,
+            full_text: text,
             align: Some(s::Align::Left),
             markup: Some(s::Markup::Pango),
             short_text: None,

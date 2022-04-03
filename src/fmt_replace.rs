@@ -41,7 +41,7 @@ macro_rules! fmt_replace {
             .replace_all($fmt_str, |caps: &regex::Captures| {
                 let value: String = match &caps["name"] {
                     $(
-                        $( | $pat )+ => {
+                        $( $pat )|+ => {
                             let val = $crate::rtfmt::FmtArg::from($exp);
                             let fmt_str = caps.name("fmtstr")
                                 .map_or("{}", |m| m.as_str());

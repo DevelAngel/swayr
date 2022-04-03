@@ -85,12 +85,12 @@ impl BarModuleFn for BarModuleBattery {
 
     fn build(&self) -> s::Block {
         let fmt =
-            "🔋 Bat: {state_of_charge:{:5.1}}% {state} Health: {state_of_health:{:5.1}}%";
-        let s = get_text(&self.manager, fmt);
+            "🔋 Bat: {state_of_charge:{:5.1}}%, {state}, Health: {state_of_health:{:5.1}}%";
+        let text = get_text(&self.manager, fmt);
         s::Block {
             name: Some(Self::name()),
             instance: Some(self.instance.clone()),
-            full_text: s,
+            full_text: text,
             align: Some(s::Align::Right),
             markup: Some(s::Markup::Pango),
             short_text: None,
