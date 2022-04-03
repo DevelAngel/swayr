@@ -38,7 +38,7 @@ impl BarModuleFn for BarModuleDate {
     }
 
     fn build(&self) -> s::Block {
-        let d = chrono::Local::now().format("%F %X").to_string();
+        let d = chrono::Local::now().format("⏰ %F %X").to_string();
         s::Block {
             name: Some(Self::name()),
             instance: Some(self.instance.clone()),
@@ -55,7 +55,7 @@ impl BarModuleFn for BarModuleDate {
             border_right: None,
             min_width: None,
             urgent: None,
-            separator: None,
+            separator: Some(true),
             separator_block_width: None,
         }
     }

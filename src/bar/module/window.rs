@@ -47,8 +47,8 @@ impl BarModuleFn for BarModuleWindow {
         s::Block {
             name: Some(Self::name()),
             instance: Some(self.instance.clone()),
-            full_text: title.to_string() + " — " + app_name,
-            align: Some(s::Align::Right),
+            full_text: "🪟 ".to_string() + title + " — " + app_name,
+            align: Some(s::Align::Left),
             markup: Some(s::Markup::Pango),
             short_text: None,
             color: None,
@@ -60,7 +60,7 @@ impl BarModuleFn for BarModuleWindow {
             border_right: None,
             min_width: None,
             urgent: None,
-            separator: None,
+            separator: Some(true),
             separator_block_width: None,
         }
     }

@@ -21,6 +21,7 @@ use std::cell::RefCell;
 use std::sync::Once;
 use swaybar_types as s;
 use sysinfo as si;
+use sysinfo::ProcessorExt;
 use sysinfo::SystemExt;
 
 pub struct BarModuleSysInfo {
@@ -48,6 +49,17 @@ impl Updater {
     fn refresh_memory(&self, sys: &RefCell<si::System>) {
         self.memory.call_once(|| sys.borrow_mut().refresh_memory());
     }
+}
+
+fn get_cpu_usage(sys: &RefCell<si::System>, upd: &Updater) -> f32 {
+    upd.refresh_cpu(sys);
+    sys.borrow().global_processor_info().cpu_usage()
+}
+
+fn get_memory_usage(sys: &RefCell<si::System>, upd: &Updater) -> f64 {
+    upd.refresh_memory(sys);
+    let sys = sys.borrow();
+    sys.used_memory() as f64 * 100 as f64 / sys.total_memory() as f64
 }
 
 #[derive(Debug)]
@@ -88,12 +100,14 @@ impl BarModuleFn for BarModuleSysInfo {
     }
 
     fn build(&self) -> s::Block {
-        let fmt = "⚡ {load_avg_1} / {load_avg_5} / {load_avg_15}";
+        let fmt = "💻 CPU: {cpu_usage:{:4.1}}% Mem: {mem_usage:{:4.1}}% Load: {load_avg_1:{:4.2}} / {load_avg_5:{:4.2}} / {load_avg_15:{:4.2}}";
         let updater = Updater::new();
         s::Block {
             name: Some(Self::name()),
             instance: Some(self.instance.clone()),
             full_text: fmt_replace!(fmt, true, {
+                "cpu_usage" => get_cpu_usage(&self.system, &updater),
+                "mem_usage" => get_memory_usage(&self.system, &updater),
                 "load_avg_1" => get_load_average(&self.system,
                                                  LoadAvg::One, &updater),
                 "load_avg_5" => get_load_average(&self.system,
@@ -113,7 +127,7 @@ impl BarModuleFn for BarModuleSysInfo {
             border_right: None,
             min_width: None,
             urgent: None,
-            separator: None,
+            separator: Some(true),
             separator_block_width: None,
         }
     }
