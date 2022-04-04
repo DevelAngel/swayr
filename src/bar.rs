@@ -27,6 +27,8 @@ pub fn start() {
     env_logger::Builder::from_env(Env::default().default_filter_or("warn"))
         .init();
 
+    let config = config::Config::default();
+
     thread::spawn(handle_input);
     let mods: Vec<Box<dyn BarModuleFn>> = vec![
         module::window::BarModuleWindow::create(
@@ -42,14 +44,14 @@ pub fn start() {
             module::date::BarModuleDate::default_config("0".to_owned()),
         ),
     ];
-    generate_status(&mods);
+    generate_status(&mods, config.refresh_interval);
 }
 
 pub fn handle_input() {
     // TODO: Read stdin and react to click events.
 }
 
-pub fn generate_status(mods: &[Box<dyn BarModuleFn>]) {
+pub fn generate_status(mods: &[Box<dyn BarModuleFn>], refresh_interval: u64) {
     println!("{{\"version\": 1}}");
     // status_command should output an infinite array meaning we emit an
     // opening [ and never the closing bracket.
@@ -63,6 +65,6 @@ pub fn generate_status(mods: &[Box<dyn BarModuleFn>]) {
         let json = serde_json::to_string_pretty(&blocks)
             .unwrap_or_else(|_| "".to_string());
         println!("{},", json);
-        thread::sleep(std::time::Duration::from_secs(1));
+        thread::sleep(std::time::Duration::from_millis(refresh_interval));
     }
 }

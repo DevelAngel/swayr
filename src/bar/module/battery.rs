@@ -20,6 +20,7 @@ use crate::bar::module::BarModuleFn;
 use crate::fmt_replace::fmt_replace;
 use battery as bat;
 use std::cell::RefCell;
+use std::collections::HashSet;
 use swaybar_types as s;
 
 pub struct BarModuleBattery {
@@ -49,6 +50,9 @@ fn get_text(
 ) -> String {
     match get_refreshed_batteries(manager) {
         Ok(bats) => {
+            if bats.is_empty() {
+                return String::new();
+            }
             fmt_replace!(&cfg.format, cfg.html_escape, {
                 "state_of_charge" => bats.iter()
                     .map(|b| b.state_of_charge().value)
@@ -58,10 +62,28 @@ fn get_text(
                     .map(|b| b.state_of_health().value)
                     .sum::<f32>()
                     / bats.len() as f32 * 100_f32,
-                "state" => bats.iter()
-                    .map(|b| format!("{:?}", b.state()))
-                    .next()
-                    .unwrap_or_default(),
+                "state" => {
+                    let states = bats.iter()
+                        .map(|b| format!("{:?}", b.state()))
+                        .collect::<HashSet<String>>();
+                    if states.len() == 1 {
+                        states.iter().next().unwrap().to_owned()
+                    } else {
+                        let mut comma_sep_string = String::from("[");
+                        let mut first = true;
+                        for state in states {
+                            if first {
+                                comma_sep_string = comma_sep_string + &state;
+                                first = false;
+                            } else {
+                                comma_sep_string = comma_sep_string
+                                    + ", " + &state;
+                            }
+                        }
+                        comma_sep_string += "]";
+                        comma_sep_string
+                    }
+                },
             })
         }
         Err(err) => format!("{}", err),

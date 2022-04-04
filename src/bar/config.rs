@@ -19,7 +19,10 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Config {
-    pub refresh_interval: f32,
+    /// The status is refreshed every `refresh_interval` milliseconds.
+    pub refresh_interval: u64,
+    /// The list of modules to display in the given order, each one specified
+    /// as `"<module_type>/<instance>"`.
     pub modules: Vec<String>,
     pub module_configs: Vec<ModuleConfig>,
 }
@@ -35,7 +38,7 @@ pub struct ModuleConfig {
 impl Default for Config {
     fn default() -> Self {
         Config {
-            refresh_interval: 1.0,
+            refresh_interval: 1000,
             modules: vec!["date/0".to_owned()],
             module_configs: vec![],
         }
