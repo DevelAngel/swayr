@@ -23,6 +23,8 @@ use std::cell::RefCell;
 use std::collections::HashSet;
 use swaybar_types as s;
 
+const NAME: &str = "battery";
+
 pub struct BarModuleBattery {
     config: config::ModuleConfig,
     manager: RefCell<bat::Manager>,
@@ -110,11 +112,11 @@ impl BarModuleFn for BarModuleBattery {
     }
 
     fn name() -> &'static str {
-        "battery"
+        NAME
     }
 
-    fn instance(&self) -> &str {
-        &self.config.instance
+    fn matches(&self, name: &str, instance: &str) -> bool {
+        NAME == name && self.config.instance == instance
     }
 
     fn build(&self) -> s::Block {

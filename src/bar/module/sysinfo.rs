@@ -25,6 +25,8 @@ use sysinfo as si;
 use sysinfo::ProcessorExt;
 use sysinfo::SystemExt;
 
+const NAME: &str = "sysinfo";
+
 pub struct BarModuleSysInfo {
     config: config::ModuleConfig,
     system: RefCell<si::System>,
@@ -93,11 +95,11 @@ impl BarModuleFn for BarModuleSysInfo {
     }
 
     fn name() -> &'static str {
-        "sysinfo"
+        NAME
     }
 
-    fn instance(&self) -> &str {
-        &self.config.instance
+    fn matches(&self, name: &str, instance: &str) -> bool {
+        NAME == name && self.config.instance == instance
     }
 
     fn build(&self) -> s::Block {

@@ -22,6 +22,8 @@ use crate::ipc;
 use crate::ipc::NodeMethods;
 use swaybar_types as s;
 
+const NAME: &str = "window";
+
 pub struct BarModuleWindow {
     config: config::ModuleConfig,
 }
@@ -41,11 +43,11 @@ impl BarModuleFn for BarModuleWindow {
     }
 
     fn name() -> &'static str {
-        "window"
+        NAME
     }
 
-    fn instance(&self) -> &str {
-        &self.config.instance
+    fn matches(&self, name: &str, instance: &str) -> bool {
+        NAME == name && self.config.instance == instance
     }
 
     fn build(&self) -> s::Block {

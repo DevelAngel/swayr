@@ -31,6 +31,6 @@ pub trait BarModuleFn {
     fn name() -> &'static str
     where
         Self: Sized;
-    fn instance(&self) -> &str;
+    fn matches(&self, name: &str, instance: &str) -> bool;
     fn build(&self) -> s::Block;
 }
