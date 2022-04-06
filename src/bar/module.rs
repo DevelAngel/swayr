@@ -21,7 +21,7 @@ pub mod date;
 pub mod sysinfo;
 pub mod window;
 
-pub trait BarModuleFn {
+pub trait BarModuleFn: Sync + Send {
     fn create(config: config::ModuleConfig) -> Box<dyn BarModuleFn>
     where
         Self: Sized;

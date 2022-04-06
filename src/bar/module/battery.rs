@@ -19,7 +19,6 @@ use crate::bar::config;
 use crate::bar::module::BarModuleFn;
 use crate::fmt_replace::fmt_replace;
 use battery as bat;
-use std::cell::RefCell;
 use std::collections::HashSet;
 use swaybar_types as s;
 
@@ -27,18 +26,15 @@ const NAME: &str = "battery";
 
 pub struct BarModuleBattery {
     config: config::ModuleConfig,
-    manager: RefCell<bat::Manager>,
 }
 
 fn get_refreshed_batteries(
-    manager: &RefCell<bat::Manager>,
+    manager: &bat::Manager,
 ) -> Result<Vec<bat::Battery>, bat::Error> {
-    let m = manager.borrow();
-
     let mut bats = vec![];
-    for bat in m.batteries()? {
+    for bat in manager.batteries()? {
         let mut bat = bat?;
-        if m.refresh(&mut bat).is_ok() {
+        if manager.refresh(&mut bat).is_ok() {
             bats.push(bat);
         }
     }
@@ -46,11 +42,12 @@ fn get_refreshed_batteries(
     Ok(bats)
 }
 
-fn get_text(
-    manager: &RefCell<bat::Manager>,
-    cfg: &config::ModuleConfig,
-) -> String {
-    match get_refreshed_batteries(manager) {
+fn get_text(cfg: &config::ModuleConfig) -> String {
+    // FIXME: Creating the Manager on every refresh is bad but internally
+    // it uses an Rc so if I keep it as a field of BarModuleBattery, that
+    // cannot be Sync.
+    let manager = battery::Manager::new().unwrap();
+    match get_refreshed_batteries(&manager) {
         Ok(bats) => {
             if bats.is_empty() {
                 return String::new();
@@ -94,12 +91,7 @@ fn get_text(
 
 impl BarModuleFn for BarModuleBattery {
     fn create(config: config::ModuleConfig) -> Box<dyn BarModuleFn> {
-        Box::new(BarModuleBattery {
-            config,
-            manager: RefCell::new(
-                bat::Manager::new().expect("Could not create Manager"),
-            ),
-        })
+        Box::new(BarModuleBattery { config })
     }
 
     fn default_config(instance: String) -> config::ModuleConfig {
@@ -120,7 +112,7 @@ impl BarModuleFn for BarModuleBattery {
     }
 
     fn build(&self) -> s::Block {
-        let text = get_text(&self.manager, &self.config);
+        let text = get_text(&self.config);
         s::Block {
             name: Some(Self::name().to_owned()),
             instance: Some(self.config.instance.clone()),

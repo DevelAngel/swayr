@@ -18,7 +18,7 @@
 use crate::bar::config;
 use crate::bar::module::BarModuleFn;
 use crate::fmt_replace::fmt_replace;
-use std::cell::RefCell;
+use std::sync::Mutex;
 use std::sync::Once;
 use swaybar_types as s;
 use sysinfo as si;
@@ -29,7 +29,7 @@ const NAME: &str = "sysinfo";
 
 pub struct BarModuleSysInfo {
     config: config::ModuleConfig,
-    system: RefCell<si::System>,
+    system: Mutex<si::System>,
 }
 
 struct OnceRefresher {
@@ -45,23 +45,22 @@ impl OnceRefresher {
         }
     }
 
-    fn refresh_cpu(&self, sys: &RefCell<si::System>) {
-        self.cpu.call_once(|| sys.borrow_mut().refresh_cpu());
+    fn refresh_cpu(&self, sys: &mut si::System) {
+        self.cpu.call_once(|| sys.refresh_cpu());
     }
 
-    fn refresh_memory(&self, sys: &RefCell<si::System>) {
-        self.memory.call_once(|| sys.borrow_mut().refresh_memory());
+    fn refresh_memory(&self, sys: &mut si::System) {
+        self.memory.call_once(|| sys.refresh_memory());
     }
 }
 
-fn get_cpu_usage(sys: &RefCell<si::System>, upd: &OnceRefresher) -> f32 {
+fn get_cpu_usage(sys: &mut si::System, upd: &OnceRefresher) -> f32 {
     upd.refresh_cpu(sys);
-    sys.borrow().global_processor_info().cpu_usage()
+    sys.global_processor_info().cpu_usage()
 }
 
-fn get_memory_usage(sys: &RefCell<si::System>, upd: &OnceRefresher) -> f64 {
+fn get_memory_usage(sys: &mut si::System, upd: &OnceRefresher) -> f64 {
     upd.refresh_memory(sys);
-    let sys = sys.borrow();
     sys.used_memory() as f64 * 100_f64 / sys.total_memory() as f64
 }
 
@@ -73,12 +72,12 @@ enum LoadAvg {
 }
 
 fn get_load_average(
-    sys: &RefCell<si::System>,
+    sys: &mut si::System,
     avg: LoadAvg,
     upd: &OnceRefresher,
 ) -> f64 {
     upd.refresh_cpu(sys);
-    let load_avg = sys.borrow().load_average();
+    let load_avg = sys.load_average();
     match avg {
         LoadAvg::One => load_avg.one,
         LoadAvg::Five => load_avg.five,
@@ -90,7 +89,7 @@ impl BarModuleFn for BarModuleSysInfo {
     fn create(config: config::ModuleConfig) -> Box<dyn BarModuleFn> {
         Box::new(BarModuleSysInfo {
             config,
-            system: RefCell::new(si::System::new_all()),
+            system: Mutex::new(si::System::new_all()),
         })
     }
 
@@ -107,16 +106,19 @@ impl BarModuleFn for BarModuleSysInfo {
         s::Block {
             name: Some(Self::name().to_owned()),
             instance: Some(self.config.instance.clone()),
-            full_text: fmt_replace!(&self.config.format, self.config.html_escape, {
-                "cpu_usage" => get_cpu_usage(&self.system, &updater),
-                "mem_usage" => get_memory_usage(&self.system, &updater),
-                "load_avg_1" => get_load_average(&self.system,
-                                                 LoadAvg::One, &updater),
-                "load_avg_5" => get_load_average(&self.system,
-                                                 LoadAvg::Five, &updater),
-                "load_avg_15" => get_load_average(&self.system,
-                                                  LoadAvg::Fifteen, &updater),
-            }),
+            full_text: {
+                let mut sys = self.system.lock().unwrap();
+                fmt_replace!(&self.config.format, self.config.html_escape, {
+                    "cpu_usage" => get_cpu_usage(&mut sys, &updater),
+                    "mem_usage" => get_memory_usage(&mut sys, &updater),
+                    "load_avg_1" => get_load_average(&mut sys,
+                                                     LoadAvg::One, &updater),
+                    "load_avg_5" => get_load_average(&mut sys,
+                                                     LoadAvg::Five, &updater),
+                    "load_avg_15" => get_load_average(&mut sys,
+                                                      LoadAvg::Fifteen, &updater),
+                })
+            },
             align: Some(s::Align::Left),
             markup: Some(s::Markup::Pango),
             short_text: None,

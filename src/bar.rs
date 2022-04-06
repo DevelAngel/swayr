@@ -18,7 +18,9 @@
 use crate::bar::module::BarModuleFn;
 use env_logger::Env;
 use serde_json;
-use std::thread;
+use serde_json::Deserializer;
+use std::{sync::Arc, thread};
+use swaybar_types as sbt;
 
 pub mod config;
 pub mod module;
@@ -29,8 +31,7 @@ pub fn start() {
 
     let config = config::Config::default();
 
-    thread::spawn(handle_input);
-    let mods: Vec<Box<dyn BarModuleFn>> = vec![
+    let mods: Arc<Vec<Box<dyn BarModuleFn>>> = Arc::new(vec![
         module::window::BarModuleWindow::create(
             module::window::BarModuleWindow::default_config("0".to_owned()),
         ),
@@ -43,16 +44,28 @@ pub fn start() {
         module::date::BarModuleDate::create(
             module::date::BarModuleDate::default_config("0".to_owned()),
         ),
-    ];
+    ]);
+    let mods_for_input = mods.clone();
+    thread::spawn(move || handle_input(mods_for_input));
     generate_status(&mods, config.refresh_interval);
 }
 
-pub fn handle_input() {
+pub fn handle_input(mods: Arc<Vec<Box<dyn BarModuleFn>>>) {
     // TODO: Read stdin and react to click events.
+    // let stream =
+    //     Deserializer::from_reader(std::io::stdin()).into_iter::<sbt::Click>();
+    // for click in stream {
+    //     log::debug!("Click received: {:?}", click);
+    // }
+
+    // let lines = std::io::stdin().lock();
+    // for l in lines {
+    //     log::debug!("{}", l);
+    // }
 }
 
 pub fn generate_status(mods: &[Box<dyn BarModuleFn>], refresh_interval: u64) {
-    println!("{{\"version\": 1}}");
+    println!("{{\"version\": 1, \"click_events\": true}}");
     // status_command should output an infinite array meaning we emit an
     // opening [ and never the closing bracket.
     println!("[");
