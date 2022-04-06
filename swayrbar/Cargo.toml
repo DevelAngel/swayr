@@ -1,0 +1,25 @@
+[package]
+name = "swayrbar"
+version = "0.0.1"
+edition = "2021"
+homepage = "https://sr.ht/~tsdh/swayr/"
+repository = "https://git.sr.ht/~tsdh/swayr"
+authors = ["Tassilo Horn <tsdh@gnu.org>"]
+license = "GPL-3.0+"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+battery = "0.7.8"
+chrono = "0.4"
+env_logger = { version = "0.9.0", default-features = false, features = ["termcolor", "atty", "humantime"] }  # without regex
+log = "0.4"
+once_cell = "1.10.0"
+regex = "1.5.5"
+rt-format = "0.3.0"
+serde = { version = "1.0.126", features = ["derive"] }
+serde_json = "1.0.64"
+swaybar-types = "3.0.0"
+swayipc = "3.0.0"
+sysinfo = "0.23"
+toml = "0.5.8"

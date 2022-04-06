@@ -1,4 +1,4 @@
-// Copyright (C) 2022  Tassilo Horn <tsdh@gnu.org>
+// Copyright (C) 2021-2022  Tassilo Horn <tsdh@gnu.org>
 //
 // This program is free software: you can redistribute it and/or modify it
 // under the terms of the GNU General Public License as published by the Free
@@ -13,10 +13,7 @@
 // You should have received a copy of the GNU General Public License along with
 // this program.  If not, see <https://www.gnu.org/licenses/>.
 
-//! The `swayrbar` binary.
-
-fn main() {
-    // TODO: We need a config file cmd line option so that each bar can have
-    // its own config.
-    swayr::bar::start();
-}
+pub mod bar;
+pub mod fmt_replace;
+pub mod ipc;
+pub mod rtfmt;

@@ -35,7 +35,7 @@ pub fn maybe_html_escape(do_it: bool, text: String) -> String {
 
 macro_rules! fmt_replace {
     ( $fmt_str:expr, $html_escape:expr,
-      { $( $($pat:pat)|+ => $exp:expr, )+ }
+      { $( $($pat:pat_param)|+ => $exp:expr, )+ }
     ) => {
         $crate::fmt_replace::PLACEHOLDER_RX
             .replace_all($fmt_str, |caps: &regex::Captures| {

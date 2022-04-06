@@ -616,14 +616,29 @@ dependencies = [
 name = "swayr"
 version = "0.17.0-alpha.0"
 dependencies = [
- "battery",
- "chrono",
  "clap",
  "directories",
  "env_logger",
  "log",
  "once_cell",
  "rand",
+ "regex",
+ "rt-format",
+ "serde",
+ "serde_json",
+ "swayipc",
+ "toml",
+]
+
+[[package]]
+name = "swayrbar"
+version = "0.0.1"
+dependencies = [
+ "battery",
+ "chrono",
+ "env_logger",
+ "log",
+ "once_cell",
  "regex",
  "rt-format",
  "serde",
