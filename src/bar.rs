@@ -18,7 +18,7 @@
 use crate::bar::module::BarModuleFn;
 use env_logger::Env;
 use serde_json;
-use serde_json::Deserializer;
+use std::io;
 use std::{sync::Arc, thread};
 use swaybar_types as sbt;
 
@@ -51,17 +51,38 @@ pub fn start() {
 }
 
 pub fn handle_input(mods: Arc<Vec<Box<dyn BarModuleFn>>>) {
-    // TODO: Read stdin and react to click events.
-    // let stream =
-    //     Deserializer::from_reader(std::io::stdin()).into_iter::<sbt::Click>();
-    // for click in stream {
-    //     log::debug!("Click received: {:?}", click);
-    // }
+    let mut sb = String::new();
+    io::stdin()
+        .read_line(&mut sb)
+        .expect("Could not read from stdin");
 
-    // let lines = std::io::stdin().lock();
-    // for l in lines {
-    //     log::debug!("{}", l);
-    // }
+    if "[\n" != sb {
+        log::error!("Expected [\\n but got {}", sb);
+        log::error!("Sorry, input events won't work is this session.");
+        return;
+    }
+
+    loop {
+        let mut buf = String::new();
+        if let Err(err) = io::stdin().read_line(&mut buf) {
+            log::error!("Error while reading from stdin: {}", err);
+            log::error!("Skipping this input line...");
+            continue;
+        }
+
+        let click = match serde_json::from_str::<sbt::Click>(
+            buf.strip_prefix(",").unwrap_or(&buf),
+        ) {
+            Ok(click) => click,
+            Err(err) => {
+                log::error!("Error while parsing str to Click: {}", err);
+                log::error!("The string was {}", buf);
+                log::error!("Skipping this input line...");
+                continue;
+            }
+        };
+        log::debug!("Received click: {:?}", click);
+    }
 }
 
 pub fn generate_status(mods: &[Box<dyn BarModuleFn>], refresh_interval: u64) {
