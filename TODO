@@ -1,3 +1,2 @@
 - Maybe add a launcher bar module
-- Investigate cargo workspaces so that swayr and swaybar can be separate crates
-  sharing a common lib.
+- Add a volume control bar module
