@@ -19,7 +19,7 @@ use crate::bar::config;
 use crate::bar::module::BarModuleFn;
 use crate::fmt_replace::fmt_replace;
 use battery as bat;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use swaybar_types as s;
 
 const NAME: &str = "battery";
@@ -96,10 +96,11 @@ impl BarModuleFn for BarModuleBattery {
 
     fn default_config(instance: String) -> config::ModuleConfig {
         config::ModuleConfig {
-            module_type: Self::name().to_owned(),
+            name: Self::name().to_owned(),
             instance,
             format: "🔋 Bat: {state_of_charge:{:5.1}}%, {state}, Health: {state_of_health:{:5.1}}%".to_owned(),
             html_escape: true,
+            on_click: HashMap::new()
         }
     }
 
@@ -107,8 +108,8 @@ impl BarModuleFn for BarModuleBattery {
         NAME
     }
 
-    fn matches(&self, name: &str, instance: &str) -> bool {
-        NAME == name && self.config.instance == instance
+    fn get_config(&self) -> &config::ModuleConfig {
+        &self.config
     }
 
     fn build(&self) -> s::Block {

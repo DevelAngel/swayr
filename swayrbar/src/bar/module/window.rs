@@ -15,6 +15,8 @@
 
 //! The window `swayrbar` module.
 
+use std::collections::HashMap;
+
 use crate::bar::config;
 use crate::bar::module::BarModuleFn;
 use crate::fmt_replace::fmt_replace;
@@ -35,10 +37,11 @@ impl BarModuleFn for BarModuleWindow {
 
     fn default_config(instance: String) -> config::ModuleConfig {
         config::ModuleConfig {
-            module_type: Self::name().to_owned(),
+            name: Self::name().to_owned(),
             instance,
             format: "🪟 {title} — {app_name}".to_owned(),
             html_escape: true,
+            on_click: HashMap::new(),
         }
     }
 
@@ -46,8 +49,8 @@ impl BarModuleFn for BarModuleWindow {
         NAME
     }
 
-    fn matches(&self, name: &str, instance: &str) -> bool {
-        NAME == name && self.config.instance == instance
+    fn get_config(&self) -> &config::ModuleConfig {
+        &self.config
     }
 
     fn build(&self) -> s::Block {

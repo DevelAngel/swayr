@@ -13,6 +13,8 @@
 // You should have received a copy of the GNU General Public License along with
 // this program.  If not, see <https://www.gnu.org/licenses/>.
 
+use std::collections::HashMap;
+
 use crate::bar::config;
 use swaybar_types as s;
 
@@ -31,6 +33,18 @@ pub trait BarModuleFn: Sync + Send {
     fn name() -> &'static str
     where
         Self: Sized;
-    fn matches(&self, name: &str, instance: &str) -> bool;
+    fn get_config(&self) -> &config::ModuleConfig;
+    fn get_on_click_map(
+        &self,
+        name: &str,
+        instance: &str,
+    ) -> Option<&HashMap<String, Vec<String>>> {
+        let cfg = self.get_config();
+        if name == cfg.name && instance == cfg.instance {
+            Some(&cfg.on_click)
+        } else {
+            None
+        }
+    }
     fn build(&self) -> s::Block;
 }

@@ -18,6 +18,7 @@
 use crate::bar::config;
 use crate::bar::module::BarModuleFn;
 use crate::fmt_replace::fmt_replace;
+use std::collections::HashMap;
 use std::sync::Mutex;
 use std::sync::Once;
 use swaybar_types as s;
@@ -93,12 +94,22 @@ impl BarModuleFn for BarModuleSysInfo {
         })
     }
 
+    fn default_config(instance: String) -> config::ModuleConfig {
+        config::ModuleConfig {
+            name: "sysinfo".to_owned(),
+            instance,
+            format: "💻 CPU: {cpu_usage:{:4.1}}% Mem: {mem_usage:{:4.1}}% Load: {load_avg_1:{:4.2}} / {load_avg_5:{:4.2}} / {load_avg_15:{:4.2}}".to_owned(),
+            html_escape: true,
+            on_click: HashMap::new(),
+        }
+    }
+
     fn name() -> &'static str {
         NAME
     }
 
-    fn matches(&self, name: &str, instance: &str) -> bool {
-        NAME == name && self.config.instance == instance
+    fn get_config(&self) -> &config::ModuleConfig {
+        &self.config
     }
 
     fn build(&self) -> s::Block {
@@ -134,13 +145,5 @@ impl BarModuleFn for BarModuleSysInfo {
             separator: Some(true),
             separator_block_width: None,
         }
-    }
-
-    fn default_config(instance: String) -> config::ModuleConfig {
-        config::ModuleConfig {
-            module_type: "sysinfo".to_owned(),
-            instance,
-            format: "💻 CPU: {cpu_usage:{:4.1}}% Mem: {mem_usage:{:4.1}}% Load: {load_avg_1:{:4.2}} / {load_avg_5:{:4.2}} / {load_avg_15:{:4.2}}".to_owned(),
-            html_escape: true }
     }
 }

@@ -15,7 +15,9 @@
 
 //! TOML configuration for swayrbar.
 
+use crate::bar::module::BarModuleFn;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Config {
@@ -29,10 +31,11 @@ pub struct Config {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ModuleConfig {
-    pub module_type: String,
+    pub name: String,
     pub instance: String,
     pub format: String,
     pub html_escape: bool,
+    pub on_click: HashMap<String, Vec<String>>,
 }
 
 impl Default for Config {
@@ -40,7 +43,11 @@ impl Default for Config {
         Config {
             refresh_interval: 1000,
             modules: vec!["date/0".to_owned()],
-            module_configs: vec![],
+            module_configs: vec![
+                crate::bar::module::date::BarModuleDate::default_config(
+                    "0".to_owned(),
+                ),
+            ],
         }
     }
 }

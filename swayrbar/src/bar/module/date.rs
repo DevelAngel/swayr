@@ -15,6 +15,8 @@
 
 //! The date `swayrbar` module.
 
+use std::collections::HashMap;
+
 use crate::bar::module::config;
 use crate::bar::module::BarModuleFn;
 use swaybar_types as s;
@@ -26,25 +28,30 @@ pub struct BarModuleDate {
 }
 
 impl BarModuleFn for BarModuleDate {
+    fn create(cfg: config::ModuleConfig) -> Box<dyn BarModuleFn> {
+        Box::new(BarModuleDate { config: cfg })
+    }
+
     fn default_config(instance: String) -> config::ModuleConfig {
         config::ModuleConfig {
-            module_type: "date".to_owned(),
+            name: "date".to_owned(),
             instance,
             format: "⏰ %F %X".to_owned(),
             html_escape: false,
+            // TODO: Only for testing.
+            on_click: HashMap::from([(
+                "Left".to_owned(),
+                vec!["foot".to_owned(), "htop".to_owned()],
+            )]),
         }
-    }
-
-    fn create(cfg: config::ModuleConfig) -> Box<dyn BarModuleFn> {
-        Box::new(BarModuleDate { config: cfg })
     }
 
     fn name() -> &'static str {
         NAME
     }
 
-    fn matches(&self, name: &str, instance: &str) -> bool {
-        NAME == name && self.config.instance == instance
+    fn get_config(&self) -> &config::ModuleConfig {
+        &self.config
     }
 
     fn build(&self) -> s::Block {

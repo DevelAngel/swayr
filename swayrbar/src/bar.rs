@@ -19,6 +19,7 @@ use crate::bar::module::BarModuleFn;
 use env_logger::Env;
 use serde_json;
 use std::io;
+use std::process as p;
 use std::{sync::Arc, thread};
 use swaybar_types as sbt;
 
@@ -71,7 +72,7 @@ pub fn handle_input(mods: Arc<Vec<Box<dyn BarModuleFn>>>) {
         }
 
         let click = match serde_json::from_str::<sbt::Click>(
-            buf.strip_prefix(",").unwrap_or(&buf),
+            buf.strip_prefix(',').unwrap_or(&buf),
         ) {
             Ok(click) => click,
             Err(err) => {
@@ -82,6 +83,36 @@ pub fn handle_input(mods: Arc<Vec<Box<dyn BarModuleFn>>>) {
             }
         };
         log::debug!("Received click: {:?}", click);
+        handle_click(click, mods.clone());
+    }
+}
+
+fn handle_click(
+    click: sbt::Click,
+    mods: Arc<Vec<Box<dyn BarModuleFn>>>,
+) -> Option<()> {
+    let name = click.name?;
+    let instance = click.instance?;
+    let button_str = format!("{:?}", click.button);
+    for m in mods.iter() {
+        if let Some(on_click) = m.get_on_click_map(&name, &instance) {
+            if let Some(cmd) = on_click.get(&button_str) {
+                execute_command(cmd);
+                return Some(());
+            }
+        }
+    }
+
+    None
+}
+
+fn execute_command(cmd: &[String]) {
+    match p::Command::new(&cmd[0]).args(&cmd[1..]).spawn() {
+        Ok(_child) => (),
+        Err(err) => {
+            log::error!("Error running shell command '{}':", cmd.join(" "));
+            log::error!("{}", err);
+        }
     }
 }
 
