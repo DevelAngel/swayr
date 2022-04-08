@@ -15,11 +15,9 @@
 
 //! TOML configuration for swayr.
 
-use crate::shared::util as shared_util;
+use crate::shared::cfg;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::fs::OpenOptions;
-use std::io::{Read, Write};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Config {
@@ -302,56 +300,12 @@ impl Default for Config {
     }
 }
 
-pub fn save_config(cfg: Config) {
-    let path = shared_util::get_config_file_path("swayr");
-    let content =
-        toml::to_string_pretty(&cfg).expect("Cannot serialize config.");
-    let mut file = OpenOptions::new()
-        .read(false)
-        .write(true)
-        .create(true)
-        .open(path)
-        .unwrap();
-    file.write_all(content.as_str().as_bytes()).unwrap();
-}
-
 pub fn load_config() -> Config {
-    let path = shared_util::get_config_file_path("swayr");
-    if !path.exists() {
-        save_config(Config::default());
-        // Tell the user that a fresh default config has been created.
-        std::process::Command::new("swaynag")
-            .arg("--background")
-            .arg("00FF44")
-            .arg("--text")
-            .arg("0000CC")
-            .arg("--message")
-            .arg(
-                "Welcome to swayr! ".to_owned()
-                    + "I've created a fresh config for use with wofi for you in "
-                    + &path.to_string_lossy()
-                    + ". Adapt it to your needs.",
-            )
-            .arg("--type")
-            .arg("warning")
-            .arg("--dismiss-button")
-            .arg("Thanks!")
-            .spawn()
-            .ok();
-    }
-    let mut file = OpenOptions::new()
-        .read(true)
-        .write(false)
-        .create(false)
-        .open(path)
-        .unwrap();
-    let mut buf: String = String::new();
-    file.read_to_string(&mut buf).unwrap();
-    toml::from_str(&buf).expect("Invalid config.")
+    cfg::load_config::<Config>("swayr")
 }
 
 #[test]
 fn test_load_config() {
-    let cfg = load_config();
+    let cfg = cfg::load_config::<Config>("swayr");
     println!("{:?}", cfg);
 }

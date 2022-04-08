@@ -13,6 +13,6 @@
 // You should have received a copy of the GNU General Public License along with
 // this program.  If not, see <https://www.gnu.org/licenses/>.
 
+pub mod cfg;
 pub mod fmt;
 pub mod ipc;
-pub mod util;
