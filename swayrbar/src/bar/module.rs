@@ -30,9 +30,6 @@ pub trait BarModuleFn: Sync + Send {
     fn default_config(instance: String) -> config::ModuleConfig
     where
         Self: Sized;
-    fn name() -> &'static str
-    where
-        Self: Sized;
     fn get_config(&self) -> &config::ModuleConfig;
     fn get_on_click_map(
         &self,

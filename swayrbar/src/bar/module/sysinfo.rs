@@ -104,10 +104,6 @@ impl BarModuleFn for BarModuleSysInfo {
         }
     }
 
-    fn name() -> &'static str {
-        NAME
-    }
-
     fn get_config(&self) -> &config::ModuleConfig {
         &self.config
     }
@@ -115,7 +111,7 @@ impl BarModuleFn for BarModuleSysInfo {
     fn build(&self) -> s::Block {
         let updater = OnceRefresher::new();
         s::Block {
-            name: Some(Self::name().to_owned()),
+            name: Some(NAME.to_owned()),
             instance: Some(self.config.instance.clone()),
             full_text: {
                 let mut sys = self.system.lock().unwrap();

@@ -96,16 +96,12 @@ impl BarModuleFn for BarModuleBattery {
 
     fn default_config(instance: String) -> config::ModuleConfig {
         config::ModuleConfig {
-            name: Self::name().to_owned(),
+            name: NAME.to_owned(),
             instance,
             format: "🔋 Bat: {state_of_charge:{:5.1}}%, {state}, Health: {state_of_health:{:5.1}}%".to_owned(),
             html_escape: true,
             on_click: HashMap::new()
         }
-    }
-
-    fn name() -> &'static str {
-        NAME
     }
 
     fn get_config(&self) -> &config::ModuleConfig {
@@ -115,7 +111,7 @@ impl BarModuleFn for BarModuleBattery {
     fn build(&self) -> s::Block {
         let text = get_text(&self.config);
         s::Block {
-            name: Some(Self::name().to_owned()),
+            name: Some(NAME.to_owned()),
             instance: Some(self.config.instance.clone()),
             full_text: text,
             align: Some(s::Align::Right),

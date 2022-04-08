@@ -37,16 +37,12 @@ impl BarModuleFn for BarModuleWindow {
 
     fn default_config(instance: String) -> config::ModuleConfig {
         config::ModuleConfig {
-            name: Self::name().to_owned(),
+            name: NAME.to_owned(),
             instance,
             format: "🪟 {title} — {app_name}".to_owned(),
             html_escape: true,
             on_click: HashMap::new(),
         }
-    }
-
-    fn name() -> &'static str {
-        NAME
     }
 
     fn get_config(&self) -> &config::ModuleConfig {
@@ -61,14 +57,14 @@ impl BarModuleFn for BarModuleWindow {
         let text = match focused_win {
             Some(win) => {
                 fmt_replace!(&self.config.format, self.config.html_escape, {
-                    "title" |"name"  =>  win.get_name(),
+                    "title" | "name"  =>  win.get_name(),
                     "app_name" => win.get_app_name(),
                 })
             }
             None => String::new(),
         };
         s::Block {
-            name: Some(Self::name().to_owned()),
+            name: Some(NAME.to_owned()),
             instance: Some(self.config.instance.clone()),
             full_text: text,
             align: Some(s::Align::Left),

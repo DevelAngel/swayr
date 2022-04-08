@@ -46,10 +46,6 @@ impl BarModuleFn for BarModuleDate {
         }
     }
 
-    fn name() -> &'static str {
-        NAME
-    }
-
     fn get_config(&self) -> &config::ModuleConfig {
         &self.config
     }
@@ -57,7 +53,7 @@ impl BarModuleFn for BarModuleDate {
     fn build(&self) -> s::Block {
         let text = chrono::Local::now().format(&self.config.format).to_string();
         s::Block {
-            name: Some(Self::name().to_owned()),
+            name: Some(NAME.to_owned()),
             instance: Some(self.config.instance.clone()),
             full_text: text,
             align: Some(s::Align::Right),
