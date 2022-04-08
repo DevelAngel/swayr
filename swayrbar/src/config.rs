@@ -16,6 +16,7 @@
 //! TOML configuration for swayrbar.
 
 use crate::module::BarModuleFn;
+use crate::shared::cfg;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -25,8 +26,7 @@ pub struct Config {
     pub refresh_interval: u64,
     /// The list of modules to display in the given order, each one specified
     /// as `"<module_type>/<instance>"`.
-    pub modules: Vec<String>,
-    pub module_configs: Vec<ModuleConfig>,
+    pub modules: Vec<ModuleConfig>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -42,12 +42,27 @@ impl Default for Config {
     fn default() -> Self {
         Config {
             refresh_interval: 1000,
-            modules: vec!["date/0".to_owned()],
-            module_configs: vec![
+            modules: vec![
+                crate::module::window::BarModuleWindow::default_config(
+                    "0".to_owned(),
+                ),
+                crate::module::sysinfo::BarModuleSysInfo::default_config(
+                    "0".to_owned(),
+                ),
                 crate::module::date::BarModuleDate::default_config(
                     "0".to_owned(),
                 ),
             ],
         }
     }
+}
+
+pub fn load_config() -> Config {
+    cfg::load_config::<Config>("swayrbar")
+}
+
+#[test]
+fn test_load_swayrbar_config() {
+    let cfg = cfg::load_config::<Config>("swayrbar");
+    println!("{:?}", cfg);
 }

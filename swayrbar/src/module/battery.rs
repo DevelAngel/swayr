@@ -99,7 +99,7 @@ impl BarModuleFn for BarModuleBattery {
             name: NAME.to_owned(),
             instance,
             format: "🔋 Bat: {state_of_charge:{:5.1}}%, {state}, Health: {state_of_health:{:5.1}}%".to_owned(),
-            html_escape: true,
+            html_escape: false,
             on_click: HashMap::new()
         }
     }
@@ -114,7 +114,7 @@ impl BarModuleFn for BarModuleBattery {
             name: Some(NAME.to_owned()),
             instance: Some(self.config.instance.clone()),
             full_text: text,
-            align: Some(s::Align::Right),
+            align: Some(s::Align::Left),
             markup: Some(s::Markup::Pango),
             short_text: None,
             color: None,

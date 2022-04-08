@@ -29,25 +29,30 @@ pub fn start() {
     env_logger::Builder::from_env(Env::default().default_filter_or("warn"))
         .init();
 
-    let config = config::Config::default();
-
-    let mods: Arc<Vec<Box<dyn BarModuleFn>>> = Arc::new(vec![
-        module::window::BarModuleWindow::create(
-            module::window::BarModuleWindow::default_config("0".to_owned()),
-        ),
-        module::sysinfo::BarModuleSysInfo::create(
-            module::sysinfo::BarModuleSysInfo::default_config("0".to_owned()),
-        ),
-        module::battery::BarModuleBattery::create(
-            module::battery::BarModuleBattery::default_config("0".to_owned()),
-        ),
-        module::date::BarModuleDate::create(
-            module::date::BarModuleDate::default_config("0".to_owned()),
-        ),
-    ]);
+    let config = config::load_config();
+    let refresh_interval = config.refresh_interval;
+    let mods: Arc<Vec<Box<dyn BarModuleFn>>> = Arc::new(create_modules(config));
     let mods_for_input = mods.clone();
     thread::spawn(move || handle_input(mods_for_input));
-    generate_status(&mods, config.refresh_interval);
+    generate_status(&mods, refresh_interval);
+}
+
+fn create_modules(config: config::Config) -> Vec<Box<dyn BarModuleFn>> {
+    let mut mods = vec![];
+    for mc in config.modules {
+        let m = match mc.name.as_str() {
+            "window" => module::window::BarModuleWindow::create(mc),
+            "sysinfo" => module::sysinfo::BarModuleSysInfo::create(mc),
+            "battery" => module::battery::BarModuleBattery::create(mc),
+            "date" => module::date::BarModuleDate::create(mc),
+            unknown => {
+                log::warn!("Unknown module name '{}'.  Ignoring...", unknown);
+                continue;
+            }
+        };
+        mods.push(m);
+    }
+    mods
 }
 
 pub fn handle_input(mods: Arc<Vec<Box<dyn BarModuleFn>>>) {

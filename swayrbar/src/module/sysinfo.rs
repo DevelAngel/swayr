@@ -99,8 +99,10 @@ impl BarModuleFn for BarModuleSysInfo {
             name: "sysinfo".to_owned(),
             instance,
             format: "💻 CPU: {cpu_usage:{:4.1}}% Mem: {mem_usage:{:4.1}}% Load: {load_avg_1:{:4.2}} / {load_avg_5:{:4.2}} / {load_avg_15:{:4.2}}".to_owned(),
-            html_escape: true,
-            on_click: HashMap::new(),
+            html_escape: false,
+            on_click: HashMap::from([
+                ("Left".to_owned(),
+                 vec!["foot".to_owned(), "htop".to_owned()])]),
         }
     }
 

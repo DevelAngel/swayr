@@ -40,8 +40,14 @@ impl BarModuleFn for BarModuleWindow {
             name: NAME.to_owned(),
             instance,
             format: "🪟 {title} — {app_name}".to_owned(),
-            html_escape: true,
-            on_click: HashMap::new(),
+            html_escape: false,
+            on_click: HashMap::from([(
+                "Left".to_owned(),
+                vec![
+                    "swayr".to_owned(),
+                    "switch-to-urgent-or-lru-window".to_owned(),
+                ],
+            )]),
         }
     }
 

@@ -305,7 +305,7 @@ pub fn load_config() -> Config {
 }
 
 #[test]
-fn test_load_config() {
+fn test_load_swayr_config() {
     let cfg = cfg::load_config::<Config>("swayr");
     println!("{:?}", cfg);
 }

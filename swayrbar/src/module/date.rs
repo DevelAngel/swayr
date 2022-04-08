@@ -38,11 +38,7 @@ impl BarModuleFn for BarModuleDate {
             instance,
             format: "⏰ %F %X".to_owned(),
             html_escape: false,
-            // TODO: Only for testing.
-            on_click: HashMap::from([(
-                "Left".to_owned(),
-                vec!["foot".to_owned(), "htop".to_owned()],
-            )]),
+            on_click: HashMap::new(),
         }
     }
 
@@ -56,7 +52,7 @@ impl BarModuleFn for BarModuleDate {
             name: Some(NAME.to_owned()),
             instance: Some(self.config.instance.clone()),
             full_text: text,
-            align: Some(s::Align::Right),
+            align: Some(s::Align::Left),
             markup: Some(s::Markup::Pango),
             short_text: None,
             color: None,
