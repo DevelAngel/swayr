@@ -111,7 +111,7 @@ impl FormatArgument for FmtArg {
     }
 }
 
-pub fn format(fmt: &str, arg: FmtArg, clipped_str: &str) -> String {
+pub fn do_format(fmt: &str, arg: FmtArg, clipped_str: &str) -> String {
     let arg_string = arg.to_string();
 
     if let Ok(pf) = ParsedFormat::parse(fmt, &[arg], &NoNamedArguments) {
@@ -136,15 +136,21 @@ fn remove_last_n_chars(s: &mut String, n: usize) {
 
 #[test]
 fn test_format() {
-    assert_eq!(format("{:.10}", "sway", ""), "sway");
-    assert_eq!(format("{:.10}", "sway", "…"), "sway");
-    assert_eq!(format("{:.4}", "𝔰𝔴𝔞𝔶", "……"), "𝔰𝔴𝔞𝔶");
+    assert_eq!(do_format("{:.10}", FmtArg::from("sway"), ""), "sway");
+    assert_eq!(do_format("{:.10}", FmtArg::from("sway"), "…"), "sway");
+    assert_eq!(do_format("{:.4}", FmtArg::from("𝔰𝔴𝔞𝔶"), "……"), "𝔰𝔴𝔞𝔶");
 
-    assert_eq!(format("{:.3}", "sway", ""), "swa");
-    assert_eq!(format("{:.3}", "sway", "…"), "sw…");
-    assert_eq!(format("{:.5}", "𝔰𝔴𝔞𝔶 𝔴𝔦𝔫𝔡𝔬𝔴", "…?"), "𝔰𝔴𝔞…?");
-    assert_eq!(format("{:.5}", "sway window", "..."), "sw...");
-    assert_eq!(format("{:.2}", "sway", "..."), "...");
+    assert_eq!(do_format("{:.3}", FmtArg::from("sway"), ""), "swa");
+    assert_eq!(do_format("{:.3}", FmtArg::from("sway"), "…"), "sw…");
+    assert_eq!(
+        do_format("{:.5}", FmtArg::from("𝔰𝔴𝔞𝔶 𝔴𝔦𝔫𝔡𝔬𝔴"), "…?"),
+        "𝔰𝔴𝔞…?"
+    );
+    assert_eq!(
+        do_format("{:.5}", FmtArg::from("sway window"), "..."),
+        "sw..."
+    );
+    assert_eq!(do_format("{:.2}", FmtArg::from("sway"), "..."), "...");
 }
 
 pub static PLACEHOLDER_RX: Lazy<Regex> = Lazy::new(|| {
@@ -153,6 +159,29 @@ pub static PLACEHOLDER_RX: Lazy<Regex> = Lazy::new(|| {
     )
     .unwrap()
 });
+
+#[test]
+fn test_placeholder_rx() {
+    let caps = PLACEHOLDER_RX.captures("Hello, {place}!").unwrap();
+    assert_eq!(caps.name("name").unwrap().as_str(), "place");
+    assert_eq!(caps.name("fmtstr"), None);
+    assert_eq!(caps.name("clipstr"), None);
+
+    let caps = PLACEHOLDER_RX.captures("Hi, {place:{:>10.10}}!").unwrap();
+    assert_eq!(caps.name("name").unwrap().as_str(), "place");
+    assert_eq!(caps.name("fmtstr").unwrap().as_str(), "{:>10.10}");
+    assert_eq!(caps.name("clipstr").unwrap().as_str(), "");
+
+    let caps = PLACEHOLDER_RX.captures("Hello, {place:{:.5}…}!").unwrap();
+    assert_eq!(caps.name("name").unwrap().as_str(), "place");
+    assert_eq!(caps.name("fmtstr").unwrap().as_str(), "{:.5}");
+    assert_eq!(caps.name("clipstr").unwrap().as_str(), "…");
+
+    let caps = PLACEHOLDER_RX.captures("Hello, {place:{:.5}...}!").unwrap();
+    assert_eq!(caps.name("name").unwrap().as_str(), "place");
+    assert_eq!(caps.name("fmtstr").unwrap().as_str(), "{:.5}");
+    assert_eq!(caps.name("clipstr").unwrap().as_str(), "...");
+}
 
 pub fn maybe_html_escape(do_it: bool, text: String) -> String {
     if do_it {
@@ -164,7 +193,7 @@ pub fn maybe_html_escape(do_it: bool, text: String) -> String {
     }
 }
 
-macro_rules! fmt_replace {
+macro_rules! format_placeholders {
     ( $fmt_str:expr, $html_escape:expr,
       { $( $($pat:pat_param)|+ => $exp:expr, )+ }
     ) => {
@@ -180,7 +209,7 @@ macro_rules! fmt_replace {
                                 .map_or("", |m| m.as_str());
                             $crate::shared::fmt::maybe_html_escape(
                                 $html_escape,
-                                $crate::shared::fmt::format(fmt_str, val, clipped_str),
+                                $crate::shared::fmt::do_format(fmt_str, val, clipped_str),
                             )
                         }
                     )+
@@ -191,15 +220,17 @@ macro_rules! fmt_replace {
     };
 }
 
-pub(crate) use fmt_replace;
+pub(crate) use format_placeholders;
 
 #[test]
-fn foo() {
-    let foo = "{a}, {b}";
+fn test_format_placeholders() {
+    let foo = "{a}, {b} = {d}";
     let html_escape = true;
-    let x: String = fmt_replace!(foo, html_escape, {
+    let x: String = format_placeholders!(foo, html_escape, {
         "a" => "1".to_string(),
-        "b" =>  "2".to_string(),
+        "b" | "d" =>  "2".to_string(),
         "c" => "3".to_owned(),
     });
+
+    assert_eq!("1, 2 = 2", x);
 }

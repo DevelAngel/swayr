@@ -17,7 +17,7 @@
 
 use crate::bar::config;
 use crate::bar::module::BarModuleFn;
-use crate::shared::fmt::fmt_replace;
+use crate::shared::fmt::format_placeholders;
 use battery as bat;
 use std::collections::{HashMap, HashSet};
 use swaybar_types as s;
@@ -52,7 +52,7 @@ fn get_text(cfg: &config::ModuleConfig) -> String {
             if bats.is_empty() {
                 return String::new();
             }
-            fmt_replace!(&cfg.format, cfg.html_escape, {
+            format_placeholders!(&cfg.format, cfg.html_escape, {
                 "state_of_charge" => bats.iter()
                     .map(|b| b.state_of_charge().value)
                     .sum::<f32>()

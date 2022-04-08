@@ -16,7 +16,7 @@
 //! Convenience data structures built from the IPC structs.
 
 use crate::config;
-use crate::shared::fmt::fmt_replace;
+use crate::shared::fmt::format_placeholders;
 use crate::shared::ipc;
 use crate::shared::ipc::NodeMethods;
 use crate::util;
@@ -370,7 +370,7 @@ impl DisplayFormat for DisplayNode<'_> {
                     .as_str(),
             );
 
-        fmt_replace!(&fmt, html_escape, {
+        format_placeholders!(&fmt, html_escape, {
             "id" => self.node.id,
             "app_name" => self.node.get_app_name(),
             "layout" => format!("{:?}", self.node.layout),
@@ -412,27 +412,4 @@ impl DisplayFormat for DisplayNode<'_> {
             }
         }
     }
-}
-
-#[test]
-fn test_placeholder_rx() {
-    let caps = PLACEHOLDER_RX.captures("Hello, {place}!").unwrap();
-    assert_eq!(caps.name("name").unwrap().as_str(), "place");
-    assert_eq!(caps.name("fmtstr"), None);
-    assert_eq!(caps.name("clipstr"), None);
-
-    let caps = PLACEHOLDER_RX.captures("Hi, {place:{:>10.10}}!").unwrap();
-    assert_eq!(caps.name("name").unwrap().as_str(), "place");
-    assert_eq!(caps.name("fmtstr").unwrap().as_str(), "{:>10.10}");
-    assert_eq!(caps.name("clipstr").unwrap().as_str(), "");
-
-    let caps = PLACEHOLDER_RX.captures("Hello, {place:{:.5}…}!").unwrap();
-    assert_eq!(caps.name("name").unwrap().as_str(), "place");
-    assert_eq!(caps.name("fmtstr").unwrap().as_str(), "{:.5}");
-    assert_eq!(caps.name("clipstr").unwrap().as_str(), "…");
-
-    let caps = PLACEHOLDER_RX.captures("Hello, {place:{:.5}...}!").unwrap();
-    assert_eq!(caps.name("name").unwrap().as_str(), "place");
-    assert_eq!(caps.name("fmtstr").unwrap().as_str(), "{:.5}");
-    assert_eq!(caps.name("clipstr").unwrap().as_str(), "...");
 }

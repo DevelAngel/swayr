@@ -19,7 +19,7 @@ use std::collections::HashMap;
 
 use crate::bar::config;
 use crate::bar::module::BarModuleFn;
-use crate::shared::fmt::fmt_replace;
+use crate::shared::fmt::format_placeholders;
 use crate::shared::ipc;
 use crate::shared::ipc::NodeMethods;
 use swaybar_types as s;
@@ -56,7 +56,7 @@ impl BarModuleFn for BarModuleWindow {
             .find(|n| n.focused && n.get_type() == ipc::Type::Window);
         let text = match focused_win {
             Some(win) => {
-                fmt_replace!(&self.config.format, self.config.html_escape, {
+                format_placeholders!(&self.config.format, self.config.html_escape, {
                     "title" | "name"  =>  win.get_name(),
                     "app_name" => win.get_app_name(),
                 })

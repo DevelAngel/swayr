@@ -17,7 +17,7 @@
 
 use crate::bar::config;
 use crate::bar::module::BarModuleFn;
-use crate::shared::fmt::fmt_replace;
+use crate::shared::fmt::format_placeholders;
 use std::collections::HashMap;
 use std::sync::Mutex;
 use std::sync::Once;
@@ -115,7 +115,7 @@ impl BarModuleFn for BarModuleSysInfo {
             instance: Some(self.config.instance.clone()),
             full_text: {
                 let mut sys = self.system.lock().unwrap();
-                fmt_replace!(&self.config.format, self.config.html_escape, {
+                format_placeholders!(&self.config.format, self.config.html_escape, {
                     "cpu_usage" => get_cpu_usage(&mut sys, &updater),
                     "mem_usage" => get_memory_usage(&mut sys, &updater),
                     "load_avg_1" => get_load_average(&mut sys,
