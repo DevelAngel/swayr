@@ -15,13 +15,11 @@
 
 //! TOML configuration for swayr.
 
-use directories::ProjectDirs;
+use crate::shared::util as shared_util;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::fs::DirBuilder;
 use std::fs::OpenOptions;
 use std::io::{Read, Write};
-use std::path::Path;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Config {
@@ -304,24 +302,8 @@ impl Default for Config {
     }
 }
 
-fn get_config_file_path() -> Box<Path> {
-    let proj_dirs = ProjectDirs::from("", "", "swayr").expect("");
-    let user_config_dir = proj_dirs.config_dir();
-    if !user_config_dir.exists() {
-        let sys_config_file = Path::new("/etc/xdg/swayr/config.toml");
-        if sys_config_file.exists() {
-            return sys_config_file.into();
-        }
-        DirBuilder::new()
-            .recursive(true)
-            .create(user_config_dir)
-            .unwrap();
-    }
-    user_config_dir.join("config.toml").into_boxed_path()
-}
-
 pub fn save_config(cfg: Config) {
-    let path = get_config_file_path();
+    let path = shared_util::get_config_file_path("swayr");
     let content =
         toml::to_string_pretty(&cfg).expect("Cannot serialize config.");
     let mut file = OpenOptions::new()
@@ -334,7 +316,7 @@ pub fn save_config(cfg: Config) {
 }
 
 pub fn load_config() -> Config {
-    let path = get_config_file_path();
+    let path = shared_util::get_config_file_path("swayr");
     if !path.exists() {
         save_config(Config::default());
         // Tell the user that a fresh default config has been created.

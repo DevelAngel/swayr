@@ -636,6 +636,7 @@ version = "0.0.1"
 dependencies = [
  "battery",
  "chrono",
+ "directories",
  "env_logger",
  "log",
  "once_cell",

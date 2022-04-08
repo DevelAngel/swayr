@@ -16,9 +16,9 @@
 //! Convenience data structures built from the IPC structs.
 
 use crate::config;
-use crate::fmt_replace::fmt_replace;
-use crate::ipc;
-use crate::ipc::NodeMethods;
+use crate::shared::fmt::fmt_replace;
+use crate::shared::ipc;
+use crate::shared::ipc::NodeMethods;
 use crate::util;
 use crate::util::DisplayFormat;
 use once_cell::sync::Lazy;
@@ -186,7 +186,7 @@ impl<'a> Tree<'a> {
         self.as_display_nodes(&v, IndentLevel::WorkspacesZeroWindowsOne)
     }
 
-    fn sort_by_urgency_and_lru_time_1(&self, v: &mut Vec<&s::Node>) {
+    fn sort_by_urgency_and_lru_time_1(&self, v: &mut [&s::Node]) {
         v.sort_by(|a, b| {
             if a.urgent && !b.urgent {
                 cmp::Ordering::Less

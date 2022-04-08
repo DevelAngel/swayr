@@ -16,8 +16,8 @@
 //! Functions and data structures of the swayrd demon.
 
 use crate::config;
-use crate::ipc;
-use crate::ipc::NodeMethods;
+use crate::shared::ipc;
+use crate::shared::ipc::NodeMethods;
 use std::collections::HashMap;
 use swayipc as s;
 

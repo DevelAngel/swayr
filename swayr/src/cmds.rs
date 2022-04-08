@@ -16,9 +16,9 @@
 //! Functions and data structures of the swayr client.
 
 use crate::config as cfg;
-use crate::ipc;
-use crate::ipc::NodeMethods;
 use crate::layout;
+use crate::shared::ipc;
+use crate::shared::ipc::NodeMethods;
 use crate::tree as t;
 use crate::util;
 use crate::util::DisplayFormat;

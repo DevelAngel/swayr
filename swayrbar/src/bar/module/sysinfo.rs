@@ -17,7 +17,7 @@
 
 use crate::bar::config;
 use crate::bar::module::BarModuleFn;
-use crate::fmt_replace::fmt_replace;
+use crate::shared::fmt::fmt_replace;
 use std::collections::HashMap;
 use std::sync::Mutex;
 use std::sync::Once;

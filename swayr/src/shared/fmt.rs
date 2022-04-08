@@ -13,10 +13,8 @@
 // You should have received a copy of the GNU General Public License along with
 // this program.  If not, see <https://www.gnu.org/licenses/>.
 
-//! Provides runtime formatting of strings since our format strings are read
-//! from the swayr config, not specified as literals, e.g., `{name:{:.30}}` in
-//! `format.window_format`.
-
+use once_cell::sync::Lazy;
+use regex::Regex;
 use rt_format::{
     Format, FormatArgument, NoNamedArguments, ParsedFormat, Specifier,
 };
@@ -147,4 +145,61 @@ fn test_format() {
     assert_eq!(format("{:.5}", "𝔰𝔴𝔞𝔶 𝔴𝔦𝔫𝔡𝔬𝔴", "…?"), "𝔰𝔴𝔞…?");
     assert_eq!(format("{:.5}", "sway window", "..."), "sw...");
     assert_eq!(format("{:.2}", "sway", "..."), "...");
+}
+
+pub static PLACEHOLDER_RX: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(
+        r"\{(?P<name>[^}:]+)(?::(?P<fmtstr>\{[^}]*\})(?P<clipstr>[^}]*))?\}",
+    )
+    .unwrap()
+});
+
+pub fn maybe_html_escape(do_it: bool, text: String) -> String {
+    if do_it {
+        text.replace('<', "&lt;")
+            .replace('>', "&gt;")
+            .replace('&', "&amp;")
+    } else {
+        text
+    }
+}
+
+macro_rules! fmt_replace {
+    ( $fmt_str:expr, $html_escape:expr,
+      { $( $($pat:pat_param)|+ => $exp:expr, )+ }
+    ) => {
+        $crate::shared::fmt::PLACEHOLDER_RX
+            .replace_all($fmt_str, |caps: &regex::Captures| {
+                let value: String = match &caps["name"] {
+                    $(
+                        $( $pat )|+ => {
+                            let val = $crate::shared::fmt::FmtArg::from($exp);
+                            let fmt_str = caps.name("fmtstr")
+                                .map_or("{}", |m| m.as_str());
+                            let clipped_str = caps.name("clipstr")
+                                .map_or("", |m| m.as_str());
+                            $crate::shared::fmt::maybe_html_escape(
+                                $html_escape,
+                                $crate::shared::fmt::format(fmt_str, val, clipped_str),
+                            )
+                        }
+                    )+
+                        _ => caps[0].to_string(),
+                };
+                value
+            }).into()
+    };
+}
+
+pub(crate) use fmt_replace;
+
+#[test]
+fn foo() {
+    let foo = "{a}, {b}";
+    let html_escape = true;
+    let x: String = fmt_replace!(foo, html_escape, {
+        "a" => "1".to_string(),
+        "b" =>  "2".to_string(),
+        "c" => "3".to_owned(),
+    });
 }

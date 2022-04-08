@@ -17,7 +17,7 @@
 
 use crate::bar::config;
 use crate::bar::module::BarModuleFn;
-use crate::fmt_replace::fmt_replace;
+use crate::shared::fmt::fmt_replace;
 use battery as bat;
 use std::collections::{HashMap, HashSet};
 use swaybar_types as s;

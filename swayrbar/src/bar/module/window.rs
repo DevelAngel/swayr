@@ -19,9 +19,9 @@ use std::collections::HashMap;
 
 use crate::bar::config;
 use crate::bar::module::BarModuleFn;
-use crate::fmt_replace::fmt_replace;
-use crate::ipc;
-use crate::ipc::NodeMethods;
+use crate::shared::fmt::fmt_replace;
+use crate::shared::ipc;
+use crate::shared::ipc::NodeMethods;
 use swaybar_types as s;
 
 const NAME: &str = "window";
