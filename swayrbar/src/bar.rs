@@ -15,16 +15,15 @@
 
 //! `swayrbar` lib.
 
-use crate::bar::module::BarModuleFn;
+use crate::config;
+use crate::module;
+use crate::module::BarModuleFn;
 use env_logger::Env;
 use serde_json;
 use std::io;
 use std::process as p;
 use std::{sync::Arc, thread};
 use swaybar_types as sbt;
-
-pub mod config;
-pub mod module;
 
 pub fn start() {
     env_logger::Builder::from_env(Env::default().default_filter_or("warn"))

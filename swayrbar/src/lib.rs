@@ -14,4 +14,6 @@
 // this program.  If not, see <https://www.gnu.org/licenses/>.
 
 pub mod bar;
+pub mod config;
+pub mod module;
 pub mod shared;

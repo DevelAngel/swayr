@@ -13,36 +13,35 @@
 // You should have received a copy of the GNU General Public License along with
 // this program.  If not, see <https://www.gnu.org/licenses/>.
 
-//! The date `swayrbar` module.
+//! The window `swayrbar` module.
 
 use std::collections::HashMap;
 
-use crate::bar::module::config;
-use crate::bar::module::BarModuleFn;
+use crate::config;
+use crate::module::BarModuleFn;
+use crate::shared::fmt::format_placeholders;
+use crate::shared::ipc;
+use crate::shared::ipc::NodeMethods;
 use swaybar_types as s;
 
-const NAME: &str = "date";
+const NAME: &str = "window";
 
-pub struct BarModuleDate {
+pub struct BarModuleWindow {
     config: config::ModuleConfig,
 }
 
-impl BarModuleFn for BarModuleDate {
-    fn create(cfg: config::ModuleConfig) -> Box<dyn BarModuleFn> {
-        Box::new(BarModuleDate { config: cfg })
+impl BarModuleFn for BarModuleWindow {
+    fn create(config: config::ModuleConfig) -> Box<dyn BarModuleFn> {
+        Box::new(BarModuleWindow { config })
     }
 
     fn default_config(instance: String) -> config::ModuleConfig {
         config::ModuleConfig {
-            name: "date".to_owned(),
+            name: NAME.to_owned(),
             instance,
-            format: "⏰ %F %X".to_owned(),
-            html_escape: false,
-            // TODO: Only for testing.
-            on_click: HashMap::from([(
-                "Left".to_owned(),
-                vec!["foot".to_owned(), "htop".to_owned()],
-            )]),
+            format: "🪟 {title} — {app_name}".to_owned(),
+            html_escape: true,
+            on_click: HashMap::new(),
         }
     }
 
@@ -51,12 +50,24 @@ impl BarModuleFn for BarModuleDate {
     }
 
     fn build(&self) -> s::Block {
-        let text = chrono::Local::now().format(&self.config.format).to_string();
+        let root = ipc::get_root_node(false);
+        let focused_win = root
+            .iter()
+            .find(|n| n.focused && n.get_type() == ipc::Type::Window);
+        let text = match focused_win {
+            Some(win) => {
+                format_placeholders!(&self.config.format, self.config.html_escape, {
+                    "title" | "name"  =>  win.get_name(),
+                    "app_name" => win.get_app_name(),
+                })
+            }
+            None => String::new(),
+        };
         s::Block {
             name: Some(NAME.to_owned()),
             instance: Some(self.config.instance.clone()),
             full_text: text,
-            align: Some(s::Align::Right),
+            align: Some(s::Align::Left),
             markup: Some(s::Markup::Pango),
             short_text: None,
             color: None,

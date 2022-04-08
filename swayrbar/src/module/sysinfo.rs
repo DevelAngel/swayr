@@ -15,8 +15,8 @@
 
 //! The date `swayrbar` module.
 
-use crate::bar::config;
-use crate::bar::module::BarModuleFn;
+use crate::config;
+use crate::module::BarModuleFn;
 use crate::shared::fmt::format_placeholders;
 use std::collections::HashMap;
 use std::sync::Mutex;

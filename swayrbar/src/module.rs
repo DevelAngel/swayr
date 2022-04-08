@@ -15,7 +15,7 @@
 
 use std::collections::HashMap;
 
-use crate::bar::config;
+use crate::config;
 use swaybar_types as s;
 
 pub mod battery;

@@ -18,5 +18,5 @@
 fn main() {
     // TODO: We need a config file cmd line option so that each bar can have
     // its own config.
-    swayrbar::bar::start();
+    swayrbar::bar::start()
 }
