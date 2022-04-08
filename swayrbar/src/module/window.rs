@@ -40,14 +40,14 @@ impl BarModuleFn for BarModuleWindow {
             name: NAME.to_owned(),
             instance,
             format: "🪟 {title} — {app_name}".to_owned(),
-            html_escape: false,
-            on_click: HashMap::from([(
+            html_escape: Some(false),
+            on_click: Some(HashMap::from([(
                 "Left".to_owned(),
                 vec![
                     "swayr".to_owned(),
                     "switch-to-urgent-or-lru-window".to_owned(),
                 ],
-            )]),
+            )])),
         }
     }
 
@@ -62,7 +62,8 @@ impl BarModuleFn for BarModuleWindow {
             .find(|n| n.focused && n.get_type() == ipc::Type::Window);
         let text = match focused_win {
             Some(win) => {
-                format_placeholders!(&self.config.format, self.config.html_escape, {
+                format_placeholders!(&self.config.format,
+                                     self.config.is_html_escape(), {
                     "title" | "name"  =>  win.get_name(),
                     "app_name" => win.get_app_name(),
                 })

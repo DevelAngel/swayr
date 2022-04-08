@@ -19,7 +19,7 @@ use crate::config;
 use crate::module::BarModuleFn;
 use crate::shared::fmt::format_placeholders;
 use battery as bat;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use swaybar_types as s;
 
 const NAME: &str = "battery";
@@ -52,7 +52,7 @@ fn get_text(cfg: &config::ModuleConfig) -> String {
             if bats.is_empty() {
                 return String::new();
             }
-            format_placeholders!(&cfg.format, cfg.html_escape, {
+            format_placeholders!(&cfg.format, cfg.is_html_escape(), {
                 "state_of_charge" => bats.iter()
                     .map(|b| b.state_of_charge().value)
                     .sum::<f32>()
@@ -99,8 +99,8 @@ impl BarModuleFn for BarModuleBattery {
             name: NAME.to_owned(),
             instance,
             format: "🔋 Bat: {state_of_charge:{:5.1}}%, {state}, Health: {state_of_health:{:5.1}}%".to_owned(),
-            html_escape: false,
-            on_click: HashMap::new()
+            html_escape: Some(false),
+            on_click: None,
         }
     }
 

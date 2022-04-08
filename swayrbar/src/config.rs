@@ -34,8 +34,14 @@ pub struct ModuleConfig {
     pub name: String,
     pub instance: String,
     pub format: String,
-    pub html_escape: bool,
-    pub on_click: HashMap<String, Vec<String>>,
+    pub html_escape: Option<bool>,
+    pub on_click: Option<HashMap<String, Vec<String>>>,
+}
+
+impl ModuleConfig {
+    pub fn is_html_escape(&self) -> bool {
+        self.html_escape.unwrap_or(false)
+    }
 }
 
 impl Default for Config {
@@ -47,6 +53,9 @@ impl Default for Config {
                     "0".to_owned(),
                 ),
                 crate::module::sysinfo::BarModuleSysInfo::default_config(
+                    "0".to_owned(),
+                ),
+                crate::module::battery::BarModuleBattery::default_config(
                     "0".to_owned(),
                 ),
                 crate::module::date::BarModuleDate::default_config(

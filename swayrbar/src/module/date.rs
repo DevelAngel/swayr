@@ -15,8 +15,6 @@
 
 //! The date `swayrbar` module.
 
-use std::collections::HashMap;
-
 use crate::module::config;
 use crate::module::BarModuleFn;
 use swaybar_types as s;
@@ -34,11 +32,11 @@ impl BarModuleFn for BarModuleDate {
 
     fn default_config(instance: String) -> config::ModuleConfig {
         config::ModuleConfig {
-            name: "date".to_owned(),
+            name: NAME.to_owned(),
             instance,
             format: "⏰ %F %X".to_owned(),
-            html_escape: false,
-            on_click: HashMap::new(),
+            html_escape: Some(false),
+            on_click: None,
         }
     }
 

@@ -54,7 +54,7 @@ where
     file.write_all(content.as_str().as_bytes()).unwrap();
 }
 
-pub fn load_config<'a, T>(project: &str) -> T
+pub fn load_config<T>(project: &str) -> T
 where
     T: Serialize + DeserializeOwned + Default,
 {

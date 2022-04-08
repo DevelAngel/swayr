@@ -96,13 +96,13 @@ impl BarModuleFn for BarModuleSysInfo {
 
     fn default_config(instance: String) -> config::ModuleConfig {
         config::ModuleConfig {
-            name: "sysinfo".to_owned(),
+            name: NAME.to_owned(),
             instance,
             format: "💻 CPU: {cpu_usage:{:4.1}}% Mem: {mem_usage:{:4.1}}% Load: {load_avg_1:{:4.2}} / {load_avg_5:{:4.2}} / {load_avg_15:{:4.2}}".to_owned(),
-            html_escape: false,
-            on_click: HashMap::from([
-                ("Left".to_owned(),
-                 vec!["foot".to_owned(), "htop".to_owned()])]),
+            html_escape: Some(false),
+            on_click: Some(HashMap::from([
+               ("Left".to_owned(),
+                vec!["foot".to_owned(), "htop".to_owned()])])),
         }
     }
 
@@ -117,7 +117,8 @@ impl BarModuleFn for BarModuleSysInfo {
             instance: Some(self.config.instance.clone()),
             full_text: {
                 let mut sys = self.system.lock().unwrap();
-                format_placeholders!(&self.config.format, self.config.html_escape, {
+                format_placeholders!(&self.config.format,
+                                     self.config.is_html_escape(), {
                     "cpu_usage" => get_cpu_usage(&mut sys, &updater),
                     "mem_usage" => get_memory_usage(&mut sys, &updater),
                     "load_avg_1" => get_load_average(&mut sys,

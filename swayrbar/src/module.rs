@@ -38,7 +38,7 @@ pub trait BarModuleFn: Sync + Send {
     ) -> Option<&HashMap<String, Vec<String>>> {
         let cfg = self.get_config();
         if name == cfg.name && instance == cfg.instance {
-            Some(&cfg.on_click)
+            cfg.on_click.as_ref()
         } else {
             None
         }
