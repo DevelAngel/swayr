@@ -145,4 +145,9 @@ impl BarModuleFn for BarModuleSysInfo {
             separator_block_width: None,
         }
     }
+
+    fn subst_args<'a>(&'a self, _cmd: &'a [String]) -> Option<Vec<String>> {
+        // TOOD: Set a State we can refer to here.
+        todo!()
+    }
 }

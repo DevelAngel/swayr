@@ -20,12 +20,20 @@ use crate::module::BarModuleFn;
 use crate::shared::fmt::format_placeholders;
 use battery as bat;
 use std::collections::HashSet;
+use std::sync::Mutex;
 use swaybar_types as s;
 
 const NAME: &str = "battery";
 
+struct State {
+    state_of_charge: f32,
+    state_of_health: f32,
+    state: String,
+}
+
 pub struct BarModuleBattery {
     config: config::ModuleConfig,
+    state: Mutex<State>,
 }
 
 fn get_refreshed_batteries(
@@ -42,56 +50,70 @@ fn get_refreshed_batteries(
     Ok(bats)
 }
 
-fn get_text(cfg: &config::ModuleConfig) -> String {
+fn set_state(state: &Mutex<State>) {
     // FIXME: Creating the Manager on every refresh is bad but internally
     // it uses an Rc so if I keep it as a field of BarModuleBattery, that
     // cannot be Sync.
     let manager = battery::Manager::new().unwrap();
     match get_refreshed_batteries(&manager) {
         Ok(bats) => {
-            if bats.is_empty() {
-                return String::new();
-            }
-            format_placeholders!(&cfg.format, cfg.is_html_escape(), {
-                "state_of_charge" => bats.iter()
-                    .map(|b| b.state_of_charge().value)
-                    .sum::<f32>()
-                    / bats.len() as f32 * 100_f32,
-                "state_of_health" => bats.iter()
-                    .map(|b| b.state_of_health().value)
-                    .sum::<f32>()
-                    / bats.len() as f32 * 100_f32,
-                "state" => {
-                    let states = bats.iter()
-                        .map(|b| format!("{:?}", b.state()))
-                        .collect::<HashSet<String>>();
-                    if states.len() == 1 {
-                        states.iter().next().unwrap().to_owned()
-                    } else {
-                        let mut comma_sep_string = String::from("[");
-                        let mut first = true;
-                        for state in states {
-                            if first {
-                                comma_sep_string = comma_sep_string + &state;
-                                first = false;
-                            } else {
-                                comma_sep_string = comma_sep_string
-                                    + ", " + &state;
-                            }
+            let mut state = state.lock().expect("Could not lock state.");
+            state.state_of_charge =
+                bats.iter().map(|b| b.state_of_charge().value).sum::<f32>()
+                    / bats.len() as f32
+                    * 100_f32;
+            state.state_of_health =
+                bats.iter().map(|b| b.state_of_health().value).sum::<f32>()
+                    / bats.len() as f32
+                    * 100_f32;
+            state.state = {
+                let states = bats
+                    .iter()
+                    .map(|b| format!("{:?}", b.state()))
+                    .collect::<HashSet<String>>();
+                if states.len() == 1 {
+                    states.iter().next().unwrap().to_owned()
+                } else {
+                    let mut comma_sep_string = String::from("[");
+                    let mut first = true;
+                    for state in states {
+                        if first {
+                            comma_sep_string = comma_sep_string + &state;
+                            first = false;
+                        } else {
+                            comma_sep_string = comma_sep_string + ", " + &state;
                         }
-                        comma_sep_string += "]";
-                        comma_sep_string
                     }
-                },
-            })
+                    comma_sep_string += "]";
+                    comma_sep_string
+                }
+            }
         }
-        Err(err) => format!("{}", err),
+        Err(err) => {
+            log::error!("Could not update battery state: {}", err);
+        }
     }
+}
+
+fn get_text(fmt: &str, html_escape: bool, state: &Mutex<State>) -> String {
+    let state = state.lock().expect("Could not lock state.");
+    format_placeholders!(fmt, html_escape, {
+        "state_of_charge" => state.state_of_charge,
+        "state_of_health" => state.state_of_health,
+        "state" => state.state.as_str(),
+    })
 }
 
 impl BarModuleFn for BarModuleBattery {
     fn create(config: config::ModuleConfig) -> Box<dyn BarModuleFn> {
-        Box::new(BarModuleBattery { config })
+        Box::new(BarModuleBattery {
+            config,
+            state: Mutex::new(State {
+                state_of_charge: 0.0,
+                state_of_health: 0.0,
+                state: "Unknown".to_owned(),
+            }),
+        })
     }
 
     fn default_config(instance: String) -> config::ModuleConfig {
@@ -109,7 +131,12 @@ impl BarModuleFn for BarModuleBattery {
     }
 
     fn build(&self) -> s::Block {
-        let text = get_text(&self.config);
+        set_state(&self.state);
+        let text = get_text(
+            &self.config.format,
+            self.config.is_html_escape(),
+            &self.state,
+        );
         s::Block {
             name: Some(NAME.to_owned()),
             instance: Some(self.config.instance.clone()),
@@ -129,5 +156,13 @@ impl BarModuleFn for BarModuleBattery {
             separator: Some(true),
             separator_block_width: None,
         }
+    }
+
+    fn subst_args<'a>(&'a self, cmd: &'a [String]) -> Option<Vec<String>> {
+        Some(
+            cmd.iter()
+                .map(|arg| get_text(arg, false, &self.state))
+                .collect(),
+        )
     }
 }

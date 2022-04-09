@@ -25,6 +25,10 @@ pub struct BarModuleDate {
     config: config::ModuleConfig,
 }
 
+fn chrono_format(s: &str) -> String {
+    chrono::Local::now().format(s).to_string()
+}
+
 impl BarModuleFn for BarModuleDate {
     fn create(cfg: config::ModuleConfig) -> Box<dyn BarModuleFn> {
         Box::new(BarModuleDate { config: cfg })
@@ -44,8 +48,21 @@ impl BarModuleFn for BarModuleDate {
         &self.config
     }
 
+    fn get_on_click_map(
+        &self,
+        name: &str,
+        instance: &str,
+    ) -> Option<&std::collections::HashMap<String, Vec<String>>> {
+        let cfg = self.get_config();
+        if name == cfg.name && instance == cfg.instance {
+            cfg.on_click.as_ref()
+        } else {
+            None
+        }
+    }
+
     fn build(&self) -> s::Block {
-        let text = chrono::Local::now().format(&self.config.format).to_string();
+        let text = chrono_format(&self.config.format);
         s::Block {
             name: Some(NAME.to_owned()),
             instance: Some(self.config.instance.clone()),
@@ -65,5 +82,9 @@ impl BarModuleFn for BarModuleDate {
             separator: Some(true),
             separator_block_width: None,
         }
+    }
+
+    fn subst_args<'a>(&'a self, cmd: &'a [String]) -> Option<Vec<String>> {
+        Some(cmd.iter().map(|arg| chrono_format(arg)).collect())
     }
 }
