@@ -27,16 +27,34 @@ use swaybar_types as s;
 
 const NAME: &str = "window";
 
+struct State {
+    name: String,
+    app_name: String,
+    pid: i32,
+}
+
 pub struct BarModuleWindow {
     config: config::ModuleConfig,
-    pid: Mutex<i32>,
+    state: Mutex<State>,
+}
+
+fn subst_placeholders(s: &str, state: &State, html_escape: bool) -> String {
+    format_placeholders!(s, html_escape, {
+        "title" | "name"  => state.name.clone(),
+        "app_name" => state.app_name.clone(),
+        "pid" => state.pid,
+    })
 }
 
 impl BarModuleFn for BarModuleWindow {
     fn create(config: config::ModuleConfig) -> Box<dyn BarModuleFn> {
         Box::new(BarModuleWindow {
             config,
-            pid: Mutex::new(0),
+            state: Mutex::new(State {
+                name: String::new(),
+                app_name: String::new(),
+                pid: -1,
+            }),
         })
     }
 
@@ -73,15 +91,16 @@ impl BarModuleFn for BarModuleWindow {
             .find(|n| n.focused && n.get_type() == ipc::Type::Window);
         let text = match focused_win {
             Some(win) => {
-                let mut pid = self.pid.lock().expect("Couldn't lock pid!");
-                *pid = win.pid.unwrap_or(-1);
-                format_placeholders!(
+                let mut state =
+                    self.state.lock().expect("Couldn't lock state!");
+                state.name = win.get_name().to_owned();
+                state.app_name = win.get_app_name().to_owned();
+                state.pid = win.pid.unwrap_or(-1);
+                subst_placeholders(
                     &self.config.format,
-                    self.config.is_html_escape(), {
-                        "title" | "name"  =>  win.get_name(),
-                        "app_name" => win.get_app_name(),
-                        "pid" => *pid,
-                })
+                    &*state,
+                    self.config.is_html_escape(),
+                )
             }
             None => String::new(),
         };
@@ -119,14 +138,11 @@ impl BarModuleFn for BarModuleWindow {
         }
     }
 
-    fn subst_args<'a>(&'a self, cmd: &'a [String]) -> Option<Vec<String>> {
+    fn subst_args<'b>(&'b self, cmd: &'b [String]) -> Option<Vec<String>> {
+        let state = self.state.lock().expect("Could not lock state.");
         let cmd = cmd
             .iter()
-            .map(|arg| {
-                format_placeholders!(arg, false, {
-                    "pid" => *self.pid.lock().expect("Could not lock pid."),
-                })
-            })
+            .map(|arg| subst_placeholders(arg, &*state, false))
             .collect();
         Some(cmd)
     }
