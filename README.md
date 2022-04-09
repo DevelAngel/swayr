@@ -1,4 +1,4 @@
-# Swayr is a window switcher (and more) for sway
+# Swayr & Swayrbar
 
 [![builds.sr.ht status](https://builds.sr.ht/~tsdh/swayr.svg)](https://builds.sr.ht/~tsdh/swayr?)
 [![latest release](https://img.shields.io/crates/v/swayr.svg)](https://crates.io/crates/swayr)
@@ -6,12 +6,31 @@
 [![dependency status](https://deps.rs/repo/sourcehut/~tsdh/swayr/status.svg)](https://deps.rs/repo/sourcehut/~tsdh/swayr)
 [![Hits-of-Code](https://hitsofcode.com/sourcehut/~tsdh/swayr?branch=main)](https://hitsofcode.com/sourcehut/~tsdh/swayr/view?branch=main)
 
+## Table of Contents
+
+* [Swayr](#swayr)
+* [Swayrbar](#swayrbar)
+* [Questions and patches](#questions-and-patches)
+* [Bugs](#bugs)
+* [Build status](#build-status)
+* [License](#license)
+
+## <a id="swayr">Swayr, a window-switcher & more for [sway](https://swaywm.org/)</a>
+
 Swayr consists of a demon, and a client.  The demon `swayrd` records
 window/workspace creations, deletions, and focus changes using sway's JSON IPC
 interface.  The client `swayr` offers subcommands, see `swayr --help`, and
 sends them to the demon which executes them.
 
-Right now, there are these subcommands:
+### Swayr commands
+
+The `swayr` binary provides many subcommands of different categories.
+
+#### Non-menu switchers
+
+Those are just commands that toggle between windows without spawning the menu
+program.
+
 * `switch-to-urgent-or-lru-window` switches to the next window with urgency
   hint (if any) or to the last recently used window.
 * `switch-to-app-or-urgent-or-lru-window` switches to a specific window matched
@@ -25,6 +44,12 @@ Right now, there are these subcommands:
   a "browser" mark to your browser window (using a standard sway `for_window`
   rule).  Then you can provide "browser" as argument to this command to have a
   convenient browser <-> last-recently-used window toggle.
+
+#### Menu switchers
+
+Those spawn a menu program where you can select a window (or workspace, or
+output, etc.) and act on that.
+
 * `switch-window` displays all windows in the order urgent first, then
   last-recently-used, focused last and focuses the selected.
 * `switch-workspace` displays all workspaces in LRU order and switches to the
@@ -55,6 +80,29 @@ Right now, there are these subcommands:
   like with `move-focused-to-workspace`.
 * `swap-focused-with` swaps the currently focused window or container with the
   one selected from the menu program.
+
+##### Menu shortcuts for non-matching input
+
+All menu switching commands (`switch-window`, `switch-workspace`, and
+`switch-workspace-or-window`) now handle non-matching input instead of doing
+nothing.  The input should start with any number of `#` (in order to be able to
+force a non-match), a shortcut followed by a colon, and some string as required
+by the shortcut.  The following shortcuts are supported.
+- `w:<workspace>`: Switches to a possibly non-existing workspace.
+  `<workspace>` must be a digit, a name or `<digit>:<name>`.  The
+  `<digit>:<name>` format is explained in `man 5 sway`.  If that format is
+  given, `swayr` will create the workspace using `workspace number
+  <digit>:<name>`.  If just a digit or name is given, the `number` argument is
+  not used.
+- `s:<cmd>`: Executes the sway command `<cmd>` using `swaymsg`.
+- Any other input is assumed to be a workspace name and thus handled as
+  `w:<input>` would do.
+
+
+#### Cycling commands
+
+Those commands cycle through (a subset of windows) in last-recently-used order.
+
 * `next-window (all-workspaces|current-workspace)` & `prev-window
   (all-workspaces|current-workspace)` focus the next/previous window in
   depth-first iteration order of the tree.  The argument `all-workspaces` or
@@ -74,6 +122,11 @@ Right now, there are these subcommands:
   stacked container, it is like `next-tiled-window` / `prev-tiled-window` if
   the current windows is in a tiled container, and is like `next-window` /
   `prev-window` otherwise.
+
+#### Layout modification commands
+
+These commands change the layout of the current workspace.
+
 * `tile-workspace exclude-floating|include-floating` tiles all windows on the
   current workspace (excluding or including floating ones).  That's done by
   moving all windows away to some special workspace, setting the current
@@ -97,6 +150,9 @@ Right now, there are these subcommands:
   between a tabbed and tiled layout, i.e., it calls `shuffle-tile-workspace` if
   it is currently tabbed, and calls `shuffle-tile-workspace` if it is currently
   tiled.
+  
+#### Miscellaneous commands
+
 * `configure-outputs` lets you repeatedly issue output configuration commands
   until you abort the menu program.
 * `execute-swaymsg-command` displays most swaymsg which don't require
@@ -107,24 +163,7 @@ Right now, there are these subcommands:
   one.  (This is useful for accessing swayr commands which are not bound to a
   key.)
 
-### Menu shortcuts for non-matching input
-
-All menu switching commands (`switch-window`, `switch-workspace`, and
-`switch-workspace-or-window`) now handle non-matching input instead of doing
-nothing.  The input should start with any number of `#` (in order to be able to
-force a non-match), a shortcut followed by a colon, and some string as required
-by the shortcut.  The following shortcuts are supported.
-- `w:<workspace>`: Switches to a possibly non-existing workspace.
-  `<workspace>` must be a digit, a name or `<digit>:<name>`.  The
-  `<digit>:<name>` format is explained in `man 5 sway`.  If that format is
-  given, `swayr` will create the workspace using `workspace number
-  <digit>:<name>`.  If just a digit or name is given, the `number` argument is
-  not used.
-- `s:<cmd>`: Executes the sway command `<cmd>` using `swaymsg`.
-- Any other input is assumed to be a workspace name and thus handled as
-  `w:<input>` would do.
-
-## Screenshots
+### Screenshots
 
 ![A screenshot of swayr switch-window](misc/switch-window.png "swayr
 switch-window")
@@ -133,13 +172,13 @@ switch-window")
 switch-workspace-or-window](misc/switch-workspace-or-window.png "swayr
 switch-workspace-or-window")
 
-## Installation
+### Installation
 
 Some distros have packaged swayr so that you can install it using your distro's
 package manager.  Alternatively, it's easy to build and install it yourself
 using `cargo`.
 
-### Distro packages
+#### Distro packages
 
 The following GNU/Linux and BSD distros package swayr.  Thanks a lot to the
 respective package maintainers!  Refer to the [repology
@@ -148,7 +187,7 @@ site](https://repology.org/project/swayr/versions) for details.
 [![Packaging status](https://repology.org/badge/vertical-allrepos/swayr.svg)](https://repology.org/project/swayr/versions)
 [![AUR swayr-git package status](https://repology.org/badge/version-for-repo/aur/swayr.svg?allow_ignored=yes&header=AUR%20swayr-git)](https://repology.org/project/swayr/versions)
 
-### Building with cargo
+#### Building with cargo
 
 You'll need to install the current stable rust toolchain using the one-liner
 shown at the [official rust installation
@@ -171,7 +210,7 @@ cargo install-update --all
 cargo install-update -- swayr
 ```
 
-## Usage
+### Usage
 
 You need to start the swayr demon `swayrd` in your sway config
 (`~/.config/sway/config`) like so:
@@ -220,7 +259,7 @@ bindsym $mod+Shift+c exec env RUST_BACKTRACE=1 \
 Of course, configure the keys to your liking.  Again, enabling rust backtraces
 and logging are optional.
 
-## Configuration
+### Configuration
 
 Swayr can be configured using the `~/.config/swayr/config.toml` or
 `/etc/xdg/swayr/config.toml` config file.
@@ -288,14 +327,14 @@ auto_tile_min_window_width_per_output_width = [
 
 In the following, all sections are explained.
 
-### The menu section
+#### The menu section
 
 In the `[menu]` section, you can specify the menu program using the
 `executable` name or full path and the `args` (flags and options) it should get
 passed.  If some argument contains the placeholder `{prompt}`, it is replaced
 with a prompt such as "Switch to window" depending on context.
 
-### The format section
+#### The format section
 
 In the `[format]` section, format strings are specified defining how selection
 choices are to be layed out.  `wofi` supports [pango
@@ -370,7 +409,7 @@ processed whereas for double-quoted strings (so-called basic strings)
 escape-sequences are processed.  `rofi` requires a null character and a
 PARAGRAPH SEPARATOR for image sequences.
 
-### The layout section
+#### The layout section
 
 In the `[layout]` section, you can enable auto-tiling by setting `auto_tile` to
 `true` (the default is `false`).  The option
@@ -403,29 +442,33 @@ over IPC.  Therefore, auto-tiling is triggered by new-window events,
 close-events, move-events, floating-events, and also focus-events.  The latter
 are a workaround and wouldn't be required if there were resize-events.
 
-## Version Changes
+### Version Changes
 
-Since version 0.8.0, I've started writing a [NEWS](NEWS.md) file listing the
+Since version 0.8.0, I've started writing a [NEWS](swayr/NEWS.md) file listing the
 news, and changes to `swayr` commands or configuration options.  If something
 doesn't seem to work as expected after an update, please consult this file to
 check if there has been some (possibly incompatible) change requiring an update
 of your config.
 
-## Questions & Patches
+## <a id="swayrbar">Swayrbar</a>
+
+TODO: Write docs!
+
+## <a id="questions-and-patches">Questions & Patches</a>
 
 For asking questions, sending feedback, or patches, refer to [my public inbox
 (mailinglist)](https://lists.sr.ht/~tsdh/public-inbox).  Please mention the
 project you are referring to in the subject.
 
-## Bugs
+## <a id="bugs">Bugs</a>
 
 Bugs and requests can be reported [here](https://todo.sr.ht/~tsdh/swayr).
 
-## Build status
+## <a id="build-status">Build status</a>
 
 [![builds.sr.ht status](https://builds.sr.ht/~tsdh/swayr.svg)](https://builds.sr.ht/~tsdh/swayr?)
 
-## License
+## <a id="license">License</a>
 
-Swayr is licensed under the
+Swayr & Swarybar are licensed under the
 [GPLv3](https://www.gnu.org/licenses/gpl-3.0.en.html) (or later).
