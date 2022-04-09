@@ -87,6 +87,9 @@ where
             .arg("Thanks!")
             .spawn()
             .ok();
+        log::debug!("Created new config in {}.", path.to_string_lossy());
+    } else {
+        log::debug!("Loaded config from {}.", path.to_string_lossy());
     }
     let mut file = OpenOptions::new()
         .read(true)
@@ -96,5 +99,12 @@ where
         .unwrap();
     let mut buf: String = String::new();
     file.read_to_string(&mut buf).unwrap();
-    toml::from_str::<T>(&buf).expect("Invalid config.")
+    match toml::from_str::<T>(&buf) {
+        Ok(cfg) => cfg,
+        Err(err) => {
+            log::error!("Invalid config: {}", err);
+            log::error!("Using default configuration.");
+            T::default()
+        }
+    }
 }

@@ -16,6 +16,7 @@
 //! The window `swayrbar` module.
 
 use std::collections::HashMap;
+use std::sync::Mutex;
 
 use crate::config;
 use crate::module::BarModuleFn;
@@ -28,11 +29,15 @@ const NAME: &str = "window";
 
 pub struct BarModuleWindow {
     config: config::ModuleConfig,
+    pid: Mutex<i32>,
 }
 
 impl BarModuleFn for BarModuleWindow {
     fn create(config: config::ModuleConfig) -> Box<dyn BarModuleFn> {
-        Box::new(BarModuleWindow { config })
+        Box::new(BarModuleWindow {
+            config,
+            pid: Mutex::new(0),
+        })
     }
 
     fn default_config(instance: String) -> config::ModuleConfig {
@@ -41,13 +46,19 @@ impl BarModuleFn for BarModuleWindow {
             instance,
             format: "🪟 {title} — {app_name}".to_owned(),
             html_escape: Some(false),
-            on_click: Some(HashMap::from([(
-                "Left".to_owned(),
-                vec![
-                    "swayr".to_owned(),
-                    "switch-to-urgent-or-lru-window".to_owned(),
-                ],
-            )])),
+            on_click: Some(HashMap::from([
+                (
+                    "Left".to_owned(),
+                    vec![
+                        "swayr".to_owned(),
+                        "switch-to-urgent-or-lru-window".to_owned(),
+                    ],
+                ),
+                (
+                    "Right".to_owned(),
+                    vec!["kill".to_owned(), "{pid}".to_owned()],
+                ),
+            ])),
         }
     }
 
@@ -62,10 +73,14 @@ impl BarModuleFn for BarModuleWindow {
             .find(|n| n.focused && n.get_type() == ipc::Type::Window);
         let text = match focused_win {
             Some(win) => {
-                format_placeholders!(&self.config.format,
-                                     self.config.is_html_escape(), {
-                    "title" | "name"  =>  win.get_name(),
-                    "app_name" => win.get_app_name(),
+                let mut pid = self.pid.lock().expect("Couldn't lock pid!");
+                *pid = win.pid.unwrap_or(-1);
+                format_placeholders!(
+                    &self.config.format,
+                    self.config.is_html_escape(), {
+                        "title" | "name"  =>  win.get_name(),
+                        "app_name" => win.get_app_name(),
+                        "pid" => *pid,
                 })
             }
             None => String::new(),
@@ -89,5 +104,30 @@ impl BarModuleFn for BarModuleWindow {
             separator: Some(true),
             separator_block_width: None,
         }
+    }
+
+    fn get_on_click_map(
+        &self,
+        name: &str,
+        instance: &str,
+    ) -> Option<&HashMap<String, Vec<String>>> {
+        let cfg = self.get_config();
+        if name == cfg.name && instance == cfg.instance {
+            cfg.on_click.as_ref()
+        } else {
+            None
+        }
+    }
+
+    fn subst_args<'a>(&'a self, cmd: &'a [String]) -> Option<Vec<String>> {
+        let cmd = cmd
+            .iter()
+            .map(|arg| {
+                format_placeholders!(arg, false, {
+                    "pid" => *self.pid.lock().expect("Could not lock pid."),
+                })
+            })
+            .collect();
+        Some(cmd)
     }
 }

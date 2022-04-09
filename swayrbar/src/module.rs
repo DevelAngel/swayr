@@ -44,4 +44,8 @@ pub trait BarModuleFn: Sync + Send {
         }
     }
     fn build(&self) -> s::Block;
+    fn subst_args<'a>(&'a self, _cmd: &'a [String]) -> Option<Vec<String>> {
+        // None means, no substitution are to be made.
+        None
+    }
 }

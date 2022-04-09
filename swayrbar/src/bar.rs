@@ -101,7 +101,10 @@ fn handle_click(
     for m in mods.iter() {
         if let Some(on_click) = m.get_on_click_map(&name, &instance) {
             if let Some(cmd) = on_click.get(&button_str) {
-                execute_command(cmd);
+                match m.subst_args(cmd) {
+                    Some(cmd) => execute_command(&cmd),
+                    None => execute_command(cmd),
+                }
                 return Some(());
             }
         }
@@ -111,6 +114,7 @@ fn handle_click(
 }
 
 fn execute_command(cmd: &[String]) {
+    log::debug!("Executing cmd: {:?}", cmd);
     match p::Command::new(&cmd[0]).args(&cmd[1..]).spawn() {
         Ok(_child) => (),
         Err(err) => {
