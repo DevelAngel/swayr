@@ -9,7 +9,14 @@
 ## Table of Contents
 
 * [Swayr](#swayr)
+  * [Commands](#swayr-commands)
+  * [Screenshots](#swayr-screenshots)
+  * [Installation](#swayr-installation)
+  * [Usage](#swayr-usage)
+  * [Configuration](#swayr-configuration)
+  * [Version changes](#swayr-version-changes)
 * [Swayrbar](#swayrbar)
+  * [Configuration](#swayrbar-configuration)
 * [Questions and patches](#questions-and-patches)
 * [Bugs](#bugs)
 * [Build status](#build-status)
@@ -22,7 +29,7 @@ window/workspace creations, deletions, and focus changes using sway's JSON IPC
 interface.  The client `swayr` offers subcommands, see `swayr --help`, and
 sends them to the demon which executes them.
 
-### Swayr commands
+### <a id="swayr-commands">Swayr commands</a>
 
 The `swayr` binary provides many subcommands of different categories.
 
@@ -163,7 +170,7 @@ These commands change the layout of the current workspace.
   one.  (This is useful for accessing swayr commands which are not bound to a
   key.)
 
-### Screenshots
+### <a id="swayr-screenshots">Screenshots</a>
 
 ![A screenshot of swayr switch-window](misc/switch-window.png "swayr
 switch-window")
@@ -172,7 +179,7 @@ switch-window")
 switch-workspace-or-window](misc/switch-workspace-or-window.png "swayr
 switch-workspace-or-window")
 
-### Installation
+### <a id="swayr-installation">Installation</a>
 
 Some distros have packaged swayr so that you can install it using your distro's
 package manager.  Alternatively, it's easy to build and install it yourself
@@ -210,7 +217,7 @@ cargo install-update --all
 cargo install-update -- swayr
 ```
 
-### Usage
+### <a id="swayr-usage">Usage</a>
 
 You need to start the swayr demon `swayrd` in your sway config
 (`~/.config/sway/config`) like so:
@@ -259,7 +266,7 @@ bindsym $mod+Shift+c exec env RUST_BACKTRACE=1 \
 Of course, configure the keys to your liking.  Again, enabling rust backtraces
 and logging are optional.
 
-### Configuration
+### <a id="swayr-configuration">Configuration</a>
 
 Swayr can be configured using the `~/.config/swayr/config.toml` or
 `/etc/xdg/swayr/config.toml` config file.
@@ -376,9 +383,10 @@ right now.
 * `fallback_icon` is a path to some PNG/SVG icon which will be used as
   `{app_icon}` if no application-specific icon can be determined.
 
-All the placeholders except `{app_icon}`, `{indent}`, `{urgency_start}`, and
-`{urgency_end}` may optionally provide a format string as specified by
-[Rust's std::fmt](https://doc.rust-lang.org/std/fmt/).  The syntax is
+All the <a id="fmt-placeholders">placeholders</a> except `{app_icon}`,
+`{indent}`, `{urgency_start}`, and `{urgency_end}` may optionally provide a
+format string as specified by [Rust's
+std::fmt](https://doc.rust-lang.org/std/fmt/).  The syntax is
 `{<placeholder>:<fmt_str><clipped_str>}`.  For example, `{app_name:{:>10.10}}`
 would mean that the application name is printed with exactly 10 characters.  If
 it's shorter, it will be right-aligned (the `>`) and padded with spaces, if
@@ -442,7 +450,7 @@ over IPC.  Therefore, auto-tiling is triggered by new-window events,
 close-events, move-events, floating-events, and also focus-events.  The latter
 are a workaround and wouldn't be required if there were resize-events.
 
-### Version Changes
+### <a id="swayr-version-changes">Version changes</a>
 
 Since version 0.8.0, I've started writing a [NEWS](swayr/NEWS.md) file listing the
 news, and changes to `swayr` commands or configuration options.  If something
@@ -452,17 +460,134 @@ of your config.
 
 ## <a id="swayrbar">Swayrbar</a>
 
-TODO: Write docs!
+`swayrbar` is a status command for sway's `swaybar` implementing the
+[`swaybar-procotol(7)`](https://man.archlinux.org/man/swaybar-protocol.7).
+This means, you would setup your `swaybar` like so in your
+`~/.config/sway/config`:
+
+```conf
+bar {
+    swaybar_command swaybar
+    # Use swayrbar as status command with some logging output which
+    # is redirected to /tmp/swayrbar.log.  Be sure to only redirect
+    # stderr because the swaybar protocol requires the status_command
+    # to emit JSON to stdout which swaybar reads.
+    status_command env RUST_BACKTRACE=1 RUST_LOG=swayr=debug swayrbar 2> /tmp/swayrbar.log
+    position top
+    font pango:Iosevka 11
+    height 20
+
+    colors {
+        statusline #f8c500
+        background #33333390
+    }
+}
+```
+
+`swayrbar`, like [waybar](https://github.com/Alexays/Waybar/), consists of a
+set of modules which you can enable and configure via its config file, either
+system-wide (`/etc/xdg/swayrbar/config.toml`) or per user
+(`~/.config/swayrbar/config.toml`).  Modules emit information which `swaybar`
+then displays and mouse clicks on a module's space in `swaybar` are propagated
+back and trigger some action (e.g., a shell command).
+
+Right now, there are the following modules:
+
+1. The `window` module can show the title and application name of the current
+   window in sway.
+2. The `sysinfo` module can show things like CPU/memory utilization or system
+   load.
+3. The `battery` module can show the current [state of
+   charge](https://en.wikipedia.org/wiki/State_of_charge), the state (e.g.,
+   charging), and the [state of
+   health](https://en.wikipedia.org/wiki/State_of_health).
+4. The `date` module can show, you guess it, the current date and time!
+
+I guess there will be more modules in the future as time permits.  I personally
+would enjoy a `volume` module.  [Patches](#questions-and-patches) are certainly
+very welcome!
+
+### <a id="swayrbar-configuration">Configuration</a>
+
+When `swayrbar` is run for the very first time and doesn't find an existing
+configuration file at `~/.config/swayrbar/config.toml` (user-specific) or
+`/etc/xdg/swayrbar/config.toml` (system-wide), it'll create a new user-specific
+one where all modules are enabled and set up with some reasonable (according to
+the author) default values.  Adapt it to your needs.
+
+The syntax of the config file is [TOML](https://toml.io/en/).  Here's a short
+example with all top-level options (one!) and one module.
+
+```toml
+refresh_interval = 1000
+
+[[modules]]
+name = 'window'
+instance = '0'
+format = '🪟 {title} — {app_name}'
+html_escape = false
+
+[modules.on_click]
+Left = ['swayr', 'switch-to-urgent-or-lru-window']
+Right = ['kill', '{pid}']
+```
+
+The `refresh_interval` defines the number of milliseconds between refreshes of
+`swaybar`.
+
+The remainder of the configuration defines a list of modules with their
+configuration (which is an [array of
+tables](https://toml.io/en/v1.0.0#array-of-tables) in TOML where a module's
+`on_click`).
+
+* `name` is the name or type of the module, e.g., `window`, `sysinfo`,
+  `battery`, `date`,...
+* `instance` is an arbitrary string used for distinguishing two modules of the
+  same `name`.  For example, you might want to have two `sysinfo` modules, one
+  for CPU and one for memory utilization, simply to have a separator between
+  these different kinds of information.  That's easily doable, just give them
+  different `instance` values.
+* `format` is the string to be printed in `swaybar` where certain placeholders
+  are substituted with module-specific values.  Usually, such placeholders are
+  written like `{title}`, i.e., inside braces.  Like in `swayr`, formatting is
+  available, see [here](#fmt-placeholders).
+* `html_escape` defines if `<` and `>` should be escaped as `&lt;` and `&gt;`
+  because `format` may contain [pango
+  markup](https://docs.gtk.org/Pango/pango_markup.html).  Obviously, if you
+  make use of this feature, you want to set `html_escape = true` for that
+  module.  This option is optional and may be omitted.
+* `on_click` is a table defining actions to be performed when you click on a
+  module's space in `swaybar`.  All placeholders available in `format` are
+  available here, too.  The action for each mouse button is specified as an
+  array `['command', 'arg1', 'arg2',...]`.  The available button names to be
+  assigned to are `Left`, `Middle`, `Right`, `WheelUp`, `WheelDown`,
+  `WheelLeft`, and `WheelRight`.
+
+The `on_click` table can also be written as:
+
+```toml
+on_click = {
+  Left = ['swayr', 'switch-to-urgent-or-lru-window']
+  Right = ['kill', '{pid}']
+}
+```
+
+I think this version is more readable but the version shown in the beginning of
+this section is what the [toml crate](https://crates.io/crates/toml) exports.
+
 
 ## <a id="questions-and-patches">Questions & Patches</a>
 
 For asking questions, sending feedback, or patches, refer to [my public inbox
 (mailinglist)](https://lists.sr.ht/~tsdh/public-inbox).  Please mention the
-project you are referring to in the subject.
+project you are referring to in the subject, e.g., `swayr` or `swayrbar` (or
+other projects in different repositories).
 
 ## <a id="bugs">Bugs</a>
 
-Bugs and requests can be reported [here](https://todo.sr.ht/~tsdh/swayr).
+It compiles, therefore there are no bugs.  Oh well, if you still found one or
+want to request a feature, you can do so
+[here](https://todo.sr.ht/~tsdh/swayr).
 
 ## <a id="build-status">Build status</a>
 
