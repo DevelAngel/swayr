@@ -28,9 +28,18 @@ use sysinfo::SystemExt;
 
 const NAME: &str = "sysinfo";
 
+struct State {
+    cpu_usage: f32,
+    mem_usage: f64,
+    load_avg_1: f64,
+    load_avg_5: f64,
+    load_avg_15: f64,
+}
+
 pub struct BarModuleSysInfo {
     config: config::ModuleConfig,
     system: Mutex<si::System>,
+    state: Mutex<State>,
 }
 
 struct OnceRefresher {
@@ -86,11 +95,37 @@ fn get_load_average(
     }
 }
 
+fn refresh_state(sys: &mut si::System, state: &mut State) {
+    let updater = OnceRefresher::new();
+    state.cpu_usage = get_cpu_usage(sys, &updater);
+    state.mem_usage = get_memory_usage(sys, &updater);
+    state.load_avg_1 = get_load_average(sys, LoadAvg::One, &updater);
+    state.load_avg_5 = get_load_average(sys, LoadAvg::Five, &updater);
+    state.load_avg_15 = get_load_average(sys, LoadAvg::Fifteen, &updater);
+}
+
+fn get_text(fmt: &str, html_escape: bool, state: &State) -> String {
+    format_placeholders!(fmt, html_escape, {
+        "cpu_usage" => state.cpu_usage,
+        "mem_usage" => state.mem_usage,
+        "load_avg_1" => state.load_avg_1,
+        "load_avg_5" => state.load_avg_5,
+        "load_avg_15" => state.load_avg_15,
+    })
+}
+
 impl BarModuleFn for BarModuleSysInfo {
     fn create(config: config::ModuleConfig) -> Box<dyn BarModuleFn> {
         Box::new(BarModuleSysInfo {
             config,
             system: Mutex::new(si::System::new_all()),
+            state: Mutex::new(State {
+                cpu_usage: 0.0,
+                mem_usage: 0.0,
+                load_avg_1: 0.0,
+                load_avg_5: 0.0,
+                load_avg_15: 0.0,
+            }),
         })
     }
 
@@ -111,24 +146,17 @@ impl BarModuleFn for BarModuleSysInfo {
     }
 
     fn build(&self) -> s::Block {
-        let updater = OnceRefresher::new();
+        let mut sys = self.system.lock().expect("Could not lock state.");
+        let mut state = self.state.lock().expect("Could not lock state.");
+        refresh_state(&mut sys, &mut state);
         s::Block {
             name: Some(NAME.to_owned()),
             instance: Some(self.config.instance.clone()),
-            full_text: {
-                let mut sys = self.system.lock().unwrap();
-                format_placeholders!(&self.config.format,
-                                     self.config.is_html_escape(), {
-                    "cpu_usage" => get_cpu_usage(&mut sys, &updater),
-                    "mem_usage" => get_memory_usage(&mut sys, &updater),
-                    "load_avg_1" => get_load_average(&mut sys,
-                                                     LoadAvg::One, &updater),
-                    "load_avg_5" => get_load_average(&mut sys,
-                                                     LoadAvg::Five, &updater),
-                    "load_avg_15" => get_load_average(&mut sys,
-                                                      LoadAvg::Fifteen, &updater),
-                })
-            },
+            full_text: get_text(
+                &self.config.format,
+                self.config.is_html_escape(),
+                &state,
+            ),
             align: Some(s::Align::Left),
             markup: Some(s::Markup::Pango),
             short_text: None,
@@ -146,8 +174,8 @@ impl BarModuleFn for BarModuleSysInfo {
         }
     }
 
-    fn subst_args<'a>(&'a self, _cmd: &'a [String]) -> Option<Vec<String>> {
-        // TOOD: Set a State we can refer to here.
-        todo!()
+    fn subst_args<'a>(&'a self, cmd: &'a [String]) -> Option<Vec<String>> {
+        let state = self.state.lock().expect("Could not lock state.");
+        Some(cmd.iter().map(|arg| get_text(arg, false, &state)).collect())
     }
 }
