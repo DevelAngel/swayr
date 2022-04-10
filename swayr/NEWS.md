@@ -1,3 +1,9 @@
+swayr v0.17.0
+=============
+
+- No user-visible changes but a major restructuring and refactoring in order to
+  share code between swayr and swayrbar.
+
 swayr v0.16.0
 =============
 
