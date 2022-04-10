@@ -4,6 +4,7 @@ version = "0.0.1"
 edition = "2021"
 homepage = "https://sr.ht/~tsdh/swayr/#swayrbar"
 repository = "https://git.sr.ht/~tsdh/swayr"
+description = "A swaybar-protocol implementation for sway/swaybar"
 authors = ["Tassilo Horn <tsdh@gnu.org>"]
 license = "GPL-3.0+"
 
