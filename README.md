@@ -563,17 +563,13 @@ tables](https://toml.io/en/v1.0.0#array-of-tables) in TOML where a module's
   assigned to are `Left`, `Middle`, `Right`, `WheelUp`, `WheelDown`,
   `WheelLeft`, and `WheelRight`.
 
-The `on_click` table can also be written as:
+The `on_click` table can also be written as inline table
 
 ```toml
-on_click = {
-  Left = ['swayr', 'switch-to-urgent-or-lru-window']
-  Right = ['kill', '{pid}']
-}
+on_click = { Left = ['swayr', 'switch-to-urgent-or-lru-window'], Right = ['kill', '{pid}'] }
 ```
 
-I think this version is more readable but the version shown in the beginning of
-this section is what the [toml crate](https://crates.io/crates/toml) exports.
+but then it has to be on one single line.
 
 
 ## <a id="questions-and-patches">Questions & Patches</a>
