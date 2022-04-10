@@ -571,6 +571,36 @@ on_click = { Left = ['swayr', 'switch-to-urgent-or-lru-window'], Right = ['kill'
 
 but then it has to be on one single line.
 
+#### The `window` module
+
+The `window` module supports the following placeholders:
+* `{title}` or `{name}` expand to the currently focused window's title.
+* `{app_name}` is the application name.
+* `{pid}` is the process id.
+
+#### The `sysinfo` module
+
+The `sysinfo` module supports the following placeholders:
+* `{cpu_usage}` is the percentage of CPU utilization.
+* `{mem_usage}` is the percentage of memory utilization.
+* `{load_avg_1}` is the average system load in the last minute.
+* `{load_avg_5}` is the average system load in the last five minutes.
+* `{load_avg_15}` is the average system load in the last fifteen minutes.
+
+#### The `battery` module
+
+The `battery` module supports the following placeholders:
+* `{state_of_charge}` is the percentage of charge wrt. the battery's current
+  capacity.
+* `{state_of_health}` is the percentage of the battery's remaining capacity
+  compared to its original capacity.
+* `{state}` is the current state, e.g., something like Discharging or Full.
+
+#### The `date` module
+
+The `date` module shows the date and time by defining the `format` using
+[chrono's strftime
+format](https://docs.rs/chrono/0.4.19/chrono/format/strftime/index.html#specifiers).
 
 ## <a id="questions-and-patches">Questions & Patches</a>
 
