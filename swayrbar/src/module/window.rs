@@ -38,6 +38,21 @@ pub struct BarModuleWindow {
     state: Mutex<State>,
 }
 
+fn refresh_state(state: &mut State) {
+    let root = ipc::get_root_node(false);
+    let focused_win = root
+        .iter()
+        .find(|n| n.focused && n.get_type() == ipc::Type::Window);
+    match focused_win {
+        Some(win) => {
+            state.name = win.get_name().to_owned();
+            state.app_name = win.get_app_name().to_owned();
+            state.pid = win.pid.unwrap_or(-1);
+        }
+        None => state.pid = -1,
+    };
+}
+
 fn subst_placeholders(s: &str, html_escape: bool, state: &State) -> String {
     format_placeholders!(s, html_escape, {
         "title" | "name"  => state.name.clone(),
@@ -85,25 +100,18 @@ impl BarModuleFn for BarModuleWindow {
     }
 
     fn build(&self) -> s::Block {
-        let root = ipc::get_root_node(false);
-        let focused_win = root
-            .iter()
-            .find(|n| n.focused && n.get_type() == ipc::Type::Window);
-        let text = match focused_win {
-            Some(win) => {
-                let mut state =
-                    self.state.lock().expect("Couldn't lock state!");
-                state.name = win.get_name().to_owned();
-                state.app_name = win.get_app_name().to_owned();
-                state.pid = win.pid.unwrap_or(-1);
-                subst_placeholders(
-                    &self.config.format,
-                    self.config.is_html_escape(),
-                    &*state,
-                )
-            }
-            None => String::new(),
+        let mut state = self.state.lock().expect("Could not lock state.");
+        refresh_state(&mut state);
+        let text = if state.pid == -1 {
+            String::new()
+        } else {
+            subst_placeholders(
+                &self.config.format,
+                self.config.is_html_escape(),
+                &state,
+            )
         };
+
         s::Block {
             name: Some(NAME.to_owned()),
             instance: Some(self.config.instance.clone()),
