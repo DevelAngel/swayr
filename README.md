@@ -1,7 +1,6 @@
 # Swayr & Swayrbar
 
 [![builds.sr.ht status](https://builds.sr.ht/~tsdh/swayr.svg)](https://builds.sr.ht/~tsdh/swayr?)
-[![latest release](https://img.shields.io/crates/v/swayr.svg)](https://crates.io/crates/swayr)
 [![License GPL 3 or later](https://img.shields.io/crates/l/swayr.svg)](https://www.gnu.org/licenses/gpl-3.0.en.html)
 [![dependency status](https://deps.rs/repo/sourcehut/~tsdh/swayr/status.svg)](https://deps.rs/repo/sourcehut/~tsdh/swayr)
 [![Hits-of-Code](https://hitsofcode.com/sourcehut/~tsdh/swayr?branch=main)](https://hitsofcode.com/sourcehut/~tsdh/swayr/view?branch=main)
@@ -24,6 +23,8 @@
 * [License](#license)
 
 ## <a id="swayr">Swayr, a window-switcher & more for [sway](https://swaywm.org/)</a>
+
+[![latest release](https://img.shields.io/crates/v/swayr.svg)](https://crates.io/crates/swayr)
 
 Swayr consists of a demon, and a client.  The demon `swayrd` records
 window/workspace creations, deletions, and focus changes using sway's JSON IPC
@@ -460,6 +461,8 @@ check if there has been some (possibly incompatible) change requiring an update
 of your config.
 
 ## <a id="swayrbar">Swayrbar</a>
+
+[![latest release](https://img.shields.io/crates/v/swayrbar.svg)](https://crates.io/crates/swayrbar)
 
 `swayrbar` is a status command for sway's `swaybar` implementing the
 [`swaybar-procotol(7)`](https://man.archlinux.org/man/swaybar-protocol.7).
