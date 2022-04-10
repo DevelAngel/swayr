@@ -16,6 +16,7 @@
   * [Configuration](#swayr-configuration)
   * [Version changes](#swayr-version-changes)
 * [Swayrbar](#swayrbar)
+  * [Installation](#swayrbar-installation)
   * [Configuration](#swayrbar-configuration)
 * [Questions and patches](#questions-and-patches)
 * [Bugs](#bugs)
@@ -507,6 +508,30 @@ I guess there will be more modules in the future as time permits.  I personally
 would enjoy a `volume` module.  [Patches](#questions-and-patches) are certainly
 very welcome!
 
+### <a id="swayrbar-installation">Installation</a>
+
+You'll need to install the current stable rust toolchain using the one-liner
+shown at the [official rust installation
+page](https://www.rust-lang.org/tools/install).
+
+Then you can install swayrbar like so:
+```sh
+cargo install swayrbar
+```
+
+For getting updates easily, I recommend the cargo `install-update` plugin.
+```sh
+# Install it once.
+cargo install install-update
+
+# Then you can update all installed rust binary crates including swayr using:
+cargo install-update --all
+
+# If you only want to update swayr, you can do so using:
+cargo install-update -- swayrbar
+```
+
+
 ### <a id="swayrbar-configuration">Configuration</a>
 
 When `swayrbar` is run for the very first time and doesn't find an existing
@@ -549,10 +574,11 @@ tables](https://toml.io/en/v1.0.0#array-of-tables) in TOML where a module's
   different `instance` values.
 * `format` is the string to be printed in `swaybar` where certain placeholders
   are substituted with module-specific values.  Usually, such placeholders are
-  written like `{title}`, i.e., inside braces.  Like in `swayr`, formatting is
-  available, see [here](#fmt-placeholders).
-* `html_escape` defines if `<` and `>` should be escaped as `&lt;` and `&gt;`
-  because `format` may contain [pango
+  written like `{title}`, i.e., inside braces.  Like in `swayr`, formatting
+  (padding, aligning, precision, etc.) is available, see
+  [here](#fmt-placeholders).
+* `html_escape` defines if `<`, `>`, and `&` should be escaped as `&lt;`,
+  `&gt;`, and `&amp;` because `format` may contain [pango
   markup](https://docs.gtk.org/Pango/pango_markup.html).  Obviously, if you
   make use of this feature, you want to set `html_escape = true` for that
   module.  This option is optional and may be omitted.

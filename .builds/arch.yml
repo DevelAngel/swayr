@@ -7,4 +7,5 @@ tasks:
   - build: |
       cd swayr
       cargo build
+      cargo test
       cargo clippy
