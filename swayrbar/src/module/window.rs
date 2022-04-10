@@ -38,7 +38,7 @@ pub struct BarModuleWindow {
     state: Mutex<State>,
 }
 
-fn subst_placeholders(s: &str, state: &State, html_escape: bool) -> String {
+fn subst_placeholders(s: &str, html_escape: bool, state: &State) -> String {
     format_placeholders!(s, html_escape, {
         "title" | "name"  => state.name.clone(),
         "app_name" => state.app_name.clone(),
@@ -98,8 +98,8 @@ impl BarModuleFn for BarModuleWindow {
                 state.pid = win.pid.unwrap_or(-1);
                 subst_placeholders(
                     &self.config.format,
-                    &*state,
                     self.config.is_html_escape(),
+                    &*state,
                 )
             }
             None => String::new(),
@@ -142,7 +142,7 @@ impl BarModuleFn for BarModuleWindow {
         let state = self.state.lock().expect("Could not lock state.");
         let cmd = cmd
             .iter()
-            .map(|arg| subst_placeholders(arg, &*state, false))
+            .map(|arg| subst_placeholders(arg, false, &*state))
             .collect();
         Some(cmd)
     }

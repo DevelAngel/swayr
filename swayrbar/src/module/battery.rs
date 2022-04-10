@@ -50,14 +50,13 @@ fn get_refreshed_batteries(
     Ok(bats)
 }
 
-fn set_state(state: &Mutex<State>) {
+fn refresh_state(state: &mut State) {
     // FIXME: Creating the Manager on every refresh is bad but internally
     // it uses an Rc so if I keep it as a field of BarModuleBattery, that
     // cannot be Sync.
     let manager = battery::Manager::new().unwrap();
     match get_refreshed_batteries(&manager) {
         Ok(bats) => {
-            let mut state = state.lock().expect("Could not lock state.");
             state.state_of_charge =
                 bats.iter().map(|b| b.state_of_charge().value).sum::<f32>()
                     / bats.len() as f32
@@ -95,8 +94,7 @@ fn set_state(state: &Mutex<State>) {
     }
 }
 
-fn get_text(fmt: &str, html_escape: bool, state: &Mutex<State>) -> String {
-    let state = state.lock().expect("Could not lock state.");
+fn get_text(fmt: &str, html_escape: bool, state: &State) -> String {
     format_placeholders!(fmt, html_escape, {
         "state_of_charge" => state.state_of_charge,
         "state_of_health" => state.state_of_health,
@@ -131,12 +129,10 @@ impl BarModuleFn for BarModuleBattery {
     }
 
     fn build(&self) -> s::Block {
-        set_state(&self.state);
-        let text = get_text(
-            &self.config.format,
-            self.config.is_html_escape(),
-            &self.state,
-        );
+        let mut state = self.state.lock().expect("Could not lock state.");
+        refresh_state(&mut state);
+        let text =
+            get_text(&self.config.format, self.config.is_html_escape(), &state);
         s::Block {
             name: Some(NAME.to_owned()),
             instance: Some(self.config.instance.clone()),
@@ -159,10 +155,7 @@ impl BarModuleFn for BarModuleBattery {
     }
 
     fn subst_args<'a>(&'a self, cmd: &'a [String]) -> Option<Vec<String>> {
-        Some(
-            cmd.iter()
-                .map(|arg| get_text(arg, false, &self.state))
-                .collect(),
-        )
+        let state = self.state.lock().expect("Could not lock state.");
+        Some(cmd.iter().map(|arg| get_text(arg, false, &state)).collect())
     }
 }
