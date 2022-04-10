@@ -218,7 +218,7 @@ macro_rules! subst_placeholders {
                                 .map_or("", |m| m.as_str());
                             $crate::shared::fmt::maybe_html_escape(
                                 $html_escape,
-                                $crate::shared::fmt::do_format(fmt_str, val, clipped_str),
+                                $crate::shared::fmt::rt_format(fmt_str, val, clipped_str),
                             )
                         }
                     )+
