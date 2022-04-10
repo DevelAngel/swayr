@@ -16,7 +16,7 @@
 //! Convenience data structures built from the IPC structs.
 
 use crate::config;
-use crate::shared::fmt::format_placeholders;
+use crate::shared::fmt::subst_placeholders;
 use crate::shared::ipc;
 use crate::shared::ipc::NodeMethods;
 use crate::util;
@@ -370,7 +370,7 @@ impl DisplayFormat for DisplayNode<'_> {
                     .as_str(),
             );
 
-        format_placeholders!(&fmt, html_escape, {
+        subst_placeholders!(&fmt, html_escape, {
             "id" => self.node.id,
             "app_name" => self.node.get_app_name(),
             "layout" => format!("{:?}", self.node.layout),

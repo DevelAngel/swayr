@@ -120,7 +120,7 @@ impl FormatArgument for FmtArg {
     }
 }
 
-pub fn do_format(fmt: &str, arg: FmtArg, clipped_str: &str) -> String {
+pub fn rt_format(fmt: &str, arg: FmtArg, clipped_str: &str) -> String {
     let arg_string = arg.to_string();
 
     if let Ok(pf) = ParsedFormat::parse(fmt, &[arg], &NoNamedArguments) {
@@ -145,21 +145,21 @@ fn remove_last_n_chars(s: &mut String, n: usize) {
 
 #[test]
 fn test_format() {
-    assert_eq!(do_format("{:.10}", FmtArg::from("sway"), ""), "sway");
-    assert_eq!(do_format("{:.10}", FmtArg::from("sway"), "…"), "sway");
-    assert_eq!(do_format("{:.4}", FmtArg::from("𝔰𝔴𝔞𝔶"), "……"), "𝔰𝔴𝔞𝔶");
+    assert_eq!(rt_format("{:.10}", FmtArg::from("sway"), ""), "sway");
+    assert_eq!(rt_format("{:.10}", FmtArg::from("sway"), "…"), "sway");
+    assert_eq!(rt_format("{:.4}", FmtArg::from("𝔰𝔴𝔞𝔶"), "……"), "𝔰𝔴𝔞𝔶");
 
-    assert_eq!(do_format("{:.3}", FmtArg::from("sway"), ""), "swa");
-    assert_eq!(do_format("{:.3}", FmtArg::from("sway"), "…"), "sw…");
+    assert_eq!(rt_format("{:.3}", FmtArg::from("sway"), ""), "swa");
+    assert_eq!(rt_format("{:.3}", FmtArg::from("sway"), "…"), "sw…");
     assert_eq!(
-        do_format("{:.5}", FmtArg::from("𝔰𝔴𝔞𝔶 𝔴𝔦𝔫𝔡𝔬𝔴"), "…?"),
+        rt_format("{:.5}", FmtArg::from("𝔰𝔴𝔞𝔶 𝔴𝔦𝔫𝔡𝔬𝔴"), "…?"),
         "𝔰𝔴𝔞…?"
     );
     assert_eq!(
-        do_format("{:.5}", FmtArg::from("sway window"), "..."),
+        rt_format("{:.5}", FmtArg::from("sway window"), "..."),
         "sw..."
     );
-    assert_eq!(do_format("{:.2}", FmtArg::from("sway"), "..."), "...");
+    assert_eq!(rt_format("{:.2}", FmtArg::from("sway"), "..."), "...");
 }
 
 pub static PLACEHOLDER_RX: Lazy<Regex> = Lazy::new(|| {
@@ -202,7 +202,7 @@ pub fn maybe_html_escape(do_it: bool, text: String) -> String {
     }
 }
 
-macro_rules! format_placeholders {
+macro_rules! subst_placeholders {
     ( $fmt_str:expr, $html_escape:expr,
       { $( $($pat:pat_param)|+ => $exp:expr, )+ }
     ) => {
@@ -229,13 +229,13 @@ macro_rules! format_placeholders {
     };
 }
 
-pub(crate) use format_placeholders;
+pub(crate) use subst_placeholders;
 
 #[test]
-fn test_format_placeholders() {
+fn test_subst_placeholders() {
     let foo = "{a}, {b} = {d}";
     let html_escape = true;
-    let x: String = format_placeholders!(foo, html_escape, {
+    let x: String = subst_placeholders!(foo, html_escape, {
         "a" => "1".to_string(),
         "b" | "d" =>  "2".to_string(),
         "c" => "3".to_owned(),

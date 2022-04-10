@@ -17,7 +17,7 @@
 
 use crate::config;
 use crate::module::BarModuleFn;
-use crate::shared::fmt::format_placeholders;
+use crate::shared::fmt::subst_placeholders;
 use std::collections::HashMap;
 use std::sync::Mutex;
 use std::sync::Once;
@@ -105,7 +105,7 @@ fn refresh_state(sys: &mut si::System, state: &mut State) {
 }
 
 fn get_text(fmt: &str, html_escape: bool, state: &State) -> String {
-    format_placeholders!(fmt, html_escape, {
+    subst_placeholders!(fmt, html_escape, {
         "cpu_usage" => state.cpu_usage,
         "mem_usage" => state.mem_usage,
         "load_avg_1" => state.load_avg_1,

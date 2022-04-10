@@ -20,7 +20,7 @@ use std::sync::Mutex;
 
 use crate::config;
 use crate::module::BarModuleFn;
-use crate::shared::fmt::format_placeholders;
+use crate::shared::fmt::subst_placeholders;
 use crate::shared::ipc;
 use crate::shared::ipc::NodeMethods;
 use swaybar_types as s;
@@ -54,7 +54,7 @@ fn refresh_state(state: &mut State) {
 }
 
 fn subst_placeholders(s: &str, html_escape: bool, state: &State) -> String {
-    format_placeholders!(s, html_escape, {
+    subst_placeholders!(s, html_escape, {
         "title" | "name"  => state.name.clone(),
         "app_name" => state.app_name.clone(),
         "pid" => state.pid,

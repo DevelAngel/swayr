@@ -17,7 +17,7 @@
 
 use crate::config;
 use crate::module::BarModuleFn;
-use crate::shared::fmt::format_placeholders;
+use crate::shared::fmt::subst_placeholders;
 use battery as bat;
 use std::collections::HashSet;
 use std::sync::Mutex;
@@ -95,7 +95,7 @@ fn refresh_state(state: &mut State) {
 }
 
 fn get_text(fmt: &str, html_escape: bool, state: &State) -> String {
-    format_placeholders!(fmt, html_escape, {
+    subst_placeholders!(fmt, html_escape, {
         "state_of_charge" => state.state_of_charge,
         "state_of_health" => state.state_of_health,
         "state" => state.state.as_str(),
