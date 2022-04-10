@@ -133,7 +133,7 @@ impl BarModuleFn for BarModuleSysInfo {
         config::ModuleConfig {
             name: NAME.to_owned(),
             instance,
-            format: "💻 CPU: {cpu_usage:{:4.1}}% Mem: {mem_usage:{:4.1}}% Load: {load_avg_1:{:4.2}} / {load_avg_5:{:4.2}} / {load_avg_15:{:4.2}}".to_owned(),
+            format: "💻 CPU: {cpu_usage:{:5.1}}% Mem: {mem_usage:{:5.1}}% Load: {load_avg_1:{:5.2}} / {load_avg_5:{:5.2}} / {load_avg_15:{:5.2}}".to_owned(),
             html_escape: Some(false),
             on_click: Some(HashMap::from([
                ("Left".to_owned(),
