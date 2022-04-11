@@ -15,6 +15,7 @@
   * [Configuration](#swayr-configuration)
   * [Version changes](#swayr-version-changes)
 * [Swayrbar](#swayrbar)
+  * [Screenshots](#swayrbar-screenshots)
   * [Installation](#swayrbar-installation)
   * [Configuration](#swayrbar-configuration)
 * [Questions and patches](#questions-and-patches)
@@ -511,9 +512,9 @@ I guess there will be more modules in the future as time permits.  I personally
 would enjoy a `volume` module.  [Patches](#questions-and-patches) are certainly
 very welcome!
 
-### <a id="swayrbar-screenshot">Screenshot</a>
+### <a id="swayrbar-screenshots">Screenshots</a>
 
-![A screenshot of swaybar runnung with swayrbar](misc/swayrbar.png "swaybar
+![A screenshot of swaybar running with swayrbar](misc/swayrbar.png "swaybar
 with swayrbar")
 
 ### <a id="swayrbar-installation">Installation</a>
