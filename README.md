@@ -511,6 +511,11 @@ I guess there will be more modules in the future as time permits.  I personally
 would enjoy a `volume` module.  [Patches](#questions-and-patches) are certainly
 very welcome!
 
+### <a id="swayrbar-screenshot">Screenshot</a>
+
+![A screenshot of swaybar runnung with swayrbar](misc/swayrbar.png "swaybar
+with swayrbar")
+
 ### <a id="swayrbar-installation">Installation</a>
 
 You'll need to install the current stable rust toolchain using the one-liner
