@@ -22,6 +22,9 @@ use env_logger::Env;
 use serde_json;
 use std::io;
 use std::process as p;
+use std::sync::Condvar;
+use std::sync::Mutex;
+use std::time::Duration;
 use std::{sync::Arc, thread};
 use swaybar_types as sbt;
 
@@ -33,8 +36,10 @@ pub fn start() {
     let refresh_interval = config.refresh_interval;
     let mods: Arc<Vec<Box<dyn BarModuleFn>>> = Arc::new(create_modules(config));
     let mods_for_input = mods.clone();
-    thread::spawn(move || handle_input(mods_for_input));
-    generate_status(&mods, refresh_interval);
+    let trigger = Arc::new((Mutex::new(()), Condvar::new()));
+    let trigger_for_input = trigger.clone();
+    thread::spawn(move || handle_input(mods_for_input, trigger_for_input));
+    generate_status(&mods, trigger, refresh_interval);
 }
 
 fn create_modules(config: config::Config) -> Vec<Box<dyn BarModuleFn>> {
@@ -55,7 +60,10 @@ fn create_modules(config: config::Config) -> Vec<Box<dyn BarModuleFn>> {
     mods
 }
 
-pub fn handle_input(mods: Arc<Vec<Box<dyn BarModuleFn>>>) {
+pub fn handle_input(
+    mods: Arc<Vec<Box<dyn BarModuleFn>>>,
+    trigger: Arc<(Mutex<()>, Condvar)>,
+) {
     let mut sb = String::new();
     io::stdin()
         .read_line(&mut sb)
@@ -87,7 +95,10 @@ pub fn handle_input(mods: Arc<Vec<Box<dyn BarModuleFn>>>) {
             }
         };
         log::debug!("Received click: {:?}", click);
-        handle_click(click, mods.clone());
+        if handle_click(click, mods.clone()).is_some() {
+            let (_, cvar) = &*trigger;
+            cvar.notify_one();
+        }
     }
 }
 
@@ -105,6 +116,9 @@ fn handle_click(
                     Some(cmd) => execute_command(&cmd),
                     None => execute_command(cmd),
                 }
+                // Wait a bit so that the action of the click has shown its
+                // effect, e.g., the window has been switched.
+                thread::sleep(Duration::from_millis(50));
                 return Some(());
             }
         }
@@ -114,9 +128,17 @@ fn handle_click(
 }
 
 fn execute_command(cmd: &[String]) {
-    log::debug!("Executing cmd: {:?}", cmd);
-    match p::Command::new(&cmd[0]).args(&cmd[1..]).spawn() {
-        Ok(_child) => (),
+    log::debug!("Executing command: {:?}", cmd);
+    match p::Command::new(&cmd[0]).args(&cmd[1..]).status() {
+        Ok(exit_status) => {
+            // TODO: Better use exit_ok() once that has stabilized.
+            if !exit_status.success() {
+                log::warn!(
+                    "Command finished with status code {:?}.",
+                    exit_status.code()
+                )
+            }
+        }
         Err(err) => {
             log::error!("Error running shell command '{}':", cmd.join(" "));
             log::error!("{}", err);
@@ -124,7 +146,11 @@ fn execute_command(cmd: &[String]) {
     }
 }
 
-pub fn generate_status(mods: &[Box<dyn BarModuleFn>], refresh_interval: u64) {
+pub fn generate_status(
+    mods: &[Box<dyn BarModuleFn>],
+    trigger: Arc<(Mutex<()>, Condvar)>,
+    refresh_interval: u64,
+) {
     println!("{{\"version\": 1, \"click_events\": true}}");
     // status_command should output an infinite array meaning we emit an
     // opening [ and never the closing bracket.
@@ -138,6 +164,14 @@ pub fn generate_status(mods: &[Box<dyn BarModuleFn>], refresh_interval: u64) {
         let json = serde_json::to_string_pretty(&blocks)
             .unwrap_or_else(|_| "".to_string());
         println!("{},", json);
-        thread::sleep(std::time::Duration::from_millis(refresh_interval));
+
+        let (lock, cvar) = &*trigger;
+        let triggered = lock.lock().unwrap();
+        let result = cvar
+            .wait_timeout(triggered, Duration::from_millis(refresh_interval))
+            .unwrap();
+        if !result.1.timed_out() {
+            log::debug!("Status writing thread waked up early by click event.");
+        }
     }
 }
