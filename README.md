@@ -507,6 +507,8 @@ Right now, there are the following modules:
    charging), and the [state of
    health](https://en.wikipedia.org/wiki/State_of_health).
 4. The `date` module can show, you guess it, the current date and time!
+5. The `pactl` module can show the current volume percentage and muted state.
+   Clicks can increase/decrease the volume or toggle the mute state.
 
 I guess there will be more modules in the future as time permits.  I personally
 would enjoy a `volume` module.  [Patches](#questions-and-patches) are certainly
@@ -606,12 +608,18 @@ on_click = { Left = ['swayr', 'switch-to-urgent-or-lru-window'], Right = ['kill'
 
 but then it has to be on one single line.
 
+
 #### The `window` module
 
 The `window` module supports the following placeholders:
 * `{title}` or `{name}` expand to the currently focused window's title.
 * `{app_name}` is the application name.
 * `{pid}` is the process id.
+
+By default, it has the following click bindings:
+* `Left` executes `swayr switch-to-urgent-or-lru-window`.
+* `Right` kills the process of the window.
+
 
 #### The `sysinfo` module
 
@@ -622,6 +630,10 @@ The `sysinfo` module supports the following placeholders:
 * `{load_avg_5}` is the average system load in the last five minutes.
 * `{load_avg_15}` is the average system load in the last fifteen minutes.
 
+By default, it has the following click bindings:
+* `Left` executes `foot htop`.
+
+
 #### The `battery` module
 
 The `battery` module supports the following placeholders:
@@ -630,6 +642,21 @@ The `battery` module supports the following placeholders:
 * `{state_of_health}` is the percentage of the battery's remaining capacity
   compared to its original capacity.
 * `{state}` is the current state, e.g., something like Discharging or Full.
+
+
+#### The `pactl` module
+
+The `pactl` module requires the pulse-audio command line tool of the same name
+to be installed.  It supports the following placeholders:
+* `{volume}` is the current volume percentage of the default sink.
+* `{muted}` is the string `" muted"` if the default sink is currently muted,
+  otherwise it is the empty string.
+
+By default, it has the following click bindings:
+* `Left` calls the `pavucontrol` program (PulseAudio GUI control).
+* `Right` toggles the default sink's mute state.
+* `WheelUp` and `WheelDown` increase/decrease the volume of the default sink.
+
 
 #### The `date` module
 
