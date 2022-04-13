@@ -23,6 +23,7 @@ use std::fmt;
 pub enum FmtArg {
     I64(i64),
     I32(i32),
+    U8(u8),
     F64(f64),
     F32(f32),
     String(String),
@@ -37,6 +38,12 @@ impl From<i64> for FmtArg {
 impl From<i32> for FmtArg {
     fn from(x: i32) -> FmtArg {
         FmtArg::I32(x)
+    }
+}
+
+impl From<u8> for FmtArg {
+    fn from(x: u8) -> FmtArg {
+        FmtArg::U8(x)
     }
 }
 
@@ -70,6 +77,7 @@ impl ToString for FmtArg {
             FmtArg::String(x) => x.clone(),
             FmtArg::I64(x) => x.to_string(),
             FmtArg::I32(x) => x.to_string(),
+            FmtArg::U8(x) => x.to_string(),
             FmtArg::F64(x) => x.to_string(),
             FmtArg::F32(x) => x.to_string(),
         }
@@ -86,6 +94,7 @@ impl FormatArgument for FmtArg {
             Self::String(val) => fmt::Display::fmt(&val, f),
             Self::I64(val) => fmt::Display::fmt(&val, f),
             Self::I32(val) => fmt::Display::fmt(&val, f),
+            Self::U8(val) => fmt::Display::fmt(&val, f),
             Self::F64(val) => fmt::Display::fmt(&val, f),
             Self::F32(val) => fmt::Display::fmt(&val, f),
         }

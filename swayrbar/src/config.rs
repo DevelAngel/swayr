@@ -58,6 +58,9 @@ impl Default for Config {
                 crate::module::battery::BarModuleBattery::default_config(
                     "0".to_owned(),
                 ),
+                crate::module::pactl::BarModulePactl::default_config(
+                    "0".to_owned(),
+                ),
                 crate::module::date::BarModuleDate::default_config(
                     "0".to_owned(),
                 ),

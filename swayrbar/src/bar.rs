@@ -50,6 +50,7 @@ fn create_modules(config: config::Config) -> Vec<Box<dyn BarModuleFn>> {
             "sysinfo" => module::sysinfo::BarModuleSysInfo::create(mc),
             "battery" => module::battery::BarModuleBattery::create(mc),
             "date" => module::date::BarModuleDate::create(mc),
+            "pactl" => module::pactl::BarModulePactl::create(mc),
             unknown => {
                 log::warn!("Unknown module name '{}'.  Ignoring...", unknown);
                 continue;
