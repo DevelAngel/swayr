@@ -19,7 +19,7 @@ use std::collections::HashMap;
 use std::sync::Mutex;
 
 use crate::config;
-use crate::module::BarModuleFn;
+use crate::module::{should_refresh, BarModuleFn, NameAndInstance};
 use crate::shared::fmt::subst_placeholders;
 use crate::shared::ipc;
 use crate::shared::ipc::NodeMethods;
@@ -99,9 +99,13 @@ impl BarModuleFn for BarModuleWindow {
         &self.config
     }
 
-    fn build(&self) -> s::Block {
+    fn build(&self, nai: &Option<NameAndInstance>) -> s::Block {
         let mut state = self.state.lock().expect("Could not lock state.");
-        refresh_state(&mut state);
+
+        if should_refresh(self, nai) {
+            refresh_state(&mut state);
+        }
+
         let text = if state.pid == -1 {
             String::new()
         } else {

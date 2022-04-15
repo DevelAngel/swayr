@@ -24,6 +24,16 @@ pub mod pactl;
 pub mod sysinfo;
 pub mod window;
 
+pub type NameAndInstance = (String, String);
+
+fn should_refresh(m: &dyn BarModuleFn, nai: &Option<NameAndInstance>) -> bool {
+    let cfg = m.get_config();
+    match nai {
+        None => true,
+        Some((n, i)) => n == &cfg.name && i == &cfg.instance,
+    }
+}
+
 pub trait BarModuleFn: Sync + Send {
     fn create(config: config::ModuleConfig) -> Box<dyn BarModuleFn>
     where
@@ -44,6 +54,6 @@ pub trait BarModuleFn: Sync + Send {
             None
         }
     }
-    fn build(&self) -> s::Block;
+    fn build(&self, nai: &Option<NameAndInstance>) -> s::Block;
     fn subst_args<'a>(&'a self, _cmd: &'a [String]) -> Option<Vec<String>>;
 }

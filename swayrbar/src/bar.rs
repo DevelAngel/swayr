@@ -17,7 +17,7 @@
 
 use crate::config;
 use crate::module;
-use crate::module::BarModuleFn;
+use crate::module::{BarModuleFn, NameAndInstance};
 use env_logger::Env;
 use serde_json;
 use std::io;
@@ -36,7 +36,8 @@ pub fn start() {
     let refresh_interval = config.refresh_interval;
     let mods: Arc<Vec<Box<dyn BarModuleFn>>> = Arc::new(create_modules(config));
     let mods_for_input = mods.clone();
-    let trigger = Arc::new((Mutex::new(()), Condvar::new()));
+    let trigger =
+        Arc::new((Mutex::new((String::new(), String::new())), Condvar::new()));
     let trigger_for_input = trigger.clone();
     thread::spawn(move || handle_input(mods_for_input, trigger_for_input));
     generate_status(&mods, trigger, refresh_interval);
@@ -63,7 +64,7 @@ fn create_modules(config: config::Config) -> Vec<Box<dyn BarModuleFn>> {
 
 pub fn handle_input(
     mods: Arc<Vec<Box<dyn BarModuleFn>>>,
-    trigger: Arc<(Mutex<()>, Condvar)>,
+    trigger: Arc<(Mutex<NameAndInstance>, Condvar)>,
 ) {
     let mut sb = String::new();
     io::stdin()
@@ -96,8 +97,11 @@ pub fn handle_input(
             }
         };
         log::debug!("Received click: {:?}", click);
-        if handle_click(click, mods.clone()).is_some() {
-            let (_, cvar) = &*trigger;
+        if let Some((name, instance)) = handle_click(click, mods.clone()) {
+            let (mtx, cvar) = &*trigger;
+            let mut name_and_instance = mtx.lock().unwrap();
+            name_and_instance.0 = name;
+            name_and_instance.1 = instance;
             cvar.notify_one();
         }
     }
@@ -106,7 +110,7 @@ pub fn handle_input(
 fn handle_click(
     click: sbt::Click,
     mods: Arc<Vec<Box<dyn BarModuleFn>>>,
-) -> Option<()> {
+) -> Option<NameAndInstance> {
     let name = click.name?;
     let instance = click.instance?;
     let button_str = format!("{:?}", click.button);
@@ -119,8 +123,9 @@ fn handle_click(
                 }
                 // Wait a bit so that the action of the click has shown its
                 // effect, e.g., the window has been switched.
-                thread::sleep(Duration::from_millis(50));
-                return Some(());
+                thread::sleep(Duration::from_millis(25));
+                let cfg = m.get_config();
+                return Some((cfg.name.clone(), cfg.instance.clone()));
             }
         }
     }
@@ -149,7 +154,7 @@ fn execute_command(cmd: &[String]) {
 
 pub fn generate_status(
     mods: &[Box<dyn BarModuleFn>],
-    trigger: Arc<(Mutex<()>, Condvar)>,
+    trigger: Arc<(Mutex<NameAndInstance>, Condvar)>,
     refresh_interval: u64,
 ) {
     println!("{{\"version\": 1, \"click_events\": true}}");
@@ -157,22 +162,30 @@ pub fn generate_status(
     // opening [ and never the closing bracket.
     println!("[");
 
+    let mut name_and_instance: Option<NameAndInstance> = None;
+
     loop {
         let mut blocks = vec![];
         for m in mods {
-            blocks.push(m.build());
+            blocks.push(m.build(&name_and_instance));
         }
         let json = serde_json::to_string_pretty(&blocks)
             .unwrap_or_else(|_| "".to_string());
         println!("{},", json);
 
         let (lock, cvar) = &*trigger;
-        let triggered = lock.lock().unwrap();
         let result = cvar
-            .wait_timeout(triggered, Duration::from_millis(refresh_interval))
+            .wait_timeout(
+                lock.lock().unwrap(),
+                Duration::from_millis(refresh_interval),
+            )
             .unwrap();
-        if !result.1.timed_out() {
-            log::debug!("Status writing thread waked up early by click event.");
+        if result.1.timed_out() {
+            name_and_instance = None;
+        } else {
+            name_and_instance = Some((*result.0).clone());
+            log::debug!("Status writing thread waked up early by click event for {}/{}.",
+                        &result.0.0, & result.0.1);
         }
     }
 }

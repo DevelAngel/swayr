@@ -16,7 +16,7 @@
 //! The date `swayrbar` module.
 
 use crate::module::config;
-use crate::module::BarModuleFn;
+use crate::module::{BarModuleFn, NameAndInstance};
 use swaybar_types as s;
 
 const NAME: &str = "date";
@@ -61,7 +61,7 @@ impl BarModuleFn for BarModuleDate {
         }
     }
 
-    fn build(&self) -> s::Block {
+    fn build(&self, _nai: &Option<NameAndInstance>) -> s::Block {
         let text = chrono_format(&self.config.format);
         s::Block {
             name: Some(NAME.to_owned()),
