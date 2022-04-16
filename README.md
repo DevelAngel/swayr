@@ -510,9 +510,8 @@ Right now, there are the following modules:
 5. The `pactl` module can show the current volume percentage and muted state.
    Clicks can increase/decrease the volume or toggle the mute state.
 
-I guess there will be more modules in the future as time permits.  I personally
-would enjoy a `volume` module.  [Patches](#questions-and-patches) are certainly
-very welcome!
+I guess there will be more modules in the future as time permits.
+[Patches](#questions-and-patches) are certainly very welcome!
 
 ### <a id="swayrbar-screenshots">Screenshots</a>
 
