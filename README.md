@@ -522,8 +522,8 @@ with swayrbar")
 
 Some distros have a swayrbar package so that you can install it using your
 distro's package manager, see the [repology
-site](https://repology.org/project/swayr/versions) for details.  Alternatively,
-it's easy to build and install it yourself using `cargo`.
+site](https://repology.org/project/swayrbar/versions) for details.
+Alternatively, it's easy to build and install it yourself using `cargo`.
 
 [![Packaging status](https://repology.org/badge/vertical-allrepos/swayrbar.svg)](https://repology.org/project/swayrbar/versions)
 
