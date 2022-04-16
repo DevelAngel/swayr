@@ -185,8 +185,9 @@ switch-workspace-or-window")
 ### <a id="swayr-installation">Installation</a>
 
 Some distros have packaged swayr so that you can install it using your distro's
-package manager.  Alternatively, it's easy to build and install it yourself
-using `cargo`.
+package manager, see the [repology
+site](https://repology.org/project/swayr/versions) for details.  Alternatively,
+it's easy to build and install it yourself using `cargo`.
 
 #### Distro packages
 
@@ -519,6 +520,15 @@ I guess there will be more modules in the future as time permits.
 with swayrbar")
 
 ### <a id="swayrbar-installation">Installation</a>
+
+Some distros have a swayrbar package so that you can install it using your
+distro's package manager.  Alternatively, it's easy to build and install it
+yourself using `cargo`.
+
+[![Packaging status](https://repology.org/badge/vertical-allrepos/swayrbar.svg)](https://repology.org/project/swayrbar/versions)
+
+
+#### Installation via Cargo
 
 You'll need to install the current stable rust toolchain using the one-liner
 shown at the [official rust installation
