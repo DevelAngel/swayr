@@ -1,2 +1,8 @@
+Swayr
+=====
+
+Swayrbar
+========
 - Maybe add a launcher bar module
-- Add a volume control bar module
+- Make the window module subscribe to sway window events and trigger an early
+  refresh on focus changes.
