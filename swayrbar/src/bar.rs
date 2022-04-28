@@ -27,6 +27,7 @@ use std::sync::Mutex;
 use std::time::Duration;
 use std::{sync::Arc, thread};
 use swaybar_types as sbt;
+use swayipc as si;
 
 pub fn start() {
     env_logger::Builder::from_env(Env::default().default_filter_or("warn"))
@@ -38,8 +39,24 @@ pub fn start() {
     let mods_for_input = mods.clone();
     let trigger =
         Arc::new((Mutex::new((String::new(), String::new())), Condvar::new()));
+
     let trigger_for_input = trigger.clone();
     thread::spawn(move || handle_input(mods_for_input, trigger_for_input));
+
+    let window_mods: Vec<NameAndInstance> = mods
+        .iter()
+        .filter(|m| m.get_config().name == "window")
+        .map(|m| (m.get_config().name.clone(), m.get_config().instance.clone()))
+        .collect();
+    if !window_mods.is_empty() {
+        // There's at least a window module, so subscribe to focus events for
+        // immediate refreshes.
+        let trigger_for_events = trigger.clone();
+        thread::spawn(move || {
+            handle_sway_events(window_mods, trigger_for_events)
+        });
+    }
+
     generate_status(&mods, trigger, refresh_interval);
 }
 
@@ -62,7 +79,7 @@ fn create_modules(config: config::Config) -> Vec<Box<dyn BarModuleFn>> {
     mods
 }
 
-pub fn handle_input(
+fn handle_input(
     mods: Arc<Vec<Box<dyn BarModuleFn>>>,
     trigger: Arc<(Mutex<NameAndInstance>, Condvar)>,
 ) {
@@ -152,7 +169,77 @@ fn execute_command(cmd: &[String]) {
     }
 }
 
-pub fn generate_status(
+fn sway_subscribe() -> si::Fallible<si::EventStream> {
+    si::Connection::new()?.subscribe(&[
+        si::EventType::Window,
+        si::EventType::Shutdown,
+        si::EventType::Workspace,
+    ])
+}
+
+fn handle_sway_events(
+    window_mods: Vec<NameAndInstance>,
+    trigger: Arc<(Mutex<NameAndInstance>, Condvar)>,
+) {
+    let mut resets = 0;
+    let max_resets = 10;
+
+    'reset: loop {
+        if resets >= max_resets {
+            break;
+        }
+        resets += 1;
+
+        log::debug!("Connecting to sway for subscribing to events...");
+
+        match sway_subscribe() {
+            Err(err) => {
+                log::warn!("Could not connect and subscribe: {}", err);
+                std::thread::sleep(std::time::Duration::from_secs(3));
+            }
+            Ok(iter) => {
+                for ev_result in iter {
+                    resets = 0;
+                    match ev_result {
+                        Ok(ev) => match ev {
+                            si::Event::Window(_) | si::Event::Workspace(_) => {
+                                log::trace!(
+                                    "Window or Workspace event: {:?}",
+                                    ev
+                                );
+                                for m in &window_mods {
+                                    let (mtx, cvar) = &*trigger;
+                                    let mut name_and_instance =
+                                        mtx.lock().unwrap();
+                                    name_and_instance.0 = m.0.to_owned();
+                                    name_and_instance.1 = m.1.to_owned();
+                                    cvar.notify_one();
+                                }
+                            }
+                            si::Event::Shutdown(sd_ev) => {
+                                log::debug!(
+                                    "Sway shuts down with reason '{:?}'.",
+                                    sd_ev.change
+                                );
+                                break 'reset;
+                            }
+                            _ => (),
+                        },
+                        Err(e) => {
+                            log::warn!("Error while receiving events: {}", e);
+                            std::thread::sleep(std::time::Duration::from_secs(
+                                3,
+                            ));
+                            log::warn!("Resetting!");
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+fn generate_status(
     mods: &[Box<dyn BarModuleFn>],
     trigger: Arc<(Mutex<NameAndInstance>, Condvar)>,
     refresh_interval: u64,

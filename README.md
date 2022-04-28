@@ -18,6 +18,7 @@
   * [Screenshots](#swayrbar-screenshots)
   * [Installation](#swayrbar-installation)
   * [Configuration](#swayrbar-configuration)
+  * [Version changes](#swayrbar-version-changes)
 * [Questions and patches](#questions-and-patches)
 * [Bugs](#bugs)
 * [Build status](#build-status)
@@ -672,6 +673,14 @@ By default, it has the following click bindings:
 The `date` module shows the date and time by defining the `format` using
 [chrono's strftime
 format](https://docs.rs/chrono/0.4.19/chrono/format/strftime/index.html#specifiers).
+
+### <a id="swayr-version-changes">Version changes</a>
+
+Version changes are summarized in the [NEWS](swayrbar/NEWS.md) file.  If
+something doesn't seem to work as expected after an update, please consult this
+file to check if there has been some (possibly incompatible) change requiring
+an update of your config.
+
 
 ## <a id="questions-and-patches">Questions & Patches</a>
 
