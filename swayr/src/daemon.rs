@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU General Public License along with
 // this program.  If not, see <https://www.gnu.org/licenses/>.
 
-//! Functions and data structures of the swayrd demon.
+//! Functions and data structures of the swayrd daemon.
 
 use crate::cmds;
 use crate::config;
@@ -28,10 +28,12 @@ use std::sync::RwLock;
 use std::thread;
 use swayipc as s;
 
-pub fn run_demon() {
+
+pub fn run_daemon() {
     let extra_props: Arc<RwLock<HashMap<i64, t::ExtraProps>>> =
         Arc::new(RwLock::new(HashMap::new()));
     let extra_props_for_ev_handler = extra_props.clone();
+
 
     thread::spawn(move || {
         monitor_sway_events(extra_props_for_ev_handler);
@@ -121,7 +123,7 @@ pub fn monitor_sway_events(
             }
         }
     }
-    log::debug!("Swayr demon shutting down.")
+    log::debug!("Swayr daemon shutting down.")
 }
 
 fn handle_window_event(

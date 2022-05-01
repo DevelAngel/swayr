@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU General Public License along with
 // this program.  If not, see <https://www.gnu.org/licenses/>.
 
-//! Functions and data structures of the swayrd demon.
+//! Functions and data structures of the swayrd daemon.
 
 use crate::config;
 use crate::shared::ipc;

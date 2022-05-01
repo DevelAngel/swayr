@@ -14,14 +14,14 @@
 // this program.  If not, see <https://www.gnu.org/licenses/>.
 
 //! **Swayr** is a LRU window-switcher and more for the sway window manager.
-//! It consists of a demon, and a client.  The demon `swayrd` records
+//! It consists of a daemon, and a client.  The `swayrd` daemon records
 //! window/workspace creations, deletions, and focus changes using sway's JSON
-//! IPC interface.  The client `swayr` offers subcommands, see `swayr --help`.
+//! IPC interface.  The `swayr` client offers subcommands, see `swayr --help`.
 
 pub mod client;
 pub mod cmds;
 pub mod config;
-pub mod demon;
+pub mod daemon;
 pub mod layout;
 pub mod shared;
 pub mod tree;

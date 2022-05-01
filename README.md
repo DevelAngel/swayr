@@ -28,10 +28,10 @@
 
 [![latest release](https://img.shields.io/crates/v/swayr.svg)](https://crates.io/crates/swayr)
 
-Swayr consists of a demon, and a client.  The demon `swayrd` records
+Swayr consists of a daemon, and a client.  The `swayrd` daemon records
 window/workspace creations, deletions, and focus changes using sway's JSON IPC
-interface.  The client `swayr` offers subcommands, see `swayr --help`, and
-sends them to the demon which executes them.
+interface.  The `swayr` client offers subcommands, see `swayr --help`, and
+sends them to the daemon which executes them.
 
 ### <a id="swayr-commands">Swayr commands</a>
 
@@ -223,7 +223,7 @@ cargo install-update -- swayr
 
 ### <a id="swayr-usage">Usage</a>
 
-You need to start the swayr demon `swayrd` in your sway config
+You need to start the swayr daemon (`swayrd`) in your sway config
 (`~/.config/sway/config`) like so:
 
 ```
@@ -238,8 +238,8 @@ issue with backtrace and logging at the `debug` level and attach that to your
 bug report.  Valid log levels in the order from logging more to logging less
 are: `trace`, `debug`, `info`, `warn`, `error`, `off`.
 
-Next to starting the demon, you want to bind swayr commands to some keys like
-so:
+Beyond starting the daemon, you will want to bind swayr commands to some keys
+like so:
 
 ```
 bindsym $mod+Space exec env RUST_BACKTRACE=1 \
