@@ -108,7 +108,7 @@ fn handle_input(
             Ok(click) => click,
             Err(err) => {
                 log::error!("Error while parsing str to Click: {}", err);
-                log::error!("The string was {}", buf);
+                log::error!("The string was '{}'.", buf);
                 log::error!("Skipping this input line...");
                 continue;
             }
@@ -271,8 +271,11 @@ fn generate_status(
             name_and_instance = None;
         } else {
             name_and_instance = Some((*result.0).clone());
-            log::debug!("Status writing thread waked up early by click event for {}/{}.",
-                        &result.0.0, & result.0.1);
+            log::debug!(
+                "Status writing thread woke up early by click event for {}/{}.",
+                &result.0 .0,
+                &result.0 .1
+            );
         }
     }
 }

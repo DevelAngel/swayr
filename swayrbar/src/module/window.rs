@@ -27,6 +27,10 @@ use swaybar_types as s;
 
 const NAME: &str = "window";
 
+const INITIAL_PID: i32 = -128;
+const NO_WINDOW_PID: i32 = -1;
+const UNKNOWN_PID: i32 = -2;
+
 struct State {
     name: String,
     app_name: String,
@@ -43,13 +47,14 @@ fn refresh_state(state: &mut State) {
     let focused_win = root
         .iter()
         .find(|n| n.focused && n.get_type() == ipc::Type::Window);
+    log::debug!("Focused win: {:?}", focused_win);
     match focused_win {
         Some(win) => {
             state.name = win.get_name().to_owned();
             state.app_name = win.get_app_name().to_owned();
-            state.pid = win.pid.unwrap_or(-1);
+            state.pid = win.pid.unwrap_or(UNKNOWN_PID);
         }
-        None => state.pid = -1,
+        None => state.pid = NO_WINDOW_PID,
     };
 }
 
@@ -68,7 +73,7 @@ impl BarModuleFn for BarModuleWindow {
             state: Mutex::new(State {
                 name: String::new(),
                 app_name: String::new(),
-                pid: -1,
+                pid: INITIAL_PID,
             }),
         })
     }
@@ -102,11 +107,16 @@ impl BarModuleFn for BarModuleWindow {
     fn build(&self, nai: &Option<NameAndInstance>) -> s::Block {
         let mut state = self.state.lock().expect("Could not lock state.");
 
-        if should_refresh(self, nai) {
+        // In contrast to other modules, this one should only refresh its state
+        // initially at startup and when explicitly named by `nai` (caused by a
+        // window or workspace event).
+        if state.pid == INITIAL_PID
+            || (nai.is_some() && should_refresh(self, nai))
+        {
             refresh_state(&mut state);
         }
 
-        let text = if state.pid == -1 {
+        let text = if state.pid == NO_WINDOW_PID {
             String::new()
         } else {
             subst_placeholders(

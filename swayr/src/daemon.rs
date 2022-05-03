@@ -28,12 +28,10 @@ use std::sync::RwLock;
 use std::thread;
 use swayipc as s;
 
-
 pub fn run_daemon() {
     let extra_props: Arc<RwLock<HashMap<i64, t::ExtraProps>>> =
         Arc::new(RwLock::new(HashMap::new()));
     let extra_props_for_ev_handler = extra_props.clone();
-
 
     thread::spawn(move || {
         monitor_sway_events(extra_props_for_ev_handler);
