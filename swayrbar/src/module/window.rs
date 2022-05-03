@@ -25,7 +25,7 @@ use crate::shared::ipc;
 use crate::shared::ipc::NodeMethods;
 use swaybar_types as s;
 
-const NAME: &str = "window";
+pub const NAME: &str = "window";
 
 const INITIAL_PID: i32 = -128;
 const NO_WINDOW_PID: i32 = -1;
@@ -35,6 +35,7 @@ struct State {
     name: String,
     app_name: String,
     pid: i32,
+    cached_text: String,
 }
 
 pub struct BarModuleWindow {
@@ -42,19 +43,25 @@ pub struct BarModuleWindow {
     state: Mutex<State>,
 }
 
-fn refresh_state(state: &mut State) {
+fn refresh_state(state: &mut State, fmt_str: &str, html_escape: bool) {
     let root = ipc::get_root_node(false);
     let focused_win = root
         .iter()
         .find(|n| n.focused && n.get_type() == ipc::Type::Window);
-    log::debug!("Focused win: {:?}", focused_win);
+
     match focused_win {
         Some(win) => {
             state.name = win.get_name().to_owned();
             state.app_name = win.get_app_name().to_owned();
             state.pid = win.pid.unwrap_or(UNKNOWN_PID);
+            state.cached_text = subst_placeholders(fmt_str, html_escape, state);
         }
-        None => state.pid = NO_WINDOW_PID,
+        None => {
+            state.name.clear();
+            state.app_name.clear();
+            state.pid = NO_WINDOW_PID;
+            state.cached_text.clear();
+        }
     };
 }
 
@@ -74,6 +81,7 @@ impl BarModuleFn for BarModuleWindow {
                 name: String::new(),
                 app_name: String::new(),
                 pid: INITIAL_PID,
+                cached_text: String::new(),
             }),
         })
     }
@@ -113,23 +121,17 @@ impl BarModuleFn for BarModuleWindow {
         if state.pid == INITIAL_PID
             || (nai.is_some() && should_refresh(self, nai))
         {
-            refresh_state(&mut state);
-        }
-
-        let text = if state.pid == NO_WINDOW_PID {
-            String::new()
-        } else {
-            subst_placeholders(
+            refresh_state(
+                &mut state,
                 &self.config.format,
                 self.config.is_html_escape(),
-                &state,
-            )
-        };
+            );
+        }
 
         s::Block {
             name: Some(NAME.to_owned()),
             instance: Some(self.config.instance.clone()),
-            full_text: text,
+            full_text: state.cached_text.clone(),
             align: Some(s::Align::Left),
             markup: Some(s::Markup::Pango),
             short_text: None,

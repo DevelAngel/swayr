@@ -29,6 +29,8 @@ use std::{sync::Arc, thread};
 use swaybar_types as sbt;
 use swayipc as si;
 
+type NameInstanceAndReason = (String, String, String);
+
 pub fn start() {
     env_logger::Builder::from_env(Env::default().default_filter_or("warn"))
         .init();
@@ -37,8 +39,10 @@ pub fn start() {
     let refresh_interval = config.refresh_interval;
     let mods: Arc<Vec<Box<dyn BarModuleFn>>> = Arc::new(create_modules(config));
     let mods_for_input = mods.clone();
-    let trigger =
-        Arc::new((Mutex::new((String::new(), String::new())), Condvar::new()));
+    let trigger: Arc<(Mutex<NameInstanceAndReason>, Condvar)> = Arc::new((
+        Mutex::new((String::new(), String::new(), String::new())),
+        Condvar::new(),
+    ));
 
     let trigger_for_input = trigger.clone();
     thread::spawn(move || handle_input(mods_for_input, trigger_for_input));
@@ -81,7 +85,7 @@ fn create_modules(config: config::Config) -> Vec<Box<dyn BarModuleFn>> {
 
 fn handle_input(
     mods: Arc<Vec<Box<dyn BarModuleFn>>>,
-    trigger: Arc<(Mutex<NameAndInstance>, Condvar)>,
+    trigger: Arc<(Mutex<NameInstanceAndReason>, Condvar)>,
 ) {
     let mut sb = String::new();
     io::stdin()
@@ -116,9 +120,10 @@ fn handle_input(
         log::debug!("Received click: {:?}", click);
         if let Some((name, instance)) = handle_click(click, mods.clone()) {
             let (mtx, cvar) = &*trigger;
-            let mut name_and_instance = mtx.lock().unwrap();
-            name_and_instance.0 = name;
-            name_and_instance.1 = instance;
+            let mut name_inst_reason = mtx.lock().unwrap();
+            name_inst_reason.0 = name;
+            name_inst_reason.1 = instance;
+            name_inst_reason.2 = String::from("click event");
             cvar.notify_one();
         }
     }
@@ -138,10 +143,12 @@ fn handle_click(
                     Some(cmd) => execute_command(&cmd),
                     None => execute_command(cmd),
                 }
-                // Wait a bit so that the action of the click has shown its
-                // effect, e.g., the window has been switched.
-                thread::sleep(Duration::from_millis(25));
                 let cfg = m.get_config();
+                // No refresh for click events for window modules because the
+                // refresh will be triggered by a sway event anyhow.
+                if cfg.name == module::window::NAME {
+                    return None;
+                }
                 return Some((cfg.name.clone(), cfg.instance.clone()));
             }
         }
@@ -179,7 +186,7 @@ fn sway_subscribe() -> si::Fallible<si::EventStream> {
 
 fn handle_sway_events(
     window_mods: Vec<NameAndInstance>,
-    trigger: Arc<(Mutex<NameAndInstance>, Condvar)>,
+    trigger: Arc<(Mutex<NameInstanceAndReason>, Condvar)>,
 ) {
     let mut resets = 0;
     let max_resets = 10;
@@ -209,10 +216,12 @@ fn handle_sway_events(
                                 );
                                 for m in &window_mods {
                                     let (mtx, cvar) = &*trigger;
-                                    let mut name_and_instance =
+                                    let mut name_inst_reason =
                                         mtx.lock().unwrap();
-                                    name_and_instance.0 = m.0.to_owned();
-                                    name_and_instance.1 = m.1.to_owned();
+                                    name_inst_reason.0 = m.0.to_owned();
+                                    name_inst_reason.1 = m.1.to_owned();
+                                    name_inst_reason.2 =
+                                        String::from("sway event");
                                     cvar.notify_one();
                                 }
                             }
@@ -241,7 +250,7 @@ fn handle_sway_events(
 
 fn generate_status(
     mods: &[Box<dyn BarModuleFn>],
-    trigger: Arc<(Mutex<NameAndInstance>, Condvar)>,
+    trigger: Arc<(Mutex<NameInstanceAndReason>, Condvar)>,
     refresh_interval: u64,
 ) {
     println!("{{\"version\": 1, \"click_events\": true}}");
@@ -249,17 +258,21 @@ fn generate_status(
     // opening [ and never the closing bracket.
     println!("[");
 
-    let mut name_and_instance: Option<NameAndInstance> = None;
+    let mut name_inst_reason: Option<NameInstanceAndReason> = None;
 
     loop {
         let mut blocks = vec![];
+        let name_and_instance = &name_inst_reason.map(|x| (x.0, x.1));
         for m in mods {
-            blocks.push(m.build(&name_and_instance));
+            blocks.push(m.build(name_and_instance));
         }
         let json = serde_json::to_string_pretty(&blocks)
             .unwrap_or_else(|_| "".to_string());
         println!("{},", json);
 
+        // FIXME: We sometimes miss click or sway events, most probably because
+        // the corresponding notify_one() is executed when we are not waiting
+        // here.
         let (lock, cvar) = &*trigger;
         let result = cvar
             .wait_timeout(
@@ -268,11 +281,12 @@ fn generate_status(
             )
             .unwrap();
         if result.1.timed_out() {
-            name_and_instance = None;
+            name_inst_reason = None;
         } else {
-            name_and_instance = Some((*result.0).clone());
+            name_inst_reason = Some((*result.0).clone());
             log::debug!(
-                "Status writing thread woke up early by click event for {}/{}.",
+                "Status writing thread woke up early by {} for {}/{}.",
+                &result.0 .2,
                 &result.0 .0,
                 &result.0 .1
             );
