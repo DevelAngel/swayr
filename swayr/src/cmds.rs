@@ -67,6 +67,9 @@ pub enum ConsiderWindows {
 
 #[derive(clap::Parser, Debug, Deserialize, Serialize)]
 pub enum SwayrCommand {
+    /// No-operation. Interrupts any in-progress prev/next sequence but has
+    /// no other effect
+    Nop,
     /// Switch to next urgent window (if any) or to last recently used window.
     SwitchToUrgentOrLRUWindow,
     /// Switch to the given app (given by app_id or window class) if that's not
@@ -264,6 +267,7 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
     }
 
     match args.cmd {
+        SwayrCommand::Nop => {}
         SwayrCommand::SwitchToUrgentOrLRUWindow => {
             switch_to_urgent_or_lru_window(&*props.read().unwrap())
         }
