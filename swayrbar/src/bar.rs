@@ -17,7 +17,7 @@
 
 use crate::config;
 use crate::module;
-use crate::module::{BarModuleFn, NameAndInstance};
+use crate::module::{BarModuleFn, NameInstanceAndReason, RefreshReason};
 use env_logger::Env;
 use serde_json;
 use std::io;
@@ -29,14 +29,6 @@ use std::time::Duration;
 use std::{sync::Arc, thread};
 use swaybar_types as sbt;
 use swayipc as si;
-
-#[derive(Debug)]
-enum RefreshReason {
-    ClickEvent,
-    SwayEvent,
-}
-
-type NameInstanceAndReason = (String, String, RefreshReason);
 
 pub fn start() {
     env_logger::Builder::from_env(Env::default().default_filter_or("warn"))
@@ -56,7 +48,7 @@ pub fn start() {
     let sender_for_input = sender.clone();
     thread::spawn(move || handle_input(mods_for_input, sender_for_input));
 
-    let window_mods: Vec<NameAndInstance> = mods
+    let window_mods: Vec<(String, String)> = mods
         .iter()
         .filter(|m| m.get_config().name == "window")
         .map(|m| (m.get_config().name.clone(), m.get_config().instance.clone()))
@@ -134,8 +126,8 @@ fn handle_input(
             }
         };
         log::debug!("Received click: {:?}", click);
-        if let Some((name, instance)) = handle_click(click, mods.clone()) {
-            let event = Some((name, instance, RefreshReason::ClickEvent));
+        let event = handle_click(click, mods.clone());
+        if event.is_some() {
             send_refresh_event(&sender, event);
         }
     }
@@ -156,7 +148,7 @@ fn send_refresh_event(
 fn handle_click(
     click: sbt::Click,
     mods: Arc<Vec<Box<dyn BarModuleFn>>>,
-) -> Option<NameAndInstance> {
+) -> Option<NameInstanceAndReason> {
     let name = click.name?;
     let instance = click.instance?;
     let button_str = format!("{:?}", click.button);
@@ -176,7 +168,11 @@ fn handle_click(
                 if cfg.name == module::window::NAME {
                     return None;
                 }
-                return Some((cfg.name.clone(), cfg.instance.clone()));
+                return Some((
+                    cfg.name.clone(),
+                    cfg.instance.clone(),
+                    RefreshReason::ClickEvent,
+                ));
             }
         }
     }
@@ -212,7 +208,7 @@ fn sway_subscribe() -> si::Fallible<si::EventStream> {
 }
 
 fn handle_sway_events(
-    window_mods: Vec<NameAndInstance>,
+    window_mods: Vec<(String, String)>,
     sender: SyncSender<Option<NameInstanceAndReason>>,
 ) {
     let mut resets = 0;
@@ -275,7 +271,7 @@ fn handle_sway_events(
 
 fn generate_status_1(
     mods: &[Box<dyn BarModuleFn>],
-    name_and_instance: &Option<NameAndInstance>,
+    name_and_instance: &Option<NameInstanceAndReason>,
 ) {
     let mut blocks = vec![];
     for m in mods {
@@ -296,6 +292,6 @@ fn generate_status(
     println!("[");
 
     for ev in receiver.iter() {
-        generate_status_1(mods, &ev.map(|x| (x.0, x.1)))
+        generate_status_1(mods, &ev)
     }
 }

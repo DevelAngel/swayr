@@ -16,7 +16,7 @@
 //! The pactl `swayrbar` module.
 
 use crate::config;
-use crate::module::{should_refresh, BarModuleFn, NameAndInstance};
+use crate::module::{should_refresh, BarModuleFn, NameInstanceAndReason};
 use crate::shared::fmt::subst_placeholders;
 use once_cell::sync::Lazy;
 use regex::Regex;
@@ -142,7 +142,7 @@ impl BarModuleFn for BarModulePactl {
         &self.config
     }
 
-    fn build(&self, nai: &Option<NameAndInstance>) -> s::Block {
+    fn build(&self, nai: &Option<NameInstanceAndReason>) -> s::Block {
         let mut state = self.state.lock().expect("Could not lock state.");
 
         if should_refresh(self, nai) {

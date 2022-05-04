@@ -24,13 +24,22 @@ pub mod pactl;
 pub mod sysinfo;
 pub mod window;
 
-pub type NameAndInstance = (String, String);
+#[derive(Debug)]
+pub enum RefreshReason {
+    ClickEvent,
+    SwayEvent,
+}
 
-fn should_refresh(m: &dyn BarModuleFn, nai: &Option<NameAndInstance>) -> bool {
+pub type NameInstanceAndReason = (String, String, RefreshReason);
+
+fn should_refresh(
+    m: &dyn BarModuleFn,
+    nai: &Option<NameInstanceAndReason>,
+) -> bool {
     let cfg = m.get_config();
     match nai {
         None => true,
-        Some((n, i)) => n == &cfg.name && i == &cfg.instance,
+        Some((n, i, _)) => n == &cfg.name && i == &cfg.instance,
     }
 }
 
@@ -54,6 +63,6 @@ pub trait BarModuleFn: Sync + Send {
             None
         }
     }
-    fn build(&self, nai: &Option<NameAndInstance>) -> s::Block;
+    fn build(&self, nai: &Option<NameInstanceAndReason>) -> s::Block;
     fn subst_args<'a>(&'a self, _cmd: &'a [String]) -> Option<Vec<String>>;
 }
