@@ -20,18 +20,23 @@ use crate::module;
 use crate::module::{BarModuleFn, NameAndInstance};
 use env_logger::Env;
 use serde_json;
-use std::collections::VecDeque;
 use std::io;
 use std::process as p;
-use std::sync::Condvar;
-use std::sync::Mutex;
+use std::sync::mpsc::sync_channel;
+use std::sync::mpsc::Receiver;
+use std::sync::mpsc::SyncSender;
 use std::time::Duration;
 use std::{sync::Arc, thread};
 use swaybar_types as sbt;
 use swayipc as si;
 
-type NameInstanceAndReason = (String, String, String);
-type Trigger = Arc<(Mutex<VecDeque<NameInstanceAndReason>>, Condvar)>;
+#[derive(Debug)]
+enum RefreshReason {
+    ClickEvent,
+    SwayEvent,
+}
+
+type NameInstanceAndReason = (String, String, RefreshReason);
 
 pub fn start() {
     env_logger::Builder::from_env(Env::default().default_filter_or("warn"))
@@ -41,11 +46,15 @@ pub fn start() {
     let refresh_interval = config.refresh_interval;
     let mods: Arc<Vec<Box<dyn BarModuleFn>>> = Arc::new(create_modules(config));
     let mods_for_input = mods.clone();
-    let trigger: Trigger =
-        Arc::new((Mutex::new(VecDeque::new()), Condvar::new()));
 
-    let trigger_for_input = trigger.clone();
-    thread::spawn(move || handle_input(mods_for_input, trigger_for_input));
+    let (sender, receiver) = sync_channel(16);
+    let sender_for_ticker = sender.clone();
+    thread::spawn(move || {
+        tick_periodically(refresh_interval, sender_for_ticker)
+    });
+
+    let sender_for_input = sender.clone();
+    thread::spawn(move || handle_input(mods_for_input, sender_for_input));
 
     let window_mods: Vec<NameAndInstance> = mods
         .iter()
@@ -53,15 +62,22 @@ pub fn start() {
         .map(|m| (m.get_config().name.clone(), m.get_config().instance.clone()))
         .collect();
     if !window_mods.is_empty() {
-        // There's at least a window module, so subscribe to focus events for
+        // There's at least one window module, so subscribe to focus events for
         // immediate refreshes.
-        let trigger_for_events = trigger.clone();
-        thread::spawn(move || {
-            handle_sway_events(window_mods, trigger_for_events)
-        });
+        thread::spawn(move || handle_sway_events(window_mods, sender));
     }
 
-    generate_status(&mods, trigger, refresh_interval);
+    generate_status(&mods, receiver);
+}
+
+fn tick_periodically(
+    refresh_interval: u64,
+    sender: SyncSender<Option<NameInstanceAndReason>>,
+) {
+    loop {
+        send_refresh_event(&sender, None);
+        thread::sleep(Duration::from_millis(refresh_interval));
+    }
 }
 
 fn create_modules(config: config::Config) -> Vec<Box<dyn BarModuleFn>> {
@@ -83,7 +99,10 @@ fn create_modules(config: config::Config) -> Vec<Box<dyn BarModuleFn>> {
     mods
 }
 
-fn handle_input(mods: Arc<Vec<Box<dyn BarModuleFn>>>, trigger: Trigger) {
+fn handle_input(
+    mods: Arc<Vec<Box<dyn BarModuleFn>>>,
+    sender: SyncSender<Option<NameInstanceAndReason>>,
+) {
     let mut sb = String::new();
     io::stdin()
         .read_line(&mut sb)
@@ -116,11 +135,21 @@ fn handle_input(mods: Arc<Vec<Box<dyn BarModuleFn>>>, trigger: Trigger) {
         };
         log::debug!("Received click: {:?}", click);
         if let Some((name, instance)) = handle_click(click, mods.clone()) {
-            let (mtx, cvar) = &*trigger;
-            let mut queue = mtx.lock().unwrap();
-            queue.push_back((name, instance, String::from("click event")));
-            cvar.notify_one();
+            let event = Some((name, instance, RefreshReason::ClickEvent));
+            send_refresh_event(&sender, event);
         }
+    }
+}
+
+fn send_refresh_event(
+    sender: &SyncSender<Option<NameInstanceAndReason>>,
+    event: Option<NameInstanceAndReason>,
+) {
+    if event.is_some() {
+        log::debug!("Sending refresh event {:?}", event);
+    }
+    if let Err(err) = sender.send(event) {
+        log::error!("Error at send: {}", err);
     }
 }
 
@@ -182,7 +211,10 @@ fn sway_subscribe() -> si::Fallible<si::EventStream> {
     ])
 }
 
-fn handle_sway_events(window_mods: Vec<NameAndInstance>, trigger: Trigger) {
+fn handle_sway_events(
+    window_mods: Vec<NameAndInstance>,
+    sender: SyncSender<Option<NameInstanceAndReason>>,
+) {
     let mut resets = 0;
     let max_resets = 10;
 
@@ -210,14 +242,12 @@ fn handle_sway_events(window_mods: Vec<NameAndInstance>, trigger: Trigger) {
                                     ev
                                 );
                                 for m in &window_mods {
-                                    let (mtx, cvar) = &*trigger;
-                                    let mut queue = mtx.lock().unwrap();
-                                    queue.push_back((
+                                    let event = Some((
                                         m.0.to_owned(),
                                         m.1.to_owned(),
-                                        String::from("sway event"),
+                                        RefreshReason::SwayEvent,
                                     ));
-                                    cvar.notify_one();
+                                    send_refresh_event(&sender, event);
                                 }
                             }
                             si::Event::Shutdown(sd_ev) => {
@@ -258,36 +288,14 @@ fn generate_status_1(
 
 fn generate_status(
     mods: &[Box<dyn BarModuleFn>],
-    trigger: Trigger,
-    refresh_interval: u64,
+    receiver: Receiver<Option<NameInstanceAndReason>>,
 ) {
     println!("{{\"version\": 1, \"click_events\": true}}");
     // status_command should output an infinite array meaning we emit an
     // opening [ and never the closing bracket.
     println!("[");
-    generate_status_1(mods, &None);
 
-    loop {
-        let (lock, cvar) = &*trigger;
-        let result = cvar
-            .wait_timeout(
-                lock.lock().unwrap(),
-                Duration::from_millis(refresh_interval),
-            )
-            .unwrap();
-        let mut queue = result.0;
-        if queue.is_empty() {
-            generate_status_1(mods, &None);
-        } else {
-            log::debug!(
-                "Status writing thread woke up early events:\n{:?}",
-                queue
-            );
-            while let Some(name_inst_reason) = queue.pop_front() {
-                let name_and_instance =
-                    Some(name_inst_reason).map(|x| (x.0, x.1));
-                generate_status_1(mods, &name_and_instance);
-            }
-        }
+    for ev in receiver.iter() {
+        generate_status_1(mods, &ev.map(|x| (x.0, x.1)))
     }
 }
