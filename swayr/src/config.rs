@@ -18,12 +18,14 @@
 use crate::shared::cfg;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::time::Duration;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Config {
     menu: Option<Menu>,
     format: Option<Format>,
     layout: Option<Layout>,
+    focus: Option<Focus>,
 }
 
 fn tilde_expand_file_names(file_names: Vec<String>) -> Vec<String> {
@@ -155,6 +157,16 @@ impl Config {
             .or_else(|| Layout::default().auto_tile_min_window_width_per_output_width_as_map())
             .expect("No layout.auto_tile_min_window_width_per_output_width defined.")
     }
+
+    pub fn get_focus_lockin_delay(&self) -> Duration {
+        Duration::from_millis(
+            self.focus
+                .as_ref()
+                .and_then(|f| f.lockin_delay)
+                .or_else(|| Focus::default().lockin_delay)
+                .expect("No focus.lockin_delay defined."),
+        )
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -197,6 +209,11 @@ impl Layout {
             None
         }
     }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Focus {
+    lockin_delay: Option<u64>,
 }
 
 impl Default for Menu {
@@ -290,12 +307,21 @@ impl Default for Layout {
     }
 }
 
+impl Default for Focus {
+    fn default() -> Self {
+        Self {
+            lockin_delay: Some(750),
+        }
+    }
+}
+
 impl Default for Config {
     fn default() -> Self {
         Config {
             menu: Some(Menu::default()),
             format: Some(Format::default()),
             layout: Some(Layout::default()),
+            focus: Some(Focus::default()),
         }
     }
 }

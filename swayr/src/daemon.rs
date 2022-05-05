@@ -16,28 +16,47 @@
 //! Functions and data structures of the swayrd daemon.
 
 use crate::cmds;
-use crate::config;
+use crate::config::{self, Config};
+use crate::focus::FocusData;
+use crate::focus::FocusEvent;
+use crate::focus::FocusMessage;
 use crate::layout;
-use crate::tree as t;
 use crate::util;
 use std::collections::HashMap;
 use std::io::Read;
 use std::os::unix::net::{UnixListener, UnixStream};
+use std::sync::mpsc;
 use std::sync::Arc;
 use std::sync::RwLock;
 use std::thread;
+use std::time::Duration;
 use swayipc as s;
 
 pub fn run_daemon() {
-    let extra_props: Arc<RwLock<HashMap<i64, t::ExtraProps>>> =
-        Arc::new(RwLock::new(HashMap::new()));
-    let extra_props_for_ev_handler = extra_props.clone();
+    let (focus_tx, focus_rx) = mpsc::channel();
+    let fdata = FocusData {
+        focus_tick_by_id: Arc::new(RwLock::new(HashMap::new())),
+        focus_chan: focus_tx,
+    };
 
-    thread::spawn(move || {
-        monitor_sway_events(extra_props_for_ev_handler);
-    });
+    let config = config::load_config();
+    let lockin_delay = config.get_focus_lockin_delay();
 
-    serve_client_requests(extra_props);
+    {
+        let fdata = fdata.clone();
+        thread::spawn(move || {
+            monitor_sway_events(fdata, &config);
+        });
+    }
+
+    {
+        let fdata = fdata.clone();
+        thread::spawn(move || {
+            focus_lock_in_handler(focus_rx, fdata, lockin_delay);
+        });
+    }
+
+    serve_client_requests(fdata);
 }
 
 fn connect_and_subscribe() -> s::Fallible<s::EventStream> {
@@ -48,10 +67,7 @@ fn connect_and_subscribe() -> s::Fallible<s::EventStream> {
     ])
 }
 
-pub fn monitor_sway_events(
-    extra_props: Arc<RwLock<HashMap<i64, t::ExtraProps>>>,
-) {
-    let config = config::load_config();
+pub fn monitor_sway_events(fdata: FocusData, config: &Config) {
     let mut focus_counter = 0;
     let mut resets = 0;
     let max_resets = 10;
@@ -75,21 +91,19 @@ pub fn monitor_sway_events(
                     match ev_result {
                         Ok(ev) => match ev {
                             s::Event::Window(win_ev) => {
-                                let extra_props_clone = extra_props.clone();
                                 focus_counter += 1;
                                 show_extra_props_state = handle_window_event(
                                     win_ev,
-                                    extra_props_clone,
-                                    &config,
+                                    &fdata,
+                                    config,
                                     focus_counter,
                                 );
                             }
                             s::Event::Workspace(ws_ev) => {
-                                let extra_props_clone = extra_props.clone();
                                 focus_counter += 1;
                                 show_extra_props_state = handle_workspace_event(
                                     ws_ev,
-                                    extra_props_clone,
+                                    &fdata,
                                     focus_counter,
                                 );
                             }
@@ -114,7 +128,7 @@ pub fn monitor_sway_events(
                     if show_extra_props_state {
                         log::debug!(
                             "New extra_props state:\n{:#?}",
-                            *extra_props.read().unwrap()
+                            *fdata.focus_tick_by_id.read().unwrap()
                         );
                     }
                 }
@@ -126,7 +140,7 @@ pub fn monitor_sway_events(
 
 fn handle_window_event(
     ev: Box<s::WindowEvent>,
-    extra_props: Arc<RwLock<HashMap<i64, t::ExtraProps>>>,
+    fdata: &FocusData,
     config: &config::Config,
     focus_val: u64,
 ) -> bool {
@@ -136,18 +150,21 @@ fn handle_window_event(
     match change {
         s::WindowChange::Focus => {
             layout::maybe_auto_tile(config);
-            update_last_focus_tick(container.id, extra_props, focus_val);
+            fdata.send(FocusMessage::FocusEvent(FocusEvent {
+                node_id: container.id,
+                ev_focus_ctr: focus_val,
+            }));
             log::debug!("Handled window event type {:?}", change);
             true
         }
         s::WindowChange::New => {
             layout::maybe_auto_tile(config);
-            update_last_focus_tick(container.id, extra_props, focus_val);
+            fdata.ensure_id(container.id);
             log::debug!("Handled window event type {:?}", change);
             true
         }
         s::WindowChange::Close => {
-            remove_extra_props(container.id, extra_props);
+            fdata.remove_focus_data(container.id);
             layout::maybe_auto_tile(config);
             log::debug!("Handled window event type {:?}", change);
             true
@@ -166,7 +183,7 @@ fn handle_window_event(
 
 fn handle_workspace_event(
     ev: Box<s::WorkspaceEvent>,
-    extra_props: Arc<RwLock<HashMap<i64, t::ExtraProps>>>,
+    fdata: &FocusData,
     focus_val: u64,
 ) -> bool {
     let s::WorkspaceEvent {
@@ -177,20 +194,19 @@ fn handle_workspace_event(
     } = *ev;
     match change {
         s::WorkspaceChange::Init | s::WorkspaceChange::Focus => {
-            update_last_focus_tick(
-                current
-                    .expect("No current in Init or Focus workspace event")
-                    .id,
-                extra_props,
-                focus_val,
-            );
+            let id = current
+                .expect("No current in Init or Focus workspace event")
+                .id;
+            fdata.send(FocusMessage::FocusEvent(FocusEvent {
+                node_id: id,
+                ev_focus_ctr: focus_val,
+            }));
             log::debug!("Handled workspace event type {:?}", change);
             true
         }
         s::WorkspaceChange::Empty => {
-            remove_extra_props(
+            fdata.remove_focus_data(
                 current.expect("No current in Empty workspace event").id,
-                extra_props,
             );
             log::debug!("Handled workspace event type {:?}", change);
             true
@@ -199,35 +215,7 @@ fn handle_workspace_event(
     }
 }
 
-fn update_last_focus_tick(
-    id: i64,
-    extra_props: Arc<RwLock<HashMap<i64, t::ExtraProps>>>,
-    focus_val: u64,
-) {
-    let mut write_lock = extra_props.write().unwrap();
-    if let Some(wp) = write_lock.get_mut(&id) {
-        wp.last_focus_tick = focus_val;
-    } else {
-        write_lock.insert(
-            id,
-            t::ExtraProps {
-                last_focus_tick: focus_val,
-                last_focus_tick_for_next_prev_seq: focus_val,
-            },
-        );
-    }
-}
-
-fn remove_extra_props(
-    id: i64,
-    extra_props: Arc<RwLock<HashMap<i64, t::ExtraProps>>>,
-) {
-    extra_props.write().unwrap().remove(&id);
-}
-
-pub fn serve_client_requests(
-    extra_props: Arc<RwLock<HashMap<i64, t::ExtraProps>>>,
-) {
+pub fn serve_client_requests(fdata: FocusData) {
     match std::fs::remove_file(util::get_swayr_socket_path()) {
         Ok(()) => log::debug!("Deleted stale socket from previous run."),
         Err(e) => log::error!("Could not delete socket:\n{:?}", e),
@@ -238,7 +226,7 @@ pub fn serve_client_requests(
             for stream in listener.incoming() {
                 match stream {
                     Ok(stream) => {
-                        handle_client_request(stream, extra_props.clone());
+                        handle_client_request(stream, &fdata);
                     }
                     Err(err) => {
                         log::error!("Error handling client request: {}", err);
@@ -253,16 +241,13 @@ pub fn serve_client_requests(
     }
 }
 
-fn handle_client_request(
-    mut stream: UnixStream,
-    extra_props: Arc<RwLock<HashMap<i64, t::ExtraProps>>>,
-) {
+fn handle_client_request(mut stream: UnixStream, fdata: &FocusData) {
     let mut cmd_str = String::new();
     if stream.read_to_string(&mut cmd_str).is_ok() {
         if let Ok(cmd) = serde_json::from_str::<cmds::SwayrCommand>(&cmd_str) {
             cmds::exec_swayr_cmd(cmds::ExecSwayrCmdArgs {
                 cmd: &cmd,
-                extra_props,
+                focus_data: fdata,
             });
         } else {
             log::error!(
@@ -272,5 +257,112 @@ fn handle_client_request(
         }
     } else {
         log::error!("Could not read command from client.");
+    }
+}
+
+#[derive(Debug)]
+enum InhibitState {
+    FocusInhibit,
+    FocusActive,
+}
+
+impl InhibitState {
+    pub fn set(&mut self) {
+        if let InhibitState::FocusActive = self {
+            log::debug!("Inhibiting tick focus updates");
+            *self = InhibitState::FocusInhibit;
+        }
+    }
+
+    pub fn clear(&mut self) {
+        if let InhibitState::FocusInhibit = self {
+            log::debug!("Activating tick focus updates");
+            *self = InhibitState::FocusActive;
+        }
+    }
+}
+
+fn focus_lock_in_handler(
+    focus_chan: mpsc::Receiver<FocusMessage>,
+    fdata: FocusData,
+    lockin_delay: Duration,
+) {
+    // Focus event that has not yet been locked-in to the LRU order
+    let mut pending_fev: Option<FocusEvent> = None;
+
+    // Toggle to inhibit LRU focus updates
+    let mut inhibit = InhibitState::FocusActive;
+
+    let update_focus = |fev: Option<FocusEvent>| {
+        if let Some(fev) = fev {
+            log::debug!("Locking-in focus on {}", fev.node_id);
+            fdata.update_last_focus_tick(
+                fev.node_id,
+                fev.ev_focus_ctr,
+            )
+        }
+    };
+
+    // outer loop, waiting for focus events
+    loop {
+        let fmsg = match focus_chan.recv() {
+            Ok(fmsg) => fmsg,
+            Err(mpsc::RecvError) => return,
+        };
+
+        let mut fev = match fmsg {
+            FocusMessage::TickUpdateInhibit => {
+                inhibit.set();
+                continue;
+            }
+            FocusMessage::TickUpdateActivate => {
+                inhibit.clear();
+                update_focus(pending_fev.take());
+                continue
+            }
+            FocusMessage::FocusEvent(fev) => {
+                if let InhibitState::FocusInhibit = inhibit {
+                    // update the pending event but take no further action
+                    pending_fev = Some(fev);
+                    continue;
+                }
+                fev
+            }
+        };
+
+        // Inner loop, waiting for the lock-in delay to expire
+        loop {
+            let fmsg = match focus_chan.recv_timeout(lockin_delay) {
+                Ok(fmsg) => fmsg,
+                Err(mpsc::RecvTimeoutError::Timeout) => {
+                    update_focus(Some(fev));
+                    break; // return to outer loop
+                }
+                Err(mpsc::RecvTimeoutError::Disconnected) => return,
+            };
+
+            match fmsg {
+                FocusMessage::TickUpdateInhibit => {
+                    // inhibit requested before currently focused container
+                    // was locked-in, set it as pending in case no other
+                    // focus changes are made while updates remain inhibited
+                    inhibit.set();
+                    pending_fev = Some(fev);
+                    break; // return to outer loop with a preset pending_fev
+                }
+                FocusMessage::TickUpdateActivate => {
+                    // updates reactivated while we were waiting to lockin
+                    // Immediately lockin fev
+                    inhibit.clear();
+                    update_focus(Some(fev));
+                    break;
+                }
+                FocusMessage::FocusEvent(new_fev) => {
+                    // start a new wait (inner) loop with the most recent
+                    // focus event
+                    fev = new_fev;
+                }
+            }
+        }
     }
 }

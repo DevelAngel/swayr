@@ -16,6 +16,8 @@
 //! Functions and data structures of the swayr client.
 
 use crate::config as cfg;
+use crate::focus::FocusData;
+use crate::focus::FocusMessage;
 use crate::layout;
 use crate::shared::ipc;
 use crate::shared::ipc::NodeMethods;
@@ -26,10 +28,6 @@ use once_cell::sync::Lazy;
 use rand::prelude::SliceRandom;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::sync::atomic;
-use std::sync::Arc;
-use std::sync::RwLock;
 use swayipc as s;
 
 pub fn run_sway_command_1(cmd: &str) {
@@ -227,7 +225,7 @@ impl SwayrCommand {
 
 pub struct ExecSwayrCmdArgs<'a> {
     pub cmd: &'a SwayrCommand,
-    pub extra_props: Arc<RwLock<HashMap<i64, t::ExtraProps>>>,
+    pub focus_data: &'a FocusData,
 }
 
 impl DisplayFormat for SwayrCommand {
@@ -247,86 +245,62 @@ fn always_true(_x: &t::DisplayNode) -> bool {
     true
 }
 
-static IN_NEXT_PREV_WINDOW_SEQ: atomic::AtomicBool =
-    atomic::AtomicBool::new(false);
-
 pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
-    let props = args.extra_props;
+    let fdata = args.focus_data;
 
     if args.cmd.is_prev_next_window_variant() {
-        let before =
-            IN_NEXT_PREV_WINDOW_SEQ.swap(true, atomic::Ordering::SeqCst);
-        if !before {
-            let mut map = props.write().unwrap();
-            for val in map.values_mut() {
-                val.last_focus_tick_for_next_prev_seq = val.last_focus_tick;
-            }
-        }
+        fdata.send(FocusMessage::TickUpdateInhibit);
     } else {
-        IN_NEXT_PREV_WINDOW_SEQ.store(false, atomic::Ordering::SeqCst);
+        fdata.send(FocusMessage::TickUpdateActivate);
     }
 
     match args.cmd {
         SwayrCommand::Nop => {}
         SwayrCommand::SwitchToUrgentOrLRUWindow => {
-            switch_to_urgent_or_lru_window(&*props.read().unwrap())
+            switch_to_urgent_or_lru_window(fdata)
         }
         SwayrCommand::SwitchToAppOrUrgentOrLRUWindow { name } => {
-            switch_to_app_or_urgent_or_lru_window(
-                Some(name),
-                &*props.read().unwrap(),
-            )
+            switch_to_app_or_urgent_or_lru_window(Some(name), fdata)
         }
         SwayrCommand::SwitchToMarkOrUrgentOrLRUWindow { con_mark } => {
-            switch_to_mark_or_urgent_or_lru_window(
-                Some(con_mark),
-                &*props.read().unwrap(),
-            )
+            switch_to_mark_or_urgent_or_lru_window(Some(con_mark), fdata)
         }
-        SwayrCommand::SwitchWindow => switch_window(&*props.read().unwrap()),
-        SwayrCommand::SwitchWorkspace => {
-            switch_workspace(&*props.read().unwrap())
-        }
-        SwayrCommand::SwitchOutput => switch_output(&*props.read().unwrap()),
+        SwayrCommand::SwitchWindow => switch_window(fdata),
+        SwayrCommand::SwitchWorkspace => switch_workspace(fdata),
+        SwayrCommand::SwitchOutput => switch_output(),
         SwayrCommand::SwitchWorkspaceOrWindow => {
-            switch_workspace_or_window(&*props.read().unwrap())
+            switch_workspace_or_window(fdata)
         }
         SwayrCommand::SwitchWorkspaceContainerOrWindow => {
-            switch_workspace_container_or_window(&*props.read().unwrap())
+            switch_workspace_container_or_window(fdata)
         }
-        SwayrCommand::SwitchTo => switch_to(&*props.read().unwrap()),
-        SwayrCommand::QuitWindow { kill } => {
-            quit_window(&*props.read().unwrap(), *kill)
-        }
-        SwayrCommand::QuitWorkspaceOrWindow => {
-            quit_workspace_or_window(&*props.read().unwrap())
-        }
+        SwayrCommand::SwitchTo => switch_to(fdata),
+        SwayrCommand::QuitWindow { kill } => quit_window(fdata, *kill),
+        SwayrCommand::QuitWorkspaceOrWindow => quit_workspace_or_window(fdata),
         SwayrCommand::QuitWorkspaceContainerOrWindow => {
-            quit_workspace_container_or_window(&*props.read().unwrap())
+            quit_workspace_container_or_window(fdata)
         }
         SwayrCommand::MoveFocusedToWorkspace => {
-            move_focused_to_workspace(&*props.read().unwrap())
+            move_focused_to_workspace(fdata)
         }
-        SwayrCommand::MoveFocusedTo => move_focused_to(&*props.read().unwrap()),
-        SwayrCommand::SwapFocusedWith => {
-            swap_focused_with(&*props.read().unwrap())
-        }
+        SwayrCommand::MoveFocusedTo => move_focused_to(fdata),
+        SwayrCommand::SwapFocusedWith => swap_focused_with(fdata),
         SwayrCommand::NextWindow { windows } => focus_window_in_direction(
             Direction::Forward,
             windows,
-            &*props.read().unwrap(),
+            fdata,
             Box::new(always_true),
         ),
         SwayrCommand::PrevWindow { windows } => focus_window_in_direction(
             Direction::Backward,
             windows,
-            &*props.read().unwrap(),
+            fdata,
             Box::new(always_true),
         ),
         SwayrCommand::NextTiledWindow { windows } => focus_window_in_direction(
             Direction::Forward,
             windows,
-            &*props.read().unwrap(),
+            fdata,
             Box::new(|dn: &t::DisplayNode| {
                 !dn.node.is_floating()
                     && dn.tree.is_child_of_tiled_container(dn.node.id)
@@ -335,7 +309,7 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
         SwayrCommand::PrevTiledWindow { windows } => focus_window_in_direction(
             Direction::Backward,
             windows,
-            &*props.read().unwrap(),
+            fdata,
             Box::new(|dn: &t::DisplayNode| {
                 !dn.node.is_floating()
                     && dn.tree.is_child_of_tiled_container(dn.node.id)
@@ -345,7 +319,7 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
             focus_window_in_direction(
                 Direction::Forward,
                 windows,
-                &*props.read().unwrap(),
+                fdata,
                 Box::new(|dn: &t::DisplayNode| {
                     !dn.node.is_floating()
                         && dn
@@ -358,7 +332,7 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
             focus_window_in_direction(
                 Direction::Backward,
                 windows,
-                &*props.read().unwrap(),
+                fdata,
                 Box::new(|dn: &t::DisplayNode| {
                     !dn.node.is_floating()
                         && dn
@@ -371,7 +345,7 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
             focus_window_in_direction(
                 Direction::Forward,
                 windows,
-                &*props.read().unwrap(),
+                fdata,
                 Box::new(|dn: &t::DisplayNode| dn.node.is_floating()),
             )
         }
@@ -379,7 +353,7 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
             focus_window_in_direction(
                 Direction::Backward,
                 windows,
-                &*props.read().unwrap(),
+                fdata,
                 Box::new(|dn: &t::DisplayNode| dn.node.is_floating()),
             )
         }
@@ -387,14 +361,14 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
             focus_window_of_same_layout_in_direction(
                 Direction::Forward,
                 windows,
-                &*props.read().unwrap(),
+                fdata,
             )
         }
         SwayrCommand::PrevWindowOfSameLayout { windows } => {
             focus_window_of_same_layout_in_direction(
                 Direction::Backward,
                 windows,
-                &*props.read().unwrap(),
+                fdata,
             )
         }
         SwayrCommand::TileWorkspace { floating } => {
@@ -473,7 +447,7 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
             {
                 exec_swayr_cmd(ExecSwayrCmdArgs {
                     cmd: c,
-                    extra_props: props,
+                    focus_data: args.focus_data,
                 });
             }
         }
@@ -495,19 +469,17 @@ pub fn get_outputs() -> Vec<s::Output> {
     }
 }
 
-pub fn switch_to_urgent_or_lru_window(
-    extra_props: &HashMap<i64, t::ExtraProps>,
-) {
-    switch_to_app_or_urgent_or_lru_window(None, extra_props)
+pub fn switch_to_urgent_or_lru_window(fdata: &FocusData) {
+    switch_to_app_or_urgent_or_lru_window(None, fdata)
 }
 
 pub fn switch_to_app_or_urgent_or_lru_window(
     name: Option<&str>,
-    extra_props: &HashMap<i64, t::ExtraProps>,
+    fdata: &FocusData,
 ) {
     let root = ipc::get_root_node(false);
-    let tree = t::get_tree(&root, extra_props);
-    let wins = tree.get_windows();
+    let tree = t::get_tree(&root);
+    let wins = tree.get_windows(fdata);
     let app_win =
         name.and_then(|n| wins.iter().find(|w| w.node.get_app_name() == n));
     focus_win_if_not_focused(app_win, wins.get(0))
@@ -515,11 +487,11 @@ pub fn switch_to_app_or_urgent_or_lru_window(
 
 pub fn switch_to_mark_or_urgent_or_lru_window(
     con_mark: Option<&str>,
-    extra_props: &HashMap<i64, t::ExtraProps>,
+    fdata: &FocusData,
 ) {
     let root = ipc::get_root_node(false);
-    let tree = t::get_tree(&root, extra_props);
-    let wins = tree.get_windows();
+    let tree = t::get_tree(&root);
+    let wins = tree.get_windows(fdata);
     let marked_win = con_mark.and_then(|mark| {
         wins.iter()
             .find(|w| w.node.marks.contains(&mark.to_owned()))
@@ -612,50 +584,48 @@ fn select_and_focus(prompt: &str, choices: &[t::DisplayNode]) {
     }
 }
 
-pub fn switch_window(extra_props: &HashMap<i64, t::ExtraProps>) {
+pub fn switch_window(fdata: &FocusData) {
     let root = ipc::get_root_node(true);
-    let tree = t::get_tree(&root, extra_props);
-    select_and_focus("Select window", &tree.get_windows());
+    let tree = t::get_tree(&root);
+    select_and_focus("Select window", &tree.get_windows(fdata));
 }
 
-pub fn switch_workspace(extra_props: &HashMap<i64, t::ExtraProps>) {
+pub fn switch_workspace(fdata: &FocusData) {
     let root = ipc::get_root_node(false);
-    let tree = t::get_tree(&root, extra_props);
-    select_and_focus("Select workspace", &tree.get_workspaces());
+    let tree = t::get_tree(&root);
+    select_and_focus("Select workspace", &tree.get_workspaces(fdata));
 }
 
-pub fn switch_output(extra_props: &HashMap<i64, t::ExtraProps>) {
+pub fn switch_output() {
     let root = ipc::get_root_node(false);
-    let tree = t::get_tree(&root, extra_props);
+    let tree = t::get_tree(&root);
     select_and_focus("Select output", &tree.get_outputs());
 }
 
-pub fn switch_workspace_or_window(extra_props: &HashMap<i64, t::ExtraProps>) {
+pub fn switch_workspace_or_window(fdata: &FocusData) {
     let root = ipc::get_root_node(true);
-    let tree = t::get_tree(&root, extra_props);
+    let tree = t::get_tree(&root);
     select_and_focus(
         "Select workspace or window",
-        &tree.get_workspaces_and_windows(),
+        &tree.get_workspaces_and_windows(fdata),
     );
 }
 
-pub fn switch_workspace_container_or_window(
-    extra_props: &HashMap<i64, t::ExtraProps>,
-) {
+pub fn switch_workspace_container_or_window(fdata: &FocusData) {
     let root = ipc::get_root_node(true);
-    let tree = t::get_tree(&root, extra_props);
+    let tree = t::get_tree(&root);
     select_and_focus(
         "Select workspace, container or window",
-        &tree.get_workspaces_containers_and_windows(),
+        &tree.get_workspaces_containers_and_windows(fdata),
     );
 }
 
-pub fn switch_to(extra_props: &HashMap<i64, t::ExtraProps>) {
+pub fn switch_to(fdata: &FocusData) {
     let root = ipc::get_root_node(true);
-    let tree = t::get_tree(&root, extra_props);
+    let tree = t::get_tree(&root);
     select_and_focus(
         "Select output, workspace, container or window",
-        &tree.get_outputs_workspaces_containers_and_windows(),
+        &tree.get_outputs_workspaces_containers_and_windows(fdata),
     );
 }
 
@@ -697,30 +667,28 @@ fn select_and_quit(prompt: &str, choices: &[t::DisplayNode], kill: bool) {
     }
 }
 
-pub fn quit_window(extra_props: &HashMap<i64, t::ExtraProps>, kill: bool) {
+pub fn quit_window(fdata: &FocusData, kill: bool) {
     let root = ipc::get_root_node(true);
-    let tree = t::get_tree(&root, extra_props);
-    select_and_quit("Quit window", &tree.get_windows(), kill);
+    let tree = t::get_tree(&root);
+    select_and_quit("Quit window", &tree.get_windows(fdata), kill);
 }
 
-pub fn quit_workspace_or_window(extra_props: &HashMap<i64, t::ExtraProps>) {
+pub fn quit_workspace_or_window(fdata: &FocusData) {
     let root = ipc::get_root_node(true);
-    let tree = t::get_tree(&root, extra_props);
+    let tree = t::get_tree(&root);
     select_and_quit(
         "Quit workspace or window",
-        &tree.get_workspaces_and_windows(),
+        &tree.get_workspaces_and_windows(fdata),
         false,
     );
 }
 
-pub fn quit_workspace_container_or_window(
-    extra_props: &HashMap<i64, t::ExtraProps>,
-) {
+pub fn quit_workspace_container_or_window(fdata: &FocusData) {
     let root = ipc::get_root_node(true);
-    let tree = t::get_tree(&root, extra_props);
+    let tree = t::get_tree(&root);
     select_and_quit(
         "Quit workspace, container or window",
-        &tree.get_workspaces_containers_and_windows(),
+        &tree.get_workspaces_containers_and_windows(fdata),
         false,
     );
 }
@@ -783,30 +751,30 @@ fn select_and_move_focused_to(prompt: &str, choices: &[t::DisplayNode]) {
     }
 }
 
-pub fn move_focused_to_workspace(extra_props: &HashMap<i64, t::ExtraProps>) {
+pub fn move_focused_to_workspace(fdata: &FocusData) {
     let root = ipc::get_root_node(true);
-    let tree = t::get_tree(&root, extra_props);
-    select_and_move_focused_to(
+    let tree = t::get_tree(&root);
+select_and_move_focused_to(
         "Move focused container to workspace",
-        &tree.get_workspaces(),
+        &tree.get_workspaces(fdata),
     );
 }
 
-pub fn move_focused_to(extra_props: &HashMap<i64, t::ExtraProps>) {
+pub fn move_focused_to(fdata: &FocusData) {
     let root = ipc::get_root_node(true);
-    let tree = t::get_tree(&root, extra_props);
+    let tree = t::get_tree(&root);
     select_and_move_focused_to(
         "Move focused container to workspace or container",
-        &tree.get_outputs_workspaces_containers_and_windows(),
+        &tree.get_outputs_workspaces_containers_and_windows(fdata),
     );
 }
 
-pub fn swap_focused_with(extra_props: &HashMap<i64, t::ExtraProps>) {
+pub fn swap_focused_with(fdata: &FocusData) {
     let root = ipc::get_root_node(true);
-    let tree = t::get_tree(&root, extra_props);
+    let tree = t::get_tree(&root);
     match util::select_from_menu(
         "Swap focused with",
-        &tree.get_workspaces_containers_and_windows(),
+        &tree.get_workspaces_containers_and_windows(fdata),
     ) {
         Ok(tn) => match tn.node.get_type() {
             ipc::Type::Workspace | ipc::Type::Container | ipc::Type::Window => {
@@ -835,12 +803,12 @@ pub enum Direction {
 pub fn focus_window_in_direction(
     dir: Direction,
     consider_wins: &ConsiderWindows,
-    extra_props: &HashMap<i64, t::ExtraProps>,
+    fdata: &FocusData,
     pred: Box<dyn Fn(&t::DisplayNode) -> bool>,
 ) {
     let root = ipc::get_root_node(false);
-    let tree = t::get_tree(&root, extra_props);
-    let mut wins = tree.get_windows();
+    let tree = t::get_tree(&root);
+    let mut wins = tree.get_windows(fdata);
 
     if consider_wins == &ConsiderWindows::CurrentWorkspace {
         let cur_ws = tree.get_current_workspace();
@@ -859,8 +827,8 @@ pub fn focus_window_in_direction(
     }
 
     wins.sort_by(|a, b| {
-        let lru_a = tree.last_focus_tick_for_next_prev_seq(a.node.id);
-        let lru_b = tree.last_focus_tick_for_next_prev_seq(b.node.id);
+        let lru_a = fdata.last_focus_tick(a.node.id);
+        let lru_b = fdata.last_focus_tick(b.node.id);
         lru_a.cmp(&lru_b).reverse()
     });
 
@@ -890,18 +858,18 @@ pub fn focus_window_in_direction(
 pub fn focus_window_of_same_layout_in_direction(
     dir: Direction,
     consider_wins: &ConsiderWindows,
-    extra_props: &HashMap<i64, t::ExtraProps>,
+    fdata: &FocusData,
 ) {
     let root = ipc::get_root_node(false);
-    let tree = t::get_tree(&root, extra_props);
-    let wins = tree.get_windows();
+    let tree = t::get_tree(&root);
+    let wins = tree.get_windows(fdata);
     let cur_win = wins.iter().find(|w| w.node.focused);
 
     if let Some(cur_win) = cur_win {
         focus_window_in_direction(
             dir,
             consider_wins,
-            extra_props,
+            fdata,
             if cur_win.node.is_floating() {
                 Box::new(|dn| dn.node.is_floating())
             } else if !cur_win.node.is_floating()

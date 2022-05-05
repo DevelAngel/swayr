@@ -16,6 +16,7 @@
 //! Convenience data structures built from the IPC structs.
 
 use crate::config;
+use crate::focus::FocusData;
 use crate::shared::fmt::subst_placeholders;
 use crate::shared::ipc;
 use crate::shared::ipc::NodeMethods;
@@ -23,25 +24,16 @@ use crate::util;
 use crate::util::DisplayFormat;
 use once_cell::sync::Lazy;
 use regex::Regex;
-use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
 use std::cmp;
 use std::collections::HashMap;
 use std::rc::Rc;
 use swayipc as s;
 
-/// Extra properties gathered by swayrd for windows and workspaces.
-#[derive(Copy, Clone, Debug, Deserialize, Serialize)]
-pub struct ExtraProps {
-    pub last_focus_tick: u64,
-    pub last_focus_tick_for_next_prev_seq: u64,
-}
-
 pub struct Tree<'a> {
     root: &'a s::Node,
     id_node: HashMap<i64, &'a s::Node>,
     id_parent: HashMap<i64, i64>,
-    extra_props: &'a HashMap<i64, ExtraProps>,
 }
 
 #[derive(Copy, Clone, PartialEq, Eq)]
@@ -83,28 +75,23 @@ impl<'a> Tree<'a> {
         }
     }
 
-    pub fn last_focus_tick(&self, id: i64) -> u64 {
-        self.extra_props.get(&id).map_or(0, |wp| wp.last_focus_tick)
-    }
-
-    pub fn last_focus_tick_for_next_prev_seq(&self, id: i64) -> u64 {
-        self.extra_props
-            .get(&id)
-            .map_or(0, |wp| wp.last_focus_tick_for_next_prev_seq)
-    }
-
     fn sorted_nodes_of_type_1(
         &self,
         node: &'a s::Node,
         t: ipc::Type,
+        fdata: &FocusData,
     ) -> Vec<&s::Node> {
         let mut v: Vec<&s::Node> = node.nodes_of_type(t);
-        self.sort_by_urgency_and_lru_time_1(&mut v);
+        self.sort_by_urgency_and_lru_time_1(&mut v, fdata);
         v
     }
 
-    fn sorted_nodes_of_type(&self, t: ipc::Type) -> Vec<&s::Node> {
-        self.sorted_nodes_of_type_1(self.root, t)
+    fn sorted_nodes_of_type(
+        &self,
+        t: ipc::Type,
+        fdata: &FocusData,
+    ) -> Vec<&s::Node> {
+        self.sorted_nodes_of_type_1(self.root, t, fdata)
     }
 
     fn as_display_nodes(
@@ -137,16 +124,16 @@ impl<'a> Tree<'a> {
         self.as_display_nodes(&outputs, IndentLevel::Fixed(0))
     }
 
-    pub fn get_workspaces(&self) -> Vec<DisplayNode> {
-        let mut v = self.sorted_nodes_of_type(ipc::Type::Workspace);
+    pub fn get_workspaces(&self, fdata: &FocusData) -> Vec<DisplayNode> {
+        let mut v = self.sorted_nodes_of_type(ipc::Type::Workspace, fdata);
         if !v.is_empty() {
             v.rotate_left(1);
         }
         self.as_display_nodes(&v, IndentLevel::Fixed(0))
     }
 
-    pub fn get_windows(&self) -> Vec<DisplayNode> {
-        let mut v = self.sorted_nodes_of_type(ipc::Type::Window);
+    pub fn get_windows(&self, fdata: &FocusData) -> Vec<DisplayNode> {
+        let mut v = self.sorted_nodes_of_type(ipc::Type::Window, fdata);
         // Rotate, but only non-urgent windows.  Those should stay at the front
         // as they are the most likely switch candidates.
         let mut x;
@@ -169,13 +156,17 @@ impl<'a> Tree<'a> {
         self.as_display_nodes(&x, IndentLevel::Fixed(0))
     }
 
-    pub fn get_workspaces_and_windows(&self) -> Vec<DisplayNode> {
-        let workspaces = self.sorted_nodes_of_type(ipc::Type::Workspace);
+    pub fn get_workspaces_and_windows(
+        &self,
+        fdata: &FocusData,
+    ) -> Vec<DisplayNode> {
+        let workspaces = self.sorted_nodes_of_type(ipc::Type::Workspace, fdata);
         let mut first = true;
         let mut v = vec![];
         for ws in workspaces {
             v.push(ws);
-            let mut wins = self.sorted_nodes_of_type_1(ws, ipc::Type::Window);
+            let mut wins =
+                self.sorted_nodes_of_type_1(ws, ipc::Type::Window, fdata);
             if first && !wins.is_empty() {
                 wins.rotate_left(1);
                 first = false;
@@ -186,15 +177,19 @@ impl<'a> Tree<'a> {
         self.as_display_nodes(&v, IndentLevel::WorkspacesZeroWindowsOne)
     }
 
-    fn sort_by_urgency_and_lru_time_1(&self, v: &mut [&s::Node]) {
+    fn sort_by_urgency_and_lru_time_1(
+        &self,
+        v: &mut [&s::Node],
+        fdata: &FocusData,
+    ) {
         v.sort_by(|a, b| {
             if a.urgent && !b.urgent {
                 cmp::Ordering::Less
             } else if !a.urgent && b.urgent {
                 cmp::Ordering::Greater
             } else {
-                let lru_a = self.last_focus_tick(a.id);
-                let lru_b = self.last_focus_tick(b.id);
+                let lru_a = fdata.last_focus_tick(a.id);
+                let lru_b = fdata.last_focus_tick(b.id);
                 lru_a.cmp(&lru_b).reverse()
             }
         });
@@ -204,36 +199,41 @@ impl<'a> Tree<'a> {
         &self,
         n: &'a s::Node,
         v: Rc<RefCell<Vec<&'a s::Node>>>,
+        fdata: &FocusData,
     ) {
         v.borrow_mut().push(n);
 
         let mut children: Vec<&s::Node> = n.nodes.iter().collect();
         children.append(&mut n.floating_nodes.iter().collect());
-        self.sort_by_urgency_and_lru_time_1(&mut children);
+        self.sort_by_urgency_and_lru_time_1(&mut children, fdata);
 
         for c in children {
-            self.push_subtree_sorted(c, Rc::clone(&v));
+            self.push_subtree_sorted(c, Rc::clone(&v), fdata);
         }
     }
 
     pub fn get_outputs_workspaces_containers_and_windows(
         &self,
+        fdata: &FocusData,
     ) -> Vec<DisplayNode> {
-        let outputs = self.sorted_nodes_of_type(ipc::Type::Output);
+        let outputs = self.sorted_nodes_of_type(ipc::Type::Output, fdata);
         let v: Rc<RefCell<Vec<&s::Node>>> = Rc::new(RefCell::new(vec![]));
         for o in outputs {
-            self.push_subtree_sorted(o, Rc::clone(&v));
+            self.push_subtree_sorted(o, Rc::clone(&v), fdata);
         }
 
         let x = self.as_display_nodes(&*v.borrow(), IndentLevel::TreeDepth(1));
         x
     }
 
-    pub fn get_workspaces_containers_and_windows(&self) -> Vec<DisplayNode> {
-        let workspaces = self.sorted_nodes_of_type(ipc::Type::Workspace);
+    pub fn get_workspaces_containers_and_windows(
+        &self,
+        fdata: &FocusData,
+    ) -> Vec<DisplayNode> {
+        let workspaces = self.sorted_nodes_of_type(ipc::Type::Workspace, fdata);
         let v: Rc<RefCell<Vec<&s::Node>>> = Rc::new(RefCell::new(vec![]));
         for ws in workspaces {
-            self.push_subtree_sorted(ws, Rc::clone(&v));
+            self.push_subtree_sorted(ws, Rc::clone(&v), fdata);
         }
 
         let x = self.as_display_nodes(&*v.borrow(), IndentLevel::TreeDepth(2));
@@ -281,10 +281,7 @@ fn init_id_parent<'a>(
     }
 }
 
-pub fn get_tree<'a>(
-    root: &'a s::Node,
-    extra_props: &'a HashMap<i64, ExtraProps>,
-) -> Tree<'a> {
+pub fn get_tree(root: &s::Node) -> Tree {
     let mut id_node: HashMap<i64, &s::Node> = HashMap::new();
     let mut id_parent: HashMap<i64, i64> = HashMap::new();
     init_id_parent(root, None, &mut id_node, &mut id_parent);
@@ -293,7 +290,6 @@ pub fn get_tree<'a>(
         root,
         id_node,
         id_parent,
-        extra_props,
     }
 }
 
