@@ -173,6 +173,11 @@ These commands change the layout of the current workspace.
 * `execute-swayr-command` displays all commands above and executes the selected
   one.  (This is useful for accessing swayr commands which are not bound to a
   key.)
+* `nop` (unsurprisingly) does nothing, the command can be used to break out of a
+  sequence of [window cycling commands](#cycling-commands). The LRU window order
+  is frozen when the first cycling command is processed and remains so until a
+  non-cycling command is received. The `nop` command can conveniently serve to
+  interrupt a sequence without having any other side effects.
 
 ### <a id="swayr-screenshots">Screenshots</a>
 
@@ -270,6 +275,17 @@ bindsym $mod+Shift+c exec env RUST_BACKTRACE=1 \
 Of course, configure the keys to your liking.  Again, enabling rust backtraces
 and logging are optional.
 
+Pending a fix for [Sway issue 6456](https://github.com/swaywm/sway/issues/6456),
+it will be possible to close a sequence of window cycling commands using
+a `nop` command bound to the release of the `$mod` key. Assuming your `$mod`
+is bound to `Super_L` it could look something like this:
+
+```
+bindsym --release Super_L exec env RUST_BACKTRACE=1 \
+    swayr nop >> /tmp/swayr.log 2>&1
+```
+
+
 ### <a id="swayr-configuration">Configuration</a>
 
 Swayr can be configured using the `~/.config/swayr/config.toml` or
@@ -334,6 +350,9 @@ auto_tile_min_window_width_per_output_width = [
     [3440, 1000],
     [4096, 1200],
 ]
+
+[focus]
+lockin_delay = 750
 ```
 
 In the following, all sections are explained.
@@ -453,6 +472,15 @@ or containers are resized but unfortunately, resizing doesn't issue any events
 over IPC.  Therefore, auto-tiling is triggered by new-window events,
 close-events, move-events, floating-events, and also focus-events.  The latter
 are a workaround and wouldn't be required if there were resize-events.
+
+
+#### The focus section
+
+In the `[focus]` section, you can configure the amount of time a window
+has to keep the focus in order to affect the LRU order. If a given window
+is only briefly focused, e.g. moving the mouse over it on the way to
+another window, then its position in the LRU order will not be modified.
+
 
 ### <a id="swayr-version-changes">Version changes</a>
 

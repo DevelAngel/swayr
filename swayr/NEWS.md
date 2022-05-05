@@ -1,3 +1,14 @@
+swayr v0.18.0
+=============
+
+- The LRU window order will no longer be immediately updated when there is a
+  focus change. Instead there is now a short (configurable) delay before the
+  update. The user-visible change is that quickly moving over windows with the
+  mouse, or moving through them using keyboard navigation, will only register
+  the start and destination windows in the LRU sequence.
+- A `nop` command can be used to interrupt a sequence of window-cycling
+  commands.
+
 swayr v0.17.0
 =============
 
