@@ -296,10 +296,7 @@ fn focus_lock_in_handler(
     let update_focus = |fev: Option<FocusEvent>| {
         if let Some(fev) = fev {
             log::debug!("Locking-in focus on {}", fev.node_id);
-            fdata.update_last_focus_tick(
-                fev.node_id,
-                fev.ev_focus_ctr,
-            )
+            fdata.update_last_focus_tick(fev.node_id, fev.ev_focus_ctr)
         }
     };
 
@@ -318,7 +315,7 @@ fn focus_lock_in_handler(
             FocusMessage::TickUpdateActivate => {
                 inhibit.clear();
                 update_focus(pending_fev.take());
-                continue
+                continue;
             }
             FocusMessage::FocusEvent(fev) => {
                 if let InhibitState::FocusInhibit = inhibit {

@@ -15,10 +15,10 @@
 
 //! Structure to hold window focus timestamps used by swayrd
 
+use std::collections::HashMap;
 use std::sync::mpsc;
 use std::sync::Arc;
 use std::sync::RwLock;
-use std::collections::HashMap;
 
 /// Data tracking most recent focus events for Sway windows/containers
 #[derive(Clone)]
@@ -29,51 +29,38 @@ pub struct FocusData {
 
 impl FocusData {
     pub fn last_focus_tick(&self, id: i64) -> u64 {
-        *self.focus_tick_by_id
-            .read()
-            .unwrap()
-            .get(&id)
-            .unwrap_or(&0)
+        *self.focus_tick_by_id.read().unwrap().get(&id).unwrap_or(&0)
     }
 
-    pub fn update_last_focus_tick(
-        &self,
-        id: i64,
-        focus_val: u64,
-    ) {
+    pub fn update_last_focus_tick(&self, id: i64, focus_val: u64) {
         let mut write_lock = self.focus_tick_by_id.write().unwrap();
         if let Some(tick) = write_lock.get_mut(&id) {
             *tick = focus_val;
         }
         // else the node has since been closed before this focus event got locked in
     }
-    
-    pub fn remove_focus_data(
-        &self,
-        id: i64
-    ) {
+
+    pub fn remove_focus_data(&self, id: i64) {
         self.focus_tick_by_id.write().unwrap().remove(&id);
     }
-    
+
     /// Ensures that a given node_id is present in the ExtraProps map, this
     /// later used to distinguish between the case where a container was
-    /// closed (it will no longer be in the map) or 
+    /// closed (it will no longer be in the map) or
     pub fn ensure_id(&self, id: i64) {
         let mut write_lock = self.focus_tick_by_id.write().unwrap();
         if write_lock.get(&id).is_none() {
-            write_lock.insert(
-                id,
-                0,
-            );
+            write_lock.insert(id, 0);
         }
     }
 
     pub fn send(&self, fmsg: FocusMessage) {
         // todo can this be removed?
-        if let FocusMessage::FocusEvent(ref fev) = fmsg { 
+        if let FocusMessage::FocusEvent(ref fev) = fmsg {
             self.ensure_id(fev.node_id);
         }
-        self.focus_chan.send(fmsg)
+        self.focus_chan
+            .send(fmsg)
             .expect("Failed to send focus event over channel");
     }
 }

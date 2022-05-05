@@ -754,7 +754,7 @@ fn select_and_move_focused_to(prompt: &str, choices: &[t::DisplayNode]) {
 pub fn move_focused_to_workspace(fdata: &FocusData) {
     let root = ipc::get_root_node(true);
     let tree = t::get_tree(&root);
-select_and_move_focused_to(
+    select_and_move_focused_to(
         "Move focused container to workspace",
         &tree.get_workspaces(fdata),
     );
