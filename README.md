@@ -110,7 +110,7 @@ by the shortcut.  The following shortcuts are supported.
   `w:<input>` would do.
 
 
-#### Cycling commands
+#### <a id="swayr-cycling-commands">Cycling commands</a>
 
 Those commands cycle through (a subset of windows) in last-recently-used order.
 
@@ -173,11 +173,12 @@ These commands change the layout of the current workspace.
 * `execute-swayr-command` displays all commands above and executes the selected
   one.  (This is useful for accessing swayr commands which are not bound to a
   key.)
-* `nop` (unsurprisingly) does nothing, the command can be used to break out of a
-  sequence of [window cycling commands](#cycling-commands). The LRU window order
-  is frozen when the first cycling command is processed and remains so until a
-  non-cycling command is received. The `nop` command can conveniently serve to
-  interrupt a sequence without having any other side effects.
+* `nop` (unsurprisingly) does nothing, the command can be used to break out of
+  a sequence of [window cycling commands](#swayr-cycling-commands).  The LRU
+  window order is frozen when the first cycling command is processed and
+  remains so until a non-cycling command is received.  The `nop` command can
+  conveniently serve to interrupt a sequence without having any other side
+  effects.
 
 ### <a id="swayr-screenshots">Screenshots</a>
 
@@ -275,10 +276,11 @@ bindsym $mod+Shift+c exec env RUST_BACKTRACE=1 \
 Of course, configure the keys to your liking.  Again, enabling rust backtraces
 and logging are optional.
 
-Pending a fix for [Sway issue 6456](https://github.com/swaywm/sway/issues/6456),
-it will be possible to close a sequence of window cycling commands using
-a `nop` command bound to the release of the `$mod` key. Assuming your `$mod`
-is bound to `Super_L` it could look something like this:
+Pending a fix for [Sway issue
+#6456](https://github.com/swaywm/sway/issues/6456), it will be possible to
+close a sequence of [window cycling commands](#swayr-cycling-commands) using a
+`nop` command bound to the release of the `$mod` key.  Assuming your `$mod` is
+bound to `Super_L` it could look something like this:
 
 ```
 bindsym --release Super_L exec env RUST_BACKTRACE=1 \
@@ -476,10 +478,11 @@ are a workaround and wouldn't be required if there were resize-events.
 
 #### The focus section
 
-In the `[focus]` section, you can configure the amount of time a window
-has to keep the focus in order to affect the LRU order. If a given window
-is only briefly focused, e.g. moving the mouse over it on the way to
-another window, then its position in the LRU order will not be modified.
+In the `[focus]` section, you can configure the amount of time a window has to
+keep the focus in order to affect the LRU order, the `lockin_delay`.  If a
+given window is only briefly focused, e.g., by moving the mouse over it on the
+way to another window with sway's `focus_follows_mouse` set to `yes` or
+`always`, then its position in the LRU order will not be modified.
 
 
 ### <a id="swayr-version-changes">Version changes</a>
