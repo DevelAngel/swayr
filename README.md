@@ -498,7 +498,7 @@ of your config.
 [![latest release](https://img.shields.io/crates/v/swayrbar.svg)](https://crates.io/crates/swayrbar)
 
 `swayrbar` is a status command for sway's `swaybar` implementing the
-[`swaybar-procotol(7)`](https://man.archlinux.org/man/swaybar-protocol.7).
+[`swaybar-protocol(7)`](https://man.archlinux.org/man/swaybar-protocol.7).
 This means, you would setup your `swaybar` like so in your
 `~/.config/sway/config`:
 
