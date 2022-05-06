@@ -24,7 +24,7 @@ pub mod pactl;
 pub mod sysinfo;
 pub mod window;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum RefreshReason {
     ClickEvent,
     SwayEvent,
@@ -32,25 +32,17 @@ pub enum RefreshReason {
 
 pub type NameInstanceAndReason = (String, String, RefreshReason);
 
-fn should_refresh(
-    m: &dyn BarModuleFn,
-    nai: &Option<NameInstanceAndReason>,
-) -> bool {
-    let cfg = m.get_config();
-    match nai {
-        None => true,
-        Some((n, i, _)) => n == &cfg.name && i == &cfg.instance,
-    }
-}
-
 pub trait BarModuleFn: Sync + Send {
     fn create(config: config::ModuleConfig) -> Box<dyn BarModuleFn>
     where
         Self: Sized;
+
     fn default_config(instance: String) -> config::ModuleConfig
     where
         Self: Sized;
+
     fn get_config(&self) -> &config::ModuleConfig;
+
     fn get_on_click_map(
         &self,
         name: &str,
@@ -63,6 +55,25 @@ pub trait BarModuleFn: Sync + Send {
             None
         }
     }
+
     fn build(&self, nai: &Option<NameInstanceAndReason>) -> s::Block;
+
+    fn should_refresh(
+        &self,
+        nai: &Option<NameInstanceAndReason>,
+        periodic: bool,
+        reasons: &[RefreshReason],
+    ) -> bool {
+        let cfg = self.get_config();
+        match nai {
+            None => periodic,
+            Some((n, i, r)) => {
+                n == &cfg.name
+                    && i == &cfg.instance
+                    && reasons.iter().any(|x| x == r)
+            }
+        }
+    }
+
     fn subst_args<'a>(&'a self, _cmd: &'a [String]) -> Option<Vec<String>>;
 }

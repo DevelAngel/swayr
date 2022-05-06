@@ -19,11 +19,13 @@ use std::collections::HashMap;
 use std::sync::Mutex;
 
 use crate::config;
-use crate::module::{should_refresh, BarModuleFn, NameInstanceAndReason};
+use crate::module::{BarModuleFn, NameInstanceAndReason};
 use crate::shared::fmt::subst_placeholders;
 use crate::shared::ipc;
 use crate::shared::ipc::NodeMethods;
 use swaybar_types as s;
+
+use super::RefreshReason;
 
 pub const NAME: &str = "window";
 
@@ -119,7 +121,7 @@ impl BarModuleFn for BarModuleWindow {
         // initially at startup and when explicitly named by `nai` (caused by a
         // window or workspace event).
         if state.pid == INITIAL_PID
-            || (nai.is_some() && should_refresh(self, nai))
+            || (self.should_refresh(nai, false, &[RefreshReason::SwayEvent]))
         {
             refresh_state(
                 &mut state,
@@ -146,19 +148,6 @@ impl BarModuleFn for BarModuleWindow {
             urgent: None,
             separator: Some(true),
             separator_block_width: None,
-        }
-    }
-
-    fn get_on_click_map(
-        &self,
-        name: &str,
-        instance: &str,
-    ) -> Option<&HashMap<String, Vec<String>>> {
-        let cfg = self.get_config();
-        if name == cfg.name && instance == cfg.instance {
-            cfg.on_click.as_ref()
-        } else {
-            None
         }
     }
 

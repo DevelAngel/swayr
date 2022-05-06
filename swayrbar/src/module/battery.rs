@@ -16,7 +16,7 @@
 //! The date `swayrbar` module.
 
 use crate::config;
-use crate::module::{should_refresh, BarModuleFn, NameInstanceAndReason};
+use crate::module::{BarModuleFn, NameInstanceAndReason};
 use crate::shared::fmt::subst_placeholders;
 use battery as bat;
 use std::collections::HashSet;
@@ -29,6 +29,7 @@ struct State {
     state_of_charge: f32,
     state_of_health: f32,
     state: String,
+    cached_text: String,
 }
 
 pub struct BarModuleBattery {
@@ -50,7 +51,7 @@ fn get_refreshed_batteries(
     Ok(bats)
 }
 
-fn refresh_state(state: &mut State) {
+fn refresh_state(state: &mut State, fmt_str: &str, html_escape: bool) {
     // FIXME: Creating the Manager on every refresh is bad but internally
     // it uses an Rc so if I keep it as a field of BarModuleBattery, that
     // cannot be Sync.
@@ -86,7 +87,8 @@ fn refresh_state(state: &mut State) {
                     comma_sep_string += "]";
                     comma_sep_string
                 }
-            }
+            };
+            state.cached_text = subst_placeholders(fmt_str, html_escape, state);
         }
         Err(err) => {
             log::error!("Could not update battery state: {}", err);
@@ -94,7 +96,7 @@ fn refresh_state(state: &mut State) {
     }
 }
 
-fn get_text(fmt: &str, html_escape: bool, state: &State) -> String {
+fn subst_placeholders(fmt: &str, html_escape: bool, state: &State) -> String {
     subst_placeholders!(fmt, html_escape, {
         "state_of_charge" => state.state_of_charge,
         "state_of_health" => state.state_of_health,
@@ -110,6 +112,7 @@ impl BarModuleFn for BarModuleBattery {
                 state_of_charge: 0.0,
                 state_of_health: 0.0,
                 state: "Unknown".to_owned(),
+                cached_text: String::new(),
             }),
         })
     }
@@ -131,16 +134,18 @@ impl BarModuleFn for BarModuleBattery {
     fn build(&self, nai: &Option<NameInstanceAndReason>) -> s::Block {
         let mut state = self.state.lock().expect("Could not lock state.");
 
-        if should_refresh(self, nai) {
-            refresh_state(&mut state);
+        if self.should_refresh(nai, true, &[]) {
+            refresh_state(
+                &mut state,
+                &self.config.format,
+                self.get_config().is_html_escape(),
+            );
         }
 
-        let text =
-            get_text(&self.config.format, self.config.is_html_escape(), &state);
         s::Block {
             name: Some(NAME.to_owned()),
             instance: Some(self.config.instance.clone()),
-            full_text: text,
+            full_text: state.cached_text.to_owned(),
             align: Some(s::Align::Left),
             markup: Some(s::Markup::Pango),
             short_text: None,
@@ -160,6 +165,10 @@ impl BarModuleFn for BarModuleBattery {
 
     fn subst_args<'a>(&'a self, cmd: &'a [String]) -> Option<Vec<String>> {
         let state = self.state.lock().expect("Could not lock state.");
-        Some(cmd.iter().map(|arg| get_text(arg, false, &state)).collect())
+        Some(
+            cmd.iter()
+                .map(|arg| subst_placeholders(arg, false, &state))
+                .collect(),
+        )
     }
 }

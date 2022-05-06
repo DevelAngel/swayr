@@ -16,7 +16,7 @@
 //! The date `swayrbar` module.
 
 use crate::config;
-use crate::module::{should_refresh, BarModuleFn, NameInstanceAndReason};
+use crate::module::{BarModuleFn, NameInstanceAndReason};
 use crate::shared::fmt::subst_placeholders;
 use std::collections::HashMap;
 use std::sync::Mutex;
@@ -34,6 +34,7 @@ struct State {
     load_avg_1: f64,
     load_avg_5: f64,
     load_avg_15: f64,
+    cached_text: String,
 }
 
 pub struct BarModuleSysInfo {
@@ -95,16 +96,22 @@ fn get_load_average(
     }
 }
 
-fn refresh_state(sys: &mut si::System, state: &mut State) {
+fn refresh_state(
+    sys: &mut si::System,
+    state: &mut State,
+    fmt_str: &str,
+    html_escape: bool,
+) {
     let updater = OnceRefresher::new();
     state.cpu_usage = get_cpu_usage(sys, &updater);
     state.mem_usage = get_memory_usage(sys, &updater);
     state.load_avg_1 = get_load_average(sys, LoadAvg::One, &updater);
     state.load_avg_5 = get_load_average(sys, LoadAvg::Five, &updater);
     state.load_avg_15 = get_load_average(sys, LoadAvg::Fifteen, &updater);
+    state.cached_text = subst_placeholders(fmt_str, html_escape, state);
 }
 
-fn get_text(fmt: &str, html_escape: bool, state: &State) -> String {
+fn subst_placeholders(fmt: &str, html_escape: bool, state: &State) -> String {
     subst_placeholders!(fmt, html_escape, {
         "cpu_usage" => state.cpu_usage,
         "mem_usage" => state.mem_usage,
@@ -125,6 +132,7 @@ impl BarModuleFn for BarModuleSysInfo {
                 load_avg_1: 0.0,
                 load_avg_5: 0.0,
                 load_avg_15: 0.0,
+                cached_text: String::new(),
             }),
         })
     }
@@ -149,18 +157,19 @@ impl BarModuleFn for BarModuleSysInfo {
         let mut sys = self.system.lock().expect("Could not lock state.");
         let mut state = self.state.lock().expect("Could not lock state.");
 
-        if should_refresh(self, nai) {
-            refresh_state(&mut sys, &mut state);
+        if self.should_refresh(nai, true, &[]) {
+            refresh_state(
+                &mut sys,
+                &mut state,
+                &self.config.format,
+                self.config.is_html_escape(),
+            );
         }
 
         s::Block {
             name: Some(NAME.to_owned()),
             instance: Some(self.config.instance.clone()),
-            full_text: get_text(
-                &self.config.format,
-                self.config.is_html_escape(),
-                &state,
-            ),
+            full_text: state.cached_text.to_owned(),
             align: Some(s::Align::Left),
             markup: Some(s::Markup::Pango),
             short_text: None,
@@ -180,6 +189,10 @@ impl BarModuleFn for BarModuleSysInfo {
 
     fn subst_args<'a>(&'a self, cmd: &'a [String]) -> Option<Vec<String>> {
         let state = self.state.lock().expect("Could not lock state.");
-        Some(cmd.iter().map(|arg| get_text(arg, false, &state)).collect())
+        Some(
+            cmd.iter()
+                .map(|arg| subst_placeholders(arg, false, &state))
+                .collect(),
+        )
     }
 }

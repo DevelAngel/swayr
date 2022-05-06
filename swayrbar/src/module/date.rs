@@ -15,14 +15,21 @@
 
 //! The date `swayrbar` module.
 
+use std::sync::Mutex;
+
 use crate::module::config;
 use crate::module::{BarModuleFn, NameInstanceAndReason};
 use swaybar_types as s;
 
 const NAME: &str = "date";
 
+struct State {
+    cached_text: String,
+}
+
 pub struct BarModuleDate {
     config: config::ModuleConfig,
+    state: Mutex<State>,
 }
 
 fn chrono_format(s: &str) -> String {
@@ -31,7 +38,12 @@ fn chrono_format(s: &str) -> String {
 
 impl BarModuleFn for BarModuleDate {
     fn create(cfg: config::ModuleConfig) -> Box<dyn BarModuleFn> {
-        Box::new(BarModuleDate { config: cfg })
+        Box::new(BarModuleDate {
+            config: cfg,
+            state: Mutex::new(State {
+                cached_text: String::new(),
+            }),
+        })
     }
 
     fn default_config(instance: String) -> config::ModuleConfig {
@@ -48,25 +60,17 @@ impl BarModuleFn for BarModuleDate {
         &self.config
     }
 
-    fn get_on_click_map(
-        &self,
-        name: &str,
-        instance: &str,
-    ) -> Option<&std::collections::HashMap<String, Vec<String>>> {
-        let cfg = self.get_config();
-        if name == cfg.name && instance == cfg.instance {
-            cfg.on_click.as_ref()
-        } else {
-            None
-        }
-    }
+    fn build(&self, nai: &Option<NameInstanceAndReason>) -> s::Block {
+        let mut state = self.state.lock().expect("Could not lock state.");
 
-    fn build(&self, _nai: &Option<NameInstanceAndReason>) -> s::Block {
-        let text = chrono_format(&self.config.format);
+        if self.should_refresh(nai, true, &[]) {
+            state.cached_text = chrono_format(&self.config.format);
+        }
+
         s::Block {
             name: Some(NAME.to_owned()),
             instance: Some(self.config.instance.clone()),
-            full_text: text,
+            full_text: state.cached_text.to_owned(),
             align: Some(s::Align::Left),
             markup: Some(s::Markup::Pango),
             short_text: None,

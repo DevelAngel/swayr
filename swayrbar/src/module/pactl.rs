@@ -16,7 +16,7 @@
 //! The pactl `swayrbar` module.
 
 use crate::config;
-use crate::module::{should_refresh, BarModuleFn, NameInstanceAndReason};
+use crate::module::{BarModuleFn, NameInstanceAndReason};
 use crate::shared::fmt::subst_placeholders;
 use once_cell::sync::Lazy;
 use regex::Regex;
@@ -25,11 +25,14 @@ use std::process::Command;
 use std::sync::Mutex;
 use swaybar_types as s;
 
+use super::RefreshReason;
+
 const NAME: &str = "pactl";
 
 struct State {
     volume: u8,
     muted: bool,
+    cached_text: String,
 }
 
 pub static VOLUME_RX: Lazy<Regex> =
@@ -62,12 +65,13 @@ pub struct BarModulePactl {
     state: Mutex<State>,
 }
 
-fn refresh_state(state: &mut State) {
+fn refresh_state(state: &mut State, fmt_str: &str, html_escape: bool) {
     state.volume = get_volume();
     state.muted = get_mute_state();
+    state.cached_text = subst_placeholders(fmt_str, html_escape, state);
 }
 
-fn get_text(fmt: &str, html_escape: bool, state: &State) -> String {
+fn subst_placeholders(fmt: &str, html_escape: bool, state: &State) -> String {
     subst_placeholders!(fmt, html_escape, {
         "volume" => {
             state.volume
@@ -92,6 +96,7 @@ impl BarModuleFn for BarModulePactl {
             state: Mutex::new(State {
                 volume: 255_u8,
                 muted: false,
+                cached_text: String::new(),
             }),
         })
     }
@@ -145,16 +150,18 @@ impl BarModuleFn for BarModulePactl {
     fn build(&self, nai: &Option<NameInstanceAndReason>) -> s::Block {
         let mut state = self.state.lock().expect("Could not lock state.");
 
-        if should_refresh(self, nai) {
-            refresh_state(&mut state);
+        if self.should_refresh(nai, true, &[RefreshReason::ClickEvent]) {
+            refresh_state(
+                &mut state,
+                &self.config.format,
+                self.config.is_html_escape(),
+            );
         }
 
-        let text =
-            get_text(&self.config.format, self.config.is_html_escape(), &state);
         s::Block {
             name: Some(NAME.to_owned()),
             instance: Some(self.config.instance.clone()),
-            full_text: text,
+            full_text: state.cached_text.to_owned(),
             align: Some(s::Align::Left),
             markup: Some(s::Markup::Pango),
             short_text: None,
@@ -174,6 +181,10 @@ impl BarModuleFn for BarModulePactl {
 
     fn subst_args<'a>(&'a self, cmd: &'a [String]) -> Option<Vec<String>> {
         let state = self.state.lock().expect("Could not lock state.");
-        Some(cmd.iter().map(|arg| get_text(arg, false, &state)).collect())
+        Some(
+            cmd.iter()
+                .map(|arg| subst_placeholders(arg, false, &state))
+                .collect(),
+        )
     }
 }
