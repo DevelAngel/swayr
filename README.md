@@ -523,8 +523,9 @@ bar {
 
 `swayrbar`, like [waybar](https://github.com/Alexays/Waybar/), consists of a
 set of modules which you can enable and configure via its config file, either
-system-wide (`/etc/xdg/swayrbar/config.toml`) or per user
-(`~/.config/swayrbar/config.toml`).  Modules emit information which `swaybar`
+the one specified via the command line option `--config-file`, the
+user-specific (`~/.config/swayrbar/config.toml`), or the system-wide
+(`/etc/xdg/swayrbar/config.toml`).  Modules emit information which `swaybar`
 then displays and mouse clicks on a module's space in `swaybar` are propagated
 back and trigger some action (e.g., a shell command).
 
