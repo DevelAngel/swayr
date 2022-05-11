@@ -74,7 +74,7 @@ where
                     + "I've created a fresh config for use with wofi for you in "
                     + &path.to_string_lossy()
                         + ". Adapt it to your needs."
-                }else{
+                } else {
                     "Welcome to swayrbar! ".to_owned()
                     + "I've created a fresh config for for you in "
                     + &path.to_string_lossy()
@@ -88,14 +88,28 @@ where
             .spawn()
             .ok();
         log::debug!("Created new config in {}.", path.to_string_lossy());
+    }
+
+    load_config_file(&path)
+}
+
+pub fn load_config_file<T>(config_file: &Path) -> T
+where
+    T: Serialize + DeserializeOwned + Default,
+{
+    if !config_file.exists() {
+        panic!(
+            "Config file {} does not exist.",
+            config_file.to_string_lossy()
+        );
     } else {
-        log::debug!("Loaded config from {}.", path.to_string_lossy());
+        log::debug!("Loading config from {}.", config_file.to_string_lossy());
     }
     let mut file = OpenOptions::new()
         .read(true)
         .write(false)
         .create(false)
-        .open(path)
+        .open(config_file)
         .unwrap();
     let mut buf: String = String::new();
     file.read_to_string(&mut buf).unwrap();

@@ -15,8 +15,10 @@
 
 //! The `swayrbar` binary.
 
+use clap::Parser;
+use swayrbar::bar::Opts;
+
 fn main() {
-    // TODO: We need a config file cmd line option so that each bar can have
-    // its own config.
-    swayrbar::bar::start()
+    let opts: Opts = Opts::parse();
+    swayrbar::bar::start(opts);
 }

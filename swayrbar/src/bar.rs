@@ -21,6 +21,7 @@ use crate::module::{BarModuleFn, NameInstanceAndReason, RefreshReason};
 use env_logger::Env;
 use serde_json;
 use std::io;
+use std::path::Path;
 use std::process as p;
 use std::sync::mpsc::sync_channel;
 use std::sync::mpsc::Receiver;
@@ -30,11 +31,30 @@ use std::{sync::Arc, thread};
 use swaybar_types as sbt;
 use swayipc as si;
 
-pub fn start() {
+#[derive(clap::Parser)]
+#[clap(about, version, author)]
+pub struct Opts {
+    #[clap(
+        short = 'c',
+        long,
+        help = "Path to a config.toml configuration file.
+If not specified, the default config ~/.config/swayrbar/config.toml or
+/etc/xdg/swayrbar/config.toml is used."
+    )]
+    config_file: Option<String>,
+}
+
+pub fn start(opts: Opts) {
     env_logger::Builder::from_env(Env::default().default_filter_or("warn"))
         .init();
 
-    let config = config::load_config();
+    let config = match opts.config_file {
+        None => config::load_config(),
+        Some(config_file) => {
+            let path = Path::new(&config_file);
+            crate::shared::cfg::load_config_file(path)
+        }
+    };
     let refresh_interval = config.refresh_interval;
     let mods: Arc<Vec<Box<dyn BarModuleFn>>> = Arc::new(create_modules(config));
     let mods_for_input = mods.clone();
