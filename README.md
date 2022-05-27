@@ -55,6 +55,11 @@ program.
   a "browser" mark to your browser window (using a standard sway `for_window`
   rule).  Then you can provide "browser" as argument to this command to have a
   convenient browser <-> last-recently-used window toggle.
+* `switch-to-matching-or-urgent-or-lru-window` switches to the (first) window
+  matching the given criterion (see section `CRITERIA` in `sway(5)`) if it
+  exists and is not already focused.  Otherwise, switch to the next urgent
+  window (if any) or to the last recently used window.
+
 
 #### Menu switchers
 

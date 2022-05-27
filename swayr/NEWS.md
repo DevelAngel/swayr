@@ -1,3 +1,12 @@
+swayr v0.19.0
+=============
+
+- There's a new command `switch-to-matching-or-urgent-or-lru-window` which
+  switches to the (first) window matching the given criteria (see section
+  `CRITERIA` in `sway(5)`) if it exists and is not already focused.  Otherwise,
+  switch to the next urgent window (if any) or to the last recently used
+  window.
+
 swayr v0.18.0
 =============
 

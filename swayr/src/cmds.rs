@@ -86,6 +86,11 @@ pub enum SwayrCommand {
     /// "browser" as argument to this command to have a convenient browser <->
     /// last-recently-used window toggle.
     SwitchToMarkOrUrgentOrLRUWindow { con_mark: String },
+    /// Switch to the (first) window matching the given criteria (see section
+    /// `CRITERIA` in `sway(5)`) if it exists and is not already focused.
+    /// Otherwise, switch to the next urgent window (if any) or to the last
+    /// recently used window.
+    SwitchToMatchingOrUrgentOrLRUWindow { criteria: String },
     /// Focus the selected window.
     SwitchWindow,
     /// Switch to the selected workspace.
@@ -260,10 +265,13 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
             switch_to_urgent_or_lru_window(fdata)
         }
         SwayrCommand::SwitchToAppOrUrgentOrLRUWindow { name } => {
-            switch_to_app_or_urgent_or_lru_window(Some(name), fdata)
+            switch_to_app_or_urgent_or_lru_window(name, fdata)
         }
         SwayrCommand::SwitchToMarkOrUrgentOrLRUWindow { con_mark } => {
-            switch_to_mark_or_urgent_or_lru_window(Some(con_mark), fdata)
+            switch_to_mark_or_urgent_or_lru_window(con_mark, fdata)
+        }
+        SwayrCommand::SwitchToMatchingOrUrgentOrLRUWindow { criteria } => {
+            switch_to_matching_or_urgent_or_lru_window(criteria, fdata)
         }
         SwayrCommand::SwitchWindow => switch_window(fdata),
         SwayrCommand::SwitchWorkspace => switch_workspace(fdata),
@@ -470,33 +478,65 @@ pub fn get_outputs() -> Vec<s::Output> {
 }
 
 pub fn switch_to_urgent_or_lru_window(fdata: &FocusData) {
-    switch_to_app_or_urgent_or_lru_window(None, fdata)
-}
-
-pub fn switch_to_app_or_urgent_or_lru_window(
-    name: Option<&str>,
-    fdata: &FocusData,
-) {
     let root = ipc::get_root_node(false);
     let tree = t::get_tree(&root);
     let wins = tree.get_windows(fdata);
-    let app_win =
-        name.and_then(|n| wins.iter().find(|w| w.node.get_app_name() == n));
+    focus_win_if_not_focused(None, wins.get(0))
+}
+
+pub fn switch_to_app_or_urgent_or_lru_window(name: &str, fdata: &FocusData) {
+    let root = ipc::get_root_node(false);
+    let tree = t::get_tree(&root);
+    let wins = tree.get_windows(fdata);
+    let app_win = wins.iter().find(|w| w.node.get_app_name() == name);
     focus_win_if_not_focused(app_win, wins.get(0))
 }
 
 pub fn switch_to_mark_or_urgent_or_lru_window(
-    con_mark: Option<&str>,
+    con_mark: &str,
     fdata: &FocusData,
 ) {
     let root = ipc::get_root_node(false);
     let tree = t::get_tree(&root);
     let wins = tree.get_windows(fdata);
-    let marked_win = con_mark.and_then(|mark| {
-        wins.iter()
-            .find(|w| w.node.marks.contains(&mark.to_owned()))
-    });
+    let con_mark = &con_mark.to_owned();
+    let marked_win = wins.iter().find(|w| w.node.marks.contains(con_mark));
     focus_win_if_not_focused(marked_win, wins.get(0))
+}
+
+fn switch_to_matching_or_urgent_or_lru_window(
+    criteria: &str,
+    fdata: &FocusData,
+) {
+    // TODO: It would be great if sway had some command which given a criteria
+    // query returns the matching windows.  Unfortunately, it doesn't have it
+    // right now.  So we call `CRITERION focus` and check if focus has moved.
+    // If not, we do the "urgent or LRU" thing.
+    let root = ipc::get_root_node(false);
+    let tree = t::get_tree(&root);
+    let wins = tree.get_windows(fdata);
+    let prev_win_id = wins
+        .iter()
+        .find(|w| w.node.focused)
+        .map(|w| w.node.id)
+        .unwrap_or(-1);
+    run_sway_command(&[criteria, "focus"]);
+
+    // Wait until the focus event had time to arrive.
+    std::thread::sleep(std::time::Duration::from_millis(50));
+
+    let root = ipc::get_root_node(false);
+    let tree = t::get_tree(&root);
+    let wins = tree.get_windows(fdata);
+    let cur_win_id = wins
+        .iter()
+        .find(|w| w.node.focused)
+        .map(|w| w.node.id)
+        .unwrap_or(-1);
+
+    if prev_win_id == cur_win_id {
+        focus_win_if_not_focused(None, wins.get(0))
+    }
 }
 
 pub fn focus_win_if_not_focused(
