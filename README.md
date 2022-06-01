@@ -39,26 +39,43 @@ The `swayr` binary provides many subcommands of different categories.
 
 #### Non-menu switchers
 
-Those are just commands that toggle between windows without spawning the menu
-program.
+Those are commands which switch through a sequence of windows where the
+sequence is:
+1. All windows with urgency hints.
+2. All matching windows where which windows match is specific to the command.
+3. The last recently used window at the time of the sequence start.
+4. Back to the window which had the focus at the time of the sequence start.
 
-* `switch-to-urgent-or-lru-window` switches to the next window with urgency
-  hint (if any) or to the last recently used window.
-* `switch-to-app-or-urgent-or-lru-window` switches to a specific window matched
-  by application ID or window class unless it's already focused.  In that case,
-  it acts just like `switch-to-urgent-or-lru-window`.  For example, you can
-  provide "firefox" as argument to this command to have a convenient firefox
-  <-> last-recently-used window toggle.
-* `switch-to-mark-or-urgent-or-lru-window` switches to a specific window
-  matched by mark (`con_mark`) unless it's already focused.  In that case, it
-  acts just like `switch-to-urgent-or-lru-window`.  For example, you can assign
-  a "browser" mark to your browser window (using a standard sway `for_window`
-  rule).  Then you can provide "browser" as argument to this command to have a
-  convenient browser <-> last-recently-used window toggle.
-* `switch-to-matching-or-urgent-or-lru-window` switches to the (first) window
-  matching the given criterion (see section `CRITERIA` in `sway(5)`) if it
-  exists and is not already focused.  Otherwise, switch to the next urgent
-  window (if any) or to the last recently used window.
+During each sequence no window will be visited twice, e.g., if some window has
+an urgency hint, matches the commands specification, and is also the LRU
+window, it's not visited once in each step 1, 2, and 3 but just in step 1.
+
+As said, which windows match is specific to each command:
+
+* `switch-to-urgent-or-lru-window` matches nothing, so step 2 above is
+  effectively disabled.
+* `switch-to-app-or-urgent-or-lru-window <name>` matches windows with the
+  specified name.  The name is compared literally against the window's `app_id`
+  for native Wayland windows or to the window class or instance for X11
+  windows.
+* `switch-to-mark-or-urgent-or-lru-window <con_mark>` matches the window having
+  the given mark.  (As `man sway(5)` defines, each mark can only be applied to
+  a single window at a time.)
+* `switch-to-matching-or-urgent-or-lru-window <criteria>` matches windows
+  according to the the given criteria query (see section `CRITERIA` in `man
+  sway(5)`).  The following criteria are supported: `app_id=<regex or
+  __focused__>`, `class=<regex or __focused__>`, `instance=<regex or
+  __focused__>`, `title=<regex or __focused__>`, `con_mark=<regex>`,
+  `con_id=<uint or __focused__>`, `pid=<uint>`, `floating`, and `tiling`.
+  
+  In addition, there's the criterion `app_name=<regex or __focused__>` not
+  known to sway itself which is matched against the application's name which
+  can either be `app_id`, `window_properties.class`, or
+  `window_properties.instance` (whatever is filled).
+  
+  All regular expressions are [Rust's regex crates
+  regexes](https://docs.rs/regex/latest/regex/index.html).  With the special
+  value `__focused__`, comparison is performed literally.
 
 
 #### Menu switchers

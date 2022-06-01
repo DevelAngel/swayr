@@ -16,6 +16,7 @@
 //! Functions and data structures of the swayr client.
 
 use crate::config as cfg;
+use crate::criteria;
 use crate::focus::FocusData;
 use crate::focus::FocusMessage;
 use crate::layout;
@@ -28,6 +29,8 @@ use once_cell::sync::Lazy;
 use rand::prelude::SliceRandom;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
+use std::sync::Mutex;
+use std::sync::MutexGuard;
 use swayipc as s;
 
 pub fn run_sway_command_1(cmd: &str) {
@@ -63,7 +66,7 @@ pub enum ConsiderWindows {
     CurrentWorkspace,
 }
 
-#[derive(clap::Parser, Debug, Deserialize, Serialize)]
+#[derive(clap::Parser, PartialEq, Debug, Clone, Deserialize, Serialize)]
 pub enum SwayrCommand {
     /// No-operation. Interrupts any in-progress prev/next sequence but has
     /// no other effect
@@ -250,8 +253,41 @@ fn always_true(_x: &t::DisplayNode) -> bool {
     true
 }
 
+static LAST_COMMAND: Lazy<Mutex<SwayrCommand>> =
+    Lazy::new(|| Mutex::new(SwayrCommand::Nop));
+
+#[derive(Debug)]
+pub struct SwitchToMatchingData {
+    visited: Vec<i64>,
+    lru: Option<i64>,
+    fallback: Option<i64>,
+}
+
+static SWITCH_TO_MATCHING_DATA: Lazy<Mutex<SwitchToMatchingData>> =
+    Lazy::new(|| {
+        Mutex::new(SwitchToMatchingData {
+            visited: vec![],
+            lru: None,
+            fallback: None,
+        })
+    });
+
 pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
+    log::info!("Running SwayrCommand {:?}", args.cmd);
     let fdata = args.focus_data;
+
+    let mut last_command = LAST_COMMAND.lock().expect("Could not lock mutex");
+    let mut switch_to_matching_data = SWITCH_TO_MATCHING_DATA
+        .lock()
+        .expect("Could not lock mutex");
+
+    // If this command is not equal to the last command, nuke the
+    // switch_to_matching_data so that we start a new sequence.
+    if *args.cmd != *last_command {
+        switch_to_matching_data.visited.clear();
+        switch_to_matching_data.lru = None;
+        switch_to_matching_data.fallback = None;
+    }
 
     if args.cmd.is_prev_next_window_variant() {
         fdata.send(FocusMessage::TickUpdateInhibit);
@@ -265,13 +301,25 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
             switch_to_urgent_or_lru_window(fdata)
         }
         SwayrCommand::SwitchToAppOrUrgentOrLRUWindow { name } => {
-            switch_to_app_or_urgent_or_lru_window(name, fdata)
+            switch_to_app_or_urgent_or_lru_window(
+                name,
+                &mut switch_to_matching_data,
+                fdata,
+            )
         }
         SwayrCommand::SwitchToMarkOrUrgentOrLRUWindow { con_mark } => {
-            switch_to_mark_or_urgent_or_lru_window(con_mark, fdata)
+            switch_to_mark_or_urgent_or_lru_window(
+                con_mark,
+                &mut switch_to_matching_data,
+                fdata,
+            )
         }
         SwayrCommand::SwitchToMatchingOrUrgentOrLRUWindow { criteria } => {
-            switch_to_matching_or_urgent_or_lru_window(criteria, fdata)
+            switch_to_matching_or_urgent_or_lru_window(
+                criteria,
+                &mut switch_to_matching_data,
+                fdata,
+            )
         }
         SwayrCommand::SwitchWindow => switch_window(fdata),
         SwayrCommand::SwitchWorkspace => switch_workspace(fdata),
@@ -460,10 +508,13 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
             }
         }
     }
+
+    *last_command = args.cmd.clone();
 }
 
-fn focus_window_by_id(id: i64) {
+fn focus_window_by_id(id: i64) -> i64 {
     run_sway_command(&[format!("[con_id={}]", id).as_str(), "focus"]);
+    id
 }
 
 fn quit_window_by_id(id: i64) {
@@ -481,77 +532,123 @@ pub fn switch_to_urgent_or_lru_window(fdata: &FocusData) {
     let root = ipc::get_root_node(false);
     let tree = t::get_tree(&root);
     let wins = tree.get_windows(fdata);
-    focus_win_if_not_focused(None, wins.get(0))
+    let mutex = Mutex::new(SwitchToMatchingData {
+        visited: vec![],
+        lru: None,
+        fallback: None,
+    });
+    let mut guard = mutex.lock().expect("Could not lock mutex");
+    focus_matching_or_lru_window(&wins, fdata, &mut guard, |_| false);
 }
 
-pub fn switch_to_app_or_urgent_or_lru_window(name: &str, fdata: &FocusData) {
+pub fn focus_matching_or_lru_window<P>(
+    wins: &[t::DisplayNode],
+    fdata: &FocusData,
+    switch_to_matching_data: &mut MutexGuard<SwitchToMatchingData>,
+    pred: P,
+) where
+    P: Fn(&t::DisplayNode) -> bool,
+{
+    // Initialize the fallback on first invocation.
+    if switch_to_matching_data.visited.is_empty() {
+        // The currently focused window is already visited, obviously.
+        let focused = wins.iter().find(|w| w.node.focused);
+        if let Some(f) = focused {
+            switch_to_matching_data.visited.push(f.node.id);
+            // The focused window is the fallback we want to return to.
+            switch_to_matching_data.fallback = Some(f.node.id);
+        }
+
+        switch_to_matching_data.lru = wins
+            .iter()
+            .filter(|w| !w.node.focused)
+            .max_by(|a, b| {
+                fdata
+                    .last_focus_tick(a.node.id)
+                    .cmp(&fdata.last_focus_tick(b.node.id))
+            })
+            .map(|w| w.node.id);
+
+        log::debug!(
+            "Initialized SwitchToMatchingData: {:?}",
+            switch_to_matching_data
+        );
+    }
+
+    let visited = &switch_to_matching_data.visited;
+    if let Some(win) = wins.iter().find(|w| {
+        switch_to_matching_data.lru != Some(w.node.id)
+            && switch_to_matching_data.fallback != Some(w.node.id)
+            && !visited.contains(&w.node.id)
+            && (w.node.urgent || pred(w))
+    }) {
+        log::debug!("Switching to by urgency or matching predicate");
+        focus_window_by_id(win.node.id);
+        switch_to_matching_data.visited.push(win.node.id);
+    } else if switch_to_matching_data.lru.is_some()
+        && !visited.contains(&switch_to_matching_data.lru.unwrap())
+    {
+        log::debug!("Switching to LRU");
+        let id = switch_to_matching_data.lru.unwrap();
+        switch_to_matching_data.visited.push(id);
+        focus_window_by_id(id);
+    } else {
+        log::debug!("Switching to Fallback");
+        if let Some(id) = switch_to_matching_data.fallback {
+            focus_window_by_id(id);
+        } else {
+            log::debug!("No fallback window.")
+        }
+        switch_to_matching_data.visited = vec![];
+        switch_to_matching_data.lru = None;
+        switch_to_matching_data.fallback = None;
+    }
+}
+
+pub fn switch_to_app_or_urgent_or_lru_window(
+    name: &str,
+    switch_to_matching_data: &mut MutexGuard<SwitchToMatchingData>,
+    fdata: &FocusData,
+) {
     let root = ipc::get_root_node(false);
     let tree = t::get_tree(&root);
     let wins = tree.get_windows(fdata);
-    let app_win = wins.iter().find(|w| w.node.get_app_name() == name);
-    focus_win_if_not_focused(app_win, wins.get(0))
+    let pred = |w: &t::DisplayNode| w.node.get_app_name() == name;
+
+    focus_matching_or_lru_window(&wins, fdata, switch_to_matching_data, pred);
 }
 
 pub fn switch_to_mark_or_urgent_or_lru_window(
     con_mark: &str,
+    switch_to_matching_data: &mut MutexGuard<SwitchToMatchingData>,
     fdata: &FocusData,
 ) {
     let root = ipc::get_root_node(false);
     let tree = t::get_tree(&root);
     let wins = tree.get_windows(fdata);
     let con_mark = &con_mark.to_owned();
-    let marked_win = wins.iter().find(|w| w.node.marks.contains(con_mark));
-    focus_win_if_not_focused(marked_win, wins.get(0))
+    let pred = |w: &t::DisplayNode| w.node.marks.contains(con_mark);
+
+    focus_matching_or_lru_window(&wins, fdata, switch_to_matching_data, pred);
 }
 
 fn switch_to_matching_or_urgent_or_lru_window(
     criteria: &str,
+    switch_to_matching_data: &mut MutexGuard<SwitchToMatchingData>,
     fdata: &FocusData,
 ) {
-    // TODO: It would be great if sway had some command which given a criteria
-    // query returns the matching windows.  Unfortunately, it doesn't have it
-    // right now.  So we call `CRITERION focus` and check if focus has moved.
-    // If not, we do the "urgent or LRU" thing.
     let root = ipc::get_root_node(false);
     let tree = t::get_tree(&root);
     let wins = tree.get_windows(fdata);
-    let prev_win_id = wins
-        .iter()
-        .find(|w| w.node.focused)
-        .map(|w| w.node.id)
-        .unwrap_or(-1);
-    run_sway_command(&[criteria, "focus"]);
 
-    // Wait until the focus event had time to arrive.
-    std::thread::sleep(std::time::Duration::from_millis(50));
-
-    let root = ipc::get_root_node(false);
-    let tree = t::get_tree(&root);
-    let wins = tree.get_windows(fdata);
-    let cur_win_id = wins
-        .iter()
-        .find(|w| w.node.focused)
-        .map(|w| w.node.id)
-        .unwrap_or(-1);
-
-    if prev_win_id == cur_win_id {
-        focus_win_if_not_focused(None, wins.get(0))
-    }
-}
-
-pub fn focus_win_if_not_focused(
-    win: Option<&t::DisplayNode>,
-    other: Option<&t::DisplayNode>,
-) {
-    match win {
-        Some(win) if !win.node.is_current() => focus_window_by_id(win.node.id),
-        _ => {
-            if let Some(win) = other {
-                focus_window_by_id(win.node.id)
-            } else {
-                log::debug!("No window to switch to.")
-            }
-        }
+    if let Some(crit) = criteria::parse_criteria(criteria) {
+        let pred = criteria::criteria_to_predicate(crit, &wins);
+        focus_matching_or_lru_window(
+            &wins,
+            fdata,
+            switch_to_matching_data,
+            pred,
+        )
     }
 }
 
@@ -612,7 +709,7 @@ fn select_and_focus(prompt: &str, choices: &[t::DisplayNode]) {
                 }
             }
             ipc::Type::Window | ipc::Type::Container => {
-                focus_window_by_id(tn.node.id)
+                focus_window_by_id(tn.node.id);
             }
             t => {
                 log::error!("Cannot handle {:?} in select_and_focus", t)

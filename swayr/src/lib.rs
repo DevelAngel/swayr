@@ -21,6 +21,7 @@
 pub mod client;
 pub mod cmds;
 pub mod config;
+pub mod criteria;
 pub mod daemon;
 pub mod focus;
 pub mod layout;

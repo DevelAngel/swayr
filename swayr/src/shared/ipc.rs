@@ -151,6 +151,12 @@ impl NodeMethods for s::Node {
             .and_then(|wp| wp.class.as_ref())
         {
             wp_class
+        } else if let Some(wp_instance) = self
+            .window_properties
+            .as_ref()
+            .and_then(|wp| wp.instance.as_ref())
+        {
+            wp_instance
         } else {
             "<unknown_app>"
         }
