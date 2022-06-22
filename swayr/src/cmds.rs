@@ -345,43 +345,43 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
             Direction::Forward,
             windows,
             fdata,
-            Box::new(always_true),
+            always_true,
         ),
         SwayrCommand::PrevWindow { windows } => focus_window_in_direction(
             Direction::Backward,
             windows,
             fdata,
-            Box::new(always_true),
+            always_true,
         ),
         SwayrCommand::NextTiledWindow { windows } => focus_window_in_direction(
             Direction::Forward,
             windows,
             fdata,
-            Box::new(|dn: &t::DisplayNode| {
+            |dn: &t::DisplayNode| {
                 !dn.node.is_floating()
                     && dn.tree.is_child_of_tiled_container(dn.node.id)
-            }),
+            },
         ),
         SwayrCommand::PrevTiledWindow { windows } => focus_window_in_direction(
             Direction::Backward,
             windows,
             fdata,
-            Box::new(|dn: &t::DisplayNode| {
+            |dn: &t::DisplayNode| {
                 !dn.node.is_floating()
                     && dn.tree.is_child_of_tiled_container(dn.node.id)
-            }),
+            },
         ),
         SwayrCommand::NextTabbedOrStackedWindow { windows } => {
             focus_window_in_direction(
                 Direction::Forward,
                 windows,
                 fdata,
-                Box::new(|dn: &t::DisplayNode| {
+                |dn: &t::DisplayNode| {
                     !dn.node.is_floating()
                         && dn
                             .tree
                             .is_child_of_tabbed_or_stacked_container(dn.node.id)
-                }),
+                },
             )
         }
         SwayrCommand::PrevTabbedOrStackedWindow { windows } => {
@@ -389,12 +389,12 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
                 Direction::Backward,
                 windows,
                 fdata,
-                Box::new(|dn: &t::DisplayNode| {
+                |dn: &t::DisplayNode| {
                     !dn.node.is_floating()
                         && dn
                             .tree
                             .is_child_of_tabbed_or_stacked_container(dn.node.id)
-                }),
+                },
             )
         }
         SwayrCommand::NextFloatingWindow { windows } => {
@@ -402,7 +402,7 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
                 Direction::Forward,
                 windows,
                 fdata,
-                Box::new(|dn: &t::DisplayNode| dn.node.is_floating()),
+                |dn: &t::DisplayNode| dn.node.is_floating(),
             )
         }
         SwayrCommand::PrevFloatingWindow { windows } => {
@@ -410,7 +410,7 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
                 Direction::Backward,
                 windows,
                 fdata,
-                Box::new(|dn: &t::DisplayNode| dn.node.is_floating()),
+                |dn: &t::DisplayNode| dn.node.is_floating(),
             )
         }
         SwayrCommand::NextWindowOfSameLayout { windows } => {
@@ -941,7 +941,7 @@ pub fn focus_window_in_direction(
     dir: Direction,
     consider_wins: &ConsiderWindows,
     fdata: &FocusData,
-    pred: Box<dyn Fn(&t::DisplayNode) -> bool>,
+    pred: impl Fn(&t::DisplayNode) -> bool,
 ) {
     let root = ipc::get_root_node(false);
     let tree = t::get_tree(&root);
@@ -1008,27 +1008,27 @@ pub fn focus_window_of_same_layout_in_direction(
             consider_wins,
             fdata,
             if cur_win.node.is_floating() {
-                Box::new(|dn| dn.node.is_floating())
+                |dn: &t::DisplayNode| dn.node.is_floating()
             } else if !cur_win.node.is_floating()
                 && cur_win
                     .tree
                     .is_child_of_tabbed_or_stacked_container(cur_win.node.id)
             {
-                Box::new(|dn| {
+                |dn: &t::DisplayNode| {
                     !dn.node.is_floating()
                         && dn
                             .tree
                             .is_child_of_tabbed_or_stacked_container(dn.node.id)
-                })
+                }
             } else if !cur_win.node.is_floating()
                 && cur_win.tree.is_child_of_tiled_container(cur_win.node.id)
             {
-                Box::new(|dn| {
+                |dn: &t::DisplayNode| {
                     !dn.node.is_floating()
                         && dn.tree.is_child_of_tiled_container(dn.node.id)
-                })
+                }
             } else {
-                Box::new(always_true)
+                always_true
             },
         )
     }
