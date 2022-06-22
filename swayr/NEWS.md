@@ -1,3 +1,17 @@
+swayr v0.20.0
+=============
+
+- The `switch-to-XXX-or-urgent-or-lru-window` family of commands have had a
+  major overhaul.  They used to be plain toggles but now cycle through a
+  sequence of all urgent window, all matching windows, the LRU window, and back
+  to the original window.
+- Swayr now has its own implementation of the CRITERIA API which is used by the
+  `switch-to-matching-or-urgent-or-lru-window` command which had been
+  introduced in v0.19.0.  Initially, it just passed the query to sway and
+  observed if some focus change occurred within a fraction of a second to check
+  it's success.  Now it follows the general contract of the
+  `switch-to-XXX-or-urgent-or-lru-window` family of commands explained above.
+
 swayr v0.19.0
 =============
 
