@@ -1037,7 +1037,7 @@ pub fn focus_window_of_same_layout_in_direction(
 fn tile_current_workspace(floating: &ConsiderFloating, shuffle: bool) {
     match layout::relayout_current_workspace(
         floating == &ConsiderFloating::IncludeFloating,
-        Box::new(move |wins, con: &mut s::Connection| {
+        move |wins, con: &mut s::Connection| {
             con.run_command("focus parent")?;
             con.run_command("layout splith")?;
 
@@ -1069,7 +1069,7 @@ fn tile_current_workspace(floating: &ConsiderFloating, shuffle: bool) {
                 }
             }
             Ok(())
-        }),
+        },
     ) {
         Ok(_) => (),
         Err(err) => log::error!("Error retiling workspace: {:?}", err),
@@ -1079,7 +1079,7 @@ fn tile_current_workspace(floating: &ConsiderFloating, shuffle: bool) {
 fn tab_current_workspace(floating: &ConsiderFloating) {
     match layout::relayout_current_workspace(
         floating == &ConsiderFloating::IncludeFloating,
-        Box::new(move |wins, con: &mut s::Connection| {
+        move |wins, con: &mut s::Connection| {
             con.run_command("focus parent")?;
             con.run_command("layout tabbed")?;
 
@@ -1101,7 +1101,7 @@ fn tab_current_workspace(floating: &ConsiderFloating) {
                 placed_wins.push(win);
             }
             Ok(())
-        }),
+        },
     ) {
         Ok(_) => (),
         Err(err) => log::error!("Error retiling workspace: {:?}", err),

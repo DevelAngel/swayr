@@ -132,12 +132,13 @@ pub fn maybe_auto_tile(config: &config::Config) {
 
 const SWAYR_TMP_WORKSPACE: &str = "✨";
 
-pub fn relayout_current_workspace(
+pub fn relayout_current_workspace<F>(
     include_floating: bool,
-    insert_win_fn: Box<
-        dyn Fn(&mut [&s::Node], &mut s::Connection) -> s::Fallible<()>,
-    >,
-) -> s::Fallible<()> {
+    insert_win_fn: F,
+) -> s::Fallible<()>
+where
+    F: Fn(&mut [&s::Node], &mut s::Connection) -> s::Fallible<()>,
+{
     let root = ipc::get_root_node(false);
     let workspaces: Vec<&s::Node> = root
         .iter()
