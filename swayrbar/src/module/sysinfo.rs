@@ -23,7 +23,7 @@ use std::sync::Mutex;
 use std::sync::Once;
 use swaybar_types as s;
 use sysinfo as si;
-use sysinfo::ProcessorExt;
+use sysinfo::CpuExt;
 use sysinfo::SystemExt;
 
 const NAME: &str = "sysinfo";
@@ -67,7 +67,7 @@ impl OnceRefresher {
 
 fn get_cpu_usage(sys: &mut si::System, upd: &OnceRefresher) -> f32 {
     upd.refresh_cpu(sys);
-    sys.global_processor_info().cpu_usage()
+    sys.global_cpu_info().cpu_usage()
 }
 
 fn get_memory_usage(sys: &mut si::System, upd: &OnceRefresher) -> f64 {
