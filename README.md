@@ -44,11 +44,15 @@ sequence is:
 1. All windows with urgency hints.
 2. All matching windows where which windows match is specific to the command.
 3. The last recently used window at the time of the sequence start.
-4. Back to the window which had the focus at the time of the sequence start.
+4. Back to the origin window, i.e., the window which had the focus at the time
+   of the sequence start.
 
 During each sequence no window will be visited twice, e.g., if some window has
 an urgency hint, matches the commands specification, and is also the LRU
 window, it's not visited once in each step 1, 2, and 3 but just in step 1.
+
+The steps 1, 3, and 4 can be inhibited with the flags `--skip-urgent`,
+`--skip-lru`, and `--skip-origin`, respectively.
 
 As said, which windows match is specific to each command:
 

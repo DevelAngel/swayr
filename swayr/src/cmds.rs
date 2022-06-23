@@ -72,14 +72,40 @@ pub enum SwayrCommand {
     /// no other effect
     Nop,
     /// Switch to next urgent window (if any) or to last recently used window.
-    SwitchToUrgentOrLRUWindow,
+    SwitchToUrgentOrLRUWindow {
+        #[clap(short = 'u', long, help = "Skip urgent windows")]
+        skip_urgent: bool,
+        #[clap(short = 'l', long, help = "Skip the last recently used window")]
+        skip_lru: bool,
+        #[clap(
+            short = 'o',
+            long,
+            help = "Don't switch back to the origin window"
+        )]
+        skip_origin: bool,
+    },
     /// Switch to the given app (given by app_id or window class) if that's not
     /// focused already.  If it is, switch to the next urgent window (if any)
     /// or to last recently used window.
     ///
     /// For example, you can provide "firefox" as argument to this command to
     /// have a convenient firefox <-> last-recently-used window toggle.
-    SwitchToAppOrUrgentOrLRUWindow { name: String },
+    SwitchToAppOrUrgentOrLRUWindow {
+        /// The app_id or window class of the windows to switch to.  Compared
+        /// literally, i.e., not a regex.
+        name: String,
+
+        #[clap(short = 'u', long, help = "Skip urgent windows")]
+        skip_urgent: bool,
+        #[clap(short = 'l', long, help = "Skip the last recently used window")]
+        skip_lru: bool,
+        #[clap(
+            short = 'o',
+            long,
+            help = "Don't switch back to the origin window"
+        )]
+        skip_origin: bool,
+    },
     /// Switch to the window with the given mark if that's not focused already.
     /// If it is, switch to the next urgent window (if any) or to last recently
     /// used window.
@@ -88,12 +114,40 @@ pub enum SwayrCommand {
     /// (using a standard sway `for_window` rule).  Then you can provide
     /// "browser" as argument to this command to have a convenient browser <->
     /// last-recently-used window toggle.
-    SwitchToMarkOrUrgentOrLRUWindow { con_mark: String },
+    SwitchToMarkOrUrgentOrLRUWindow {
+        /// The con_mark to switch to.
+        con_mark: String,
+
+        #[clap(short = 'u', long, help = "Skip urgent windows")]
+        skip_urgent: bool,
+        #[clap(short = 'l', long, help = "Skip the last recently used window")]
+        skip_lru: bool,
+        #[clap(
+            short = 'o',
+            long,
+            help = "Don't switch back to the origin window"
+        )]
+        skip_origin: bool,
+    },
     /// Switch to the (first) window matching the given criteria (see section
     /// `CRITERIA` in `sway(5)`) if it exists and is not already focused.
     /// Otherwise, switch to the next urgent window (if any) or to the last
     /// recently used window.
-    SwitchToMatchingOrUrgentOrLRUWindow { criteria: String },
+    SwitchToMatchingOrUrgentOrLRUWindow {
+        /// The criteria query defining which windows to switch to.
+        criteria: String,
+
+        #[clap(short = 'u', long, help = "Skip urgent windows")]
+        skip_urgent: bool,
+        #[clap(short = 'l', long, help = "Skip the last recently used window")]
+        skip_lru: bool,
+        #[clap(
+            short = 'o',
+            long,
+            help = "Don't switch back to the origin window"
+        )]
+        skip_origin: bool,
+    },
     /// Focus the selected window.
     SwitchWindow,
     /// Switch to the selected workspace.
@@ -260,17 +314,36 @@ static LAST_COMMAND: Lazy<Mutex<SwayrCommand>> =
 pub struct SwitchToMatchingData {
     visited: Vec<i64>,
     lru: Option<i64>,
-    fallback: Option<i64>,
+    origin: Option<i64>,
+    skip_urgent: bool,
+    skip_lru: bool,
+    skip_origin: bool,
+}
+
+impl SwitchToMatchingData {
+    pub fn reset(&mut self) {
+        self.visited.clear();
+        self.lru = None;
+        self.origin = None;
+        self.skip_urgent = false;
+        self.skip_lru = false;
+        self.skip_origin = false;
+    }
+
+    fn new() -> SwitchToMatchingData {
+        SwitchToMatchingData {
+            visited: vec![],
+            lru: None,
+            origin: None,
+            skip_urgent: false,
+            skip_lru: false,
+            skip_origin: false,
+        }
+    }
 }
 
 static SWITCH_TO_MATCHING_DATA: Lazy<Mutex<SwitchToMatchingData>> =
-    Lazy::new(|| {
-        Mutex::new(SwitchToMatchingData {
-            visited: vec![],
-            lru: None,
-            fallback: None,
-        })
-    });
+    Lazy::new(|| Mutex::new(SwitchToMatchingData::new()));
 
 pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
     log::info!("Running SwayrCommand {:?}", args.cmd);
@@ -284,9 +357,7 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
     // If this command is not equal to the last command, nuke the
     // switch_to_matching_data so that we start a new sequence.
     if *args.cmd != *last_command {
-        switch_to_matching_data.visited.clear();
-        switch_to_matching_data.lru = None;
-        switch_to_matching_data.fallback = None;
+        switch_to_matching_data.reset();
     }
 
     if args.cmd.is_prev_next_window_variant() {
@@ -297,24 +368,59 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
 
     match args.cmd {
         SwayrCommand::Nop => {}
-        SwayrCommand::SwitchToUrgentOrLRUWindow => {
-            switch_to_urgent_or_lru_window(fdata)
+        SwayrCommand::SwitchToUrgentOrLRUWindow {
+            skip_urgent,
+            skip_lru,
+            skip_origin,
+        } => {
+            switch_to_matching_data.skip_urgent = *skip_urgent;
+            switch_to_matching_data.skip_lru = *skip_lru;
+            switch_to_matching_data.skip_origin = *skip_origin;
+
+            switch_to_urgent_or_lru_window(&mut switch_to_matching_data, fdata)
         }
-        SwayrCommand::SwitchToAppOrUrgentOrLRUWindow { name } => {
+        SwayrCommand::SwitchToAppOrUrgentOrLRUWindow {
+            name,
+            skip_urgent,
+            skip_lru,
+            skip_origin,
+        } => {
+            switch_to_matching_data.skip_urgent = *skip_urgent;
+            switch_to_matching_data.skip_lru = *skip_lru;
+            switch_to_matching_data.skip_origin = *skip_origin;
+
             switch_to_app_or_urgent_or_lru_window(
                 name,
                 &mut switch_to_matching_data,
                 fdata,
             )
         }
-        SwayrCommand::SwitchToMarkOrUrgentOrLRUWindow { con_mark } => {
+        SwayrCommand::SwitchToMarkOrUrgentOrLRUWindow {
+            con_mark,
+            skip_urgent,
+            skip_lru,
+            skip_origin,
+        } => {
+            switch_to_matching_data.skip_urgent = *skip_urgent;
+            switch_to_matching_data.skip_lru = *skip_lru;
+            switch_to_matching_data.skip_origin = *skip_origin;
+
             switch_to_mark_or_urgent_or_lru_window(
                 con_mark,
                 &mut switch_to_matching_data,
                 fdata,
             )
         }
-        SwayrCommand::SwitchToMatchingOrUrgentOrLRUWindow { criteria } => {
+        SwayrCommand::SwitchToMatchingOrUrgentOrLRUWindow {
+            criteria,
+            skip_urgent,
+            skip_lru,
+            skip_origin,
+        } => {
+            switch_to_matching_data.skip_urgent = *skip_urgent;
+            switch_to_matching_data.skip_lru = *skip_lru;
+            switch_to_matching_data.skip_origin = *skip_origin;
+
             switch_to_matching_or_urgent_or_lru_window(
                 criteria,
                 &mut switch_to_matching_data,
@@ -451,7 +557,11 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
                 SwayrCommand::SwitchWorkspace,
                 SwayrCommand::SwitchOutput,
                 SwayrCommand::SwitchWorkspaceOrWindow,
-                SwayrCommand::SwitchToUrgentOrLRUWindow,
+                SwayrCommand::SwitchToUrgentOrLRUWindow {
+                    skip_urgent: false,
+                    skip_lru: false,
+                    skip_origin: false,
+                },
                 SwayrCommand::ConfigureOutputs,
                 SwayrCommand::ExecuteSwaymsgCommand,
             ];
@@ -528,38 +638,35 @@ pub fn get_outputs() -> Vec<s::Output> {
     }
 }
 
-pub fn switch_to_urgent_or_lru_window(fdata: &FocusData) {
+pub fn switch_to_urgent_or_lru_window(
+    stm_data: &mut MutexGuard<SwitchToMatchingData>,
+    fdata: &FocusData,
+) {
     let root = ipc::get_root_node(false);
     let tree = t::get_tree(&root);
     let wins = tree.get_windows(fdata);
-    let mutex = Mutex::new(SwitchToMatchingData {
-        visited: vec![],
-        lru: None,
-        fallback: None,
-    });
-    let mut guard = mutex.lock().expect("Could not lock mutex");
-    focus_matching_or_lru_window(&wins, fdata, &mut guard, |_| false);
+    focus_urgent_or_matching_or_lru_window(&wins, fdata, stm_data, |_| false);
 }
 
-pub fn focus_matching_or_lru_window<P>(
+pub fn focus_urgent_or_matching_or_lru_window<P>(
     wins: &[t::DisplayNode],
     fdata: &FocusData,
-    switch_to_matching_data: &mut MutexGuard<SwitchToMatchingData>,
+    stm_data: &mut MutexGuard<SwitchToMatchingData>,
     pred: P,
 ) where
     P: Fn(&t::DisplayNode) -> bool,
 {
     // Initialize the fallback on first invocation.
-    if switch_to_matching_data.visited.is_empty() {
+    if stm_data.visited.is_empty() {
         // The currently focused window is already visited, obviously.
         let focused = wins.iter().find(|w| w.node.focused);
         if let Some(f) = focused {
-            switch_to_matching_data.visited.push(f.node.id);
+            stm_data.visited.push(f.node.id);
             // The focused window is the fallback we want to return to.
-            switch_to_matching_data.fallback = Some(f.node.id);
+            stm_data.origin = Some(f.node.id);
         }
 
-        switch_to_matching_data.lru = wins
+        stm_data.lru = wins
             .iter()
             .filter(|w| !w.node.focused)
             .max_by(|a, b| {
@@ -569,45 +676,47 @@ pub fn focus_matching_or_lru_window<P>(
             })
             .map(|w| w.node.id);
 
-        log::debug!(
-            "Initialized SwitchToMatchingData: {:?}",
-            switch_to_matching_data
-        );
+        log::debug!("Initialized SwitchToMatchingData: {:?}", stm_data);
     }
 
-    let visited = &switch_to_matching_data.visited;
+    let skip_urgent = stm_data.skip_urgent;
+    let skip_lru = stm_data.skip_lru;
+    let skip_origin = stm_data.skip_origin;
+
+    let visited = &stm_data.visited;
     if let Some(win) = wins.iter().find(|w| {
-        switch_to_matching_data.lru != Some(w.node.id)
-            && switch_to_matching_data.fallback != Some(w.node.id)
+        stm_data.lru != Some(w.node.id)
+            && stm_data.origin != Some(w.node.id)
             && !visited.contains(&w.node.id)
-            && (w.node.urgent || pred(w))
+            && (!skip_urgent && w.node.urgent || pred(w))
     }) {
         log::debug!("Switching to by urgency or matching predicate");
         focus_window_by_id(win.node.id);
-        switch_to_matching_data.visited.push(win.node.id);
-    } else if switch_to_matching_data.lru.is_some()
-        && !visited.contains(&switch_to_matching_data.lru.unwrap())
+        stm_data.visited.push(win.node.id);
+    } else if !skip_lru
+        && stm_data.lru.is_some()
+        && !visited.contains(&stm_data.lru.unwrap())
     {
         log::debug!("Switching to LRU");
-        let id = switch_to_matching_data.lru.unwrap();
-        switch_to_matching_data.visited.push(id);
+        let id = stm_data.lru.unwrap();
+        stm_data.visited.push(id);
         focus_window_by_id(id);
-    } else {
-        log::debug!("Switching to Fallback");
-        if let Some(id) = switch_to_matching_data.fallback {
+    } else if !skip_origin {
+        log::debug!("Switching back to origin");
+        if let Some(id) = stm_data.origin {
             focus_window_by_id(id);
         } else {
-            log::debug!("No fallback window.")
+            log::debug!("No origin window")
         }
-        switch_to_matching_data.visited = vec![];
-        switch_to_matching_data.lru = None;
-        switch_to_matching_data.fallback = None;
+        stm_data.reset();
+    } else {
+        stm_data.reset();
     }
 }
 
 pub fn switch_to_app_or_urgent_or_lru_window(
     name: &str,
-    switch_to_matching_data: &mut MutexGuard<SwitchToMatchingData>,
+    stm_data: &mut MutexGuard<SwitchToMatchingData>,
     fdata: &FocusData,
 ) {
     let root = ipc::get_root_node(false);
@@ -615,12 +724,12 @@ pub fn switch_to_app_or_urgent_or_lru_window(
     let wins = tree.get_windows(fdata);
     let pred = |w: &t::DisplayNode| w.node.get_app_name() == name;
 
-    focus_matching_or_lru_window(&wins, fdata, switch_to_matching_data, pred);
+    focus_urgent_or_matching_or_lru_window(&wins, fdata, stm_data, pred);
 }
 
 pub fn switch_to_mark_or_urgent_or_lru_window(
     con_mark: &str,
-    switch_to_matching_data: &mut MutexGuard<SwitchToMatchingData>,
+    stm_data: &mut MutexGuard<SwitchToMatchingData>,
     fdata: &FocusData,
 ) {
     let root = ipc::get_root_node(false);
@@ -629,7 +738,7 @@ pub fn switch_to_mark_or_urgent_or_lru_window(
     let con_mark = &con_mark.to_owned();
     let pred = |w: &t::DisplayNode| w.node.marks.contains(con_mark);
 
-    focus_matching_or_lru_window(&wins, fdata, switch_to_matching_data, pred);
+    focus_urgent_or_matching_or_lru_window(&wins, fdata, stm_data, pred);
 }
 
 fn switch_to_matching_or_urgent_or_lru_window(
@@ -643,7 +752,7 @@ fn switch_to_matching_or_urgent_or_lru_window(
 
     if let Some(crit) = criteria::parse_criteria(criteria) {
         let pred = criteria::criteria_to_predicate(crit, &wins);
-        focus_matching_or_lru_window(
+        focus_urgent_or_matching_or_lru_window(
             &wins,
             fdata,
             switch_to_matching_data,
