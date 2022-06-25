@@ -685,8 +685,8 @@ pub fn focus_urgent_or_matching_or_lru_window<P>(
 
     let visited = &stm_data.visited;
     if let Some(win) = wins.iter().find(|w| {
-        stm_data.lru != Some(w.node.id)
-            && stm_data.origin != Some(w.node.id)
+        (skip_lru || stm_data.lru != Some(w.node.id))
+            && (skip_origin || stm_data.origin != Some(w.node.id))
             && !visited.contains(&w.node.id)
             && (!skip_urgent && w.node.urgent || pred(w))
     }) {
