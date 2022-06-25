@@ -656,10 +656,12 @@ pub fn focus_urgent_or_matching_or_lru_window<P>(
 ) where
     P: Fn(&t::DisplayNode) -> bool,
 {
+    let focused = wins.iter().find(|w| w.node.focused);
+    let focused_id = focused.map(|f| f.node.id).unwrap_or(-1);
+
     // Initialize the fallback on first invocation.
     if stm_data.visited.is_empty() {
         // The currently focused window is already visited, obviously.
-        let focused = wins.iter().find(|w| w.node.focused);
         if let Some(f) = focused {
             stm_data.visited.push(f.node.id);
             // The focused window is the fallback we want to return to.
@@ -685,7 +687,8 @@ pub fn focus_urgent_or_matching_or_lru_window<P>(
 
     let visited = &stm_data.visited;
     if let Some(win) = wins.iter().find(|w| {
-        (skip_lru || stm_data.lru != Some(w.node.id))
+        w.node.id != focused_id
+            && (skip_lru || stm_data.lru != Some(w.node.id))
             && (skip_origin || stm_data.origin != Some(w.node.id))
             && !visited.contains(&w.node.id)
             && (!skip_urgent && w.node.urgent || pred(w))
@@ -694,8 +697,9 @@ pub fn focus_urgent_or_matching_or_lru_window<P>(
         focus_window_by_id(win.node.id);
         stm_data.visited.push(win.node.id);
     } else if !skip_lru
-        && stm_data.lru.is_some()
+        && stm_data.lru != Some(focused_id)
         && !visited.contains(&stm_data.lru.unwrap())
+        && wins.iter().any(|w| w.node.id == stm_data.lru.unwrap())
     {
         log::debug!("Switching to LRU");
         let id = stm_data.lru.unwrap();
@@ -704,13 +708,22 @@ pub fn focus_urgent_or_matching_or_lru_window<P>(
     } else if !skip_origin {
         log::debug!("Switching back to origin");
         if let Some(id) = stm_data.origin {
-            focus_window_by_id(id);
+            if id != focused_id && wins.iter().any(|w| w.node.id == id) {
+                focus_window_by_id(id);
+            } else {
+                stm_data.reset();
+                focus_urgent_or_matching_or_lru_window(
+                    wins, fdata, stm_data, pred,
+                );
+            }
         } else {
-            log::debug!("No origin window")
+            log::debug!("No origin window");
+            stm_data.reset();
+            focus_urgent_or_matching_or_lru_window(wins, fdata, stm_data, pred);
         }
-        stm_data.reset();
     } else {
         stm_data.reset();
+        focus_urgent_or_matching_or_lru_window(wins, fdata, stm_data, pred);
     }
 }
 
