@@ -321,13 +321,15 @@ pub struct SwitchToMatchingData {
 }
 
 impl SwitchToMatchingData {
-    pub fn reset(&mut self) {
+    pub fn reset(&mut self, reset_skip_flags: bool) {
         self.visited.clear();
         self.lru = None;
         self.origin = None;
-        self.skip_urgent = false;
-        self.skip_lru = false;
-        self.skip_origin = false;
+        if reset_skip_flags {
+            self.skip_urgent = false;
+            self.skip_lru = false;
+            self.skip_origin = false;
+        }
     }
 
     fn new() -> SwitchToMatchingData {
@@ -357,7 +359,7 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
     // If this command is not equal to the last command, nuke the
     // switch_to_matching_data so that we start a new sequence.
     if *args.cmd != *last_command {
-        switch_to_matching_data.reset();
+        switch_to_matching_data.reset(true);
     }
 
     if args.cmd.is_prev_next_window_variant() {
@@ -711,18 +713,18 @@ pub fn focus_urgent_or_matching_or_lru_window<P>(
             if id != focused_id && wins.iter().any(|w| w.node.id == id) {
                 focus_window_by_id(id);
             } else {
-                stm_data.reset();
+                stm_data.reset(false);
                 focus_urgent_or_matching_or_lru_window(
                     wins, fdata, stm_data, pred,
                 );
             }
         } else {
             log::debug!("No origin window");
-            stm_data.reset();
+            stm_data.reset(false);
             focus_urgent_or_matching_or_lru_window(wins, fdata, stm_data, pred);
         }
     } else {
-        stm_data.reset();
+        stm_data.reset(false);
         focus_urgent_or_matching_or_lru_window(wins, fdata, stm_data, pred);
     }
 }
