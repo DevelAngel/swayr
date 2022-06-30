@@ -665,7 +665,6 @@ pub fn focus_urgent_or_matching_or_lru_window<P>(
     if stm_data.visited.is_empty() {
         // The currently focused window is already visited, obviously.
         if let Some(f) = focused {
-            stm_data.visited.push(f.node.id);
             // The focused window is the fallback we want to return to.
             stm_data.origin = Some(f.node.id);
         }
@@ -683,6 +682,10 @@ pub fn focus_urgent_or_matching_or_lru_window<P>(
         log::debug!("Initialized SwitchToMatchingData: {:?}", stm_data);
     }
 
+    // We might have changed focus through other means (normal sway commands)
+    // so just add the current window to visited unconditionally.
+    stm_data.visited.push(focused_id);
+
     let skip_urgent = stm_data.skip_urgent;
     let skip_lru = stm_data.skip_lru;
     let skip_origin = stm_data.skip_origin;
@@ -696,8 +699,8 @@ pub fn focus_urgent_or_matching_or_lru_window<P>(
             && (!skip_urgent && w.node.urgent || pred(w))
     }) {
         log::debug!("Switching to by urgency or matching predicate");
-        focus_window_by_id(win.node.id);
         stm_data.visited.push(win.node.id);
+        focus_window_by_id(win.node.id);
     } else if !skip_lru
         && stm_data.lru != Some(focused_id)
         && !visited.contains(&stm_data.lru.unwrap())
@@ -711,6 +714,7 @@ pub fn focus_urgent_or_matching_or_lru_window<P>(
         log::debug!("Switching back to origin");
         if let Some(id) = stm_data.origin {
             if id != focused_id && wins.iter().any(|w| w.node.id == id) {
+                stm_data.reset(false);
                 focus_window_by_id(id);
             } else {
                 stm_data.reset(false);
