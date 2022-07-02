@@ -381,6 +381,9 @@ auto_tile_min_window_width_per_output_width = [
 
 [focus]
 lockin_delay = 750
+
+[misc]
+auto_nop_delay = 3000
 ```
 
 In the following, all sections are explained.
@@ -505,10 +508,23 @@ are a workaround and wouldn't be required if there were resize-events.
 #### The focus section
 
 In the `[focus]` section, you can configure the amount of time a window has to
-keep the focus in order to affect the LRU order, the `lockin_delay`.  If a
-given window is only briefly focused, e.g., by moving the mouse over it on the
-way to another window with sway's `focus_follows_mouse` set to `yes` or
-`always`, then its position in the LRU order will not be modified.
+keep the focus in order to affect the LRU order, the `lockin_delay` (specified
+in milliseconds).  If a given window is only briefly focused, e.g., by moving
+the mouse over it on the way to another window with sway's
+`focus_follows_mouse` set to `yes` or `always`, then its position in the LRU
+order will not be modified.
+
+
+#### The misc section
+
+In the `[misc]` section, there's the `auto_nop_delay` option.  When some swayr
+command is executed, this amount of milliseconds is waited before a `nop`
+command (see the [commands documentation](#swayr-commands)) is executed in
+order to break out of a `next-*-window`/`prev-*-window` sequence or a
+`switch-to-*or-urgent-or-lru-window` cycle automatically.  If another swayr
+command is executed within this time frame, the auto-`nop` execution will be
+delayed for another `auto_nop_delay` milliseconds.  If this option is not
+specified explicitly, no automatic `nop` commands will be executed.
 
 
 ### <a id="swayr-version-changes">Version changes</a>

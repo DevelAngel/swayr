@@ -25,9 +25,9 @@ use crate::util;
 use std::collections::HashMap;
 use std::io::Read;
 use std::os::unix::net::{UnixListener, UnixStream};
-use std::sync::mpsc;
-use std::sync::Arc;
 use std::sync::RwLock;
+use std::sync::{mpsc, Condvar};
+use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
 use swayipc as s;
@@ -41,6 +41,7 @@ pub fn run_daemon() {
 
     let config = config::load_config();
     let lockin_delay = config.get_focus_lockin_delay();
+    let auto_nop_delay = &config.get_misc_auto_nop_delay();
 
     {
         let fdata = fdata.clone();
@@ -56,7 +57,7 @@ pub fn run_daemon() {
         });
     }
 
-    serve_client_requests(fdata);
+    serve_client_requests(fdata, auto_nop_delay);
 }
 
 fn connect_and_subscribe() -> s::Fallible<s::EventStream> {
@@ -126,7 +127,7 @@ pub fn monitor_sway_events(fdata: FocusData, config: &Config) {
                         }
                     }
                     if show_extra_props_state {
-                        log::debug!(
+                        log::trace!(
                             "New extra_props state:\n{:#?}",
                             *fdata.focus_tick_by_id.read().unwrap()
                         );
@@ -215,10 +216,44 @@ fn handle_workspace_event(
     }
 }
 
-pub fn serve_client_requests(fdata: FocusData) {
+pub fn serve_client_requests(
+    fdata: FocusData,
+    auto_nop_delay: &Option<Duration>,
+) {
     match std::fs::remove_file(util::get_swayr_socket_path()) {
         Ok(()) => log::debug!("Deleted stale socket from previous run."),
         Err(e) => log::error!("Could not delete socket:\n{:?}", e),
+    }
+
+    let pair = Arc::new((Mutex::new(()), Condvar::new()));
+    let pair2 = pair.clone();
+
+    if let Some(delay) = auto_nop_delay {
+        let delay = *delay;
+        let fdata = fdata.clone();
+        thread::spawn(move || {
+            let mut inhibit = false;
+            loop {
+                let (lock, cvar) = &*pair2;
+                let guard = lock.lock().unwrap();
+                let result = cvar.wait_timeout(guard, delay);
+
+                if let Ok(r) = result {
+                    if r.1.timed_out() {
+                        if !inhibit {
+                            log::debug!("Executing auto-nop.");
+                            cmds::exec_swayr_cmd(cmds::ExecSwayrCmdArgs {
+                                cmd: &cmds::SwayrCommand::Nop,
+                                focus_data: Some(&fdata),
+                            });
+                            inhibit = true;
+                        }
+                    } else {
+                        inhibit = false;
+                    }
+                }
+            }
+        });
     }
 
     match UnixListener::bind(util::get_swayr_socket_path()) {
@@ -227,6 +262,11 @@ pub fn serve_client_requests(fdata: FocusData) {
                 match stream {
                     Ok(stream) => {
                         handle_client_request(stream, &fdata);
+                        if auto_nop_delay.is_some() {
+                            let (lock, cvar) = &*pair;
+                            let _guard = lock.lock().unwrap();
+                            cvar.notify_one();
+                        }
                     }
                     Err(err) => {
                         log::error!("Error handling client request: {}", err);
@@ -247,7 +287,7 @@ fn handle_client_request(mut stream: UnixStream, fdata: &FocusData) {
         if let Ok(cmd) = serde_json::from_str::<cmds::SwayrCommand>(&cmd_str) {
             cmds::exec_swayr_cmd(cmds::ExecSwayrCmdArgs {
                 cmd: &cmd,
-                focus_data: fdata,
+                focus_data: Some(fdata),
             });
         } else {
             log::error!(

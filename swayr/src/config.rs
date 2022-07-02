@@ -26,6 +26,44 @@ pub struct Config {
     format: Option<Format>,
     layout: Option<Layout>,
     focus: Option<Focus>,
+    misc: Option<Misc>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Menu {
+    executable: Option<String>,
+    args: Option<Vec<String>>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Format {
+    output_format: Option<String>,
+    workspace_format: Option<String>,
+    container_format: Option<String>,
+    window_format: Option<String>,
+    indent: Option<String>,
+    urgency_start: Option<String>,
+    urgency_end: Option<String>,
+    html_escape: Option<bool>,
+    icon_dirs: Option<Vec<String>>,
+    fallback_icon: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Layout {
+    auto_tile: Option<bool>,
+    auto_tile_min_window_width_per_output_width: Option<Vec<[i32; 2]>>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Focus {
+    lockin_delay: Option<u64>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Default)]
+pub struct Misc {
+    /// Delay after which an automatic Nop command is sent.
+    auto_nop_delay: Option<u64>,
 }
 
 fn tilde_expand_file_names(file_names: Vec<String>) -> Vec<String> {
@@ -167,32 +205,13 @@ impl Config {
                 .expect("No focus.lockin_delay defined."),
         )
     }
-}
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Menu {
-    executable: Option<String>,
-    args: Option<Vec<String>>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Format {
-    output_format: Option<String>,
-    workspace_format: Option<String>,
-    container_format: Option<String>,
-    window_format: Option<String>,
-    indent: Option<String>,
-    urgency_start: Option<String>,
-    urgency_end: Option<String>,
-    html_escape: Option<bool>,
-    icon_dirs: Option<Vec<String>>,
-    fallback_icon: Option<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Layout {
-    auto_tile: Option<bool>,
-    auto_tile_min_window_width_per_output_width: Option<Vec<[i32; 2]>>,
+    pub fn get_misc_auto_nop_delay(&self) -> Option<Duration> {
+        self.misc
+            .as_ref()
+            .and_then(|m| m.auto_nop_delay)
+            .map(Duration::from_millis)
+    }
 }
 
 impl Layout {
@@ -209,11 +228,6 @@ impl Layout {
             None
         }
     }
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Focus {
-    lockin_delay: Option<u64>,
 }
 
 impl Default for Menu {
@@ -322,6 +336,7 @@ impl Default for Config {
             format: Some(Format::default()),
             layout: Some(Layout::default()),
             focus: Some(Focus::default()),
+            misc: Some(Misc::default()),
         }
     }
 }

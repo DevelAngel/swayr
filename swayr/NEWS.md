@@ -11,6 +11,7 @@ swayr v0.20.0
   observed if some focus change occurred within a fraction of a second to check
   it's success.  Now it follows the general contract of the
   `switch-to-XXX-or-urgent-or-lru-window` family of commands explained above.
+- There's a new `misc.auto_nop_delay` option.
 
 swayr v0.19.0
 =============
