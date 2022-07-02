@@ -37,7 +37,7 @@ sends them to the daemon which executes them.
 
 The `swayr` binary provides many subcommands of different categories.
 
-#### Non-menu switchers
+#### <a id="swayr-non-menu-switchers">Non-menu switchers</a>
 
 Those are commands which switch through a sequence of windows where the
 sequence is:
@@ -200,11 +200,11 @@ These commands change the layout of the current workspace.
   one.  (This is useful for accessing swayr commands which are not bound to a
   key.)
 * `nop` (unsurprisingly) does nothing, the command can be used to break out of
-  a sequence of [window cycling commands](#swayr-cycling-commands).  The LRU
-  window order is frozen when the first cycling command is processed and
-  remains so until a non-cycling command is received.  The `nop` command can
-  conveniently serve to interrupt a sequence without having any other side
-  effects.
+  a sequence of [non-menu switching commands](#swayr-non-menu-switchers) or
+  [window cycling commands](#swayr-cycling-commands).  The LRU window order is
+  frozen when the first cycling command is processed and remains so until a
+  non-cycling command is received.  The `nop` command can conveniently serve to
+  interrupt a sequence without having any other side effects.
 
 ### <a id="swayr-screenshots">Screenshots</a>
 
@@ -303,15 +303,19 @@ Of course, configure the keys to your liking.  Again, enabling rust backtraces
 and logging are optional.
 
 Pending a fix for [Sway issue
-#6456](https://github.com/swaywm/sway/issues/6456), it will be possible to
-close a sequence of [window cycling commands](#swayr-cycling-commands) using a
-`nop` command bound to the release of the `$mod` key.  Assuming your `$mod` is
-bound to `Super_L` it could look something like this:
+#6456](https://github.com/swaywm/sway/issues/6456) or a merge of [Sway PR
+#6920](https://github.com/swaywm/sway/pull/6920), it will be possible to close
+a sequence of [non-menu switching commands](#swayr-non-menu-switchers) or
+[window cycling commands](#swayr-cycling-commands) using a `nop` command bound
+to the release of the `$mod` key.  Assuming your `$mod` is bound to `Super_L`
+it could look something like this:
 
 ```
-bindsym --release Super_L exec env RUST_BACKTRACE=1 \
-    swayr nop >> /tmp/swayr.log 2>&1
+bindsym --release Super_L exec swayr nop
 ```
+
+Until then, there's the `focus.auto_nop_delay` option which see below in the
+[Configuration](#swayr-configuration) section.
 
 
 ### <a id="swayr-configuration">Configuration</a>
@@ -525,6 +529,10 @@ order to break out of a `next-*-window`/`prev-*-window` sequence or a
 command is executed within this time frame, the auto-`nop` execution will be
 delayed for another `auto_nop_delay` milliseconds.  If this option is not
 specified explicitly, no automatic `nop` commands will be executed.
+
+A more elegant solution using a key release binding is discussed at the end of
+the [Usage](#swayr-usage) section.  However, that requires a PR to sway which
+has not been merged so far.
 
 
 ### <a id="swayr-version-changes">Version changes</a>
