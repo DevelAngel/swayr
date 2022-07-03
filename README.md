@@ -76,7 +76,7 @@ As said, which windows match is specific to each command:
   known to sway itself which is matched against the application's name which
   can either be `app_id`, `window_properties.class`, or
   `window_properties.instance` (whatever is filled).
-  
+
   All regular expressions are [Rust's regex crates
   regexes](https://docs.rs/regex/latest/regex/index.html).  With the special
   value `__focused__`, comparison is performed literally.
@@ -187,7 +187,7 @@ These commands change the layout of the current workspace.
   between a tabbed and tiled layout, i.e., it calls `shuffle-tile-workspace` if
   it is currently tabbed, and calls `shuffle-tile-workspace` if it is currently
   tiled.
-  
+
 #### Miscellaneous commands
 
 * `configure-outputs` lets you repeatedly issue output configuration commands
@@ -539,19 +539,19 @@ The `seq_inhibit` boolean controls how `swayrd` behaves during a _sequence_ of
 [window cycling commands](#swayr-cycling-commands).
 
 - When the setting is `true`, `swayrd` will inhibit updates to the window LRU
-  order while a _sequence_ of window cycling commands is in progress. LRU updates
-  are reactivated when the _sequence_ ends. A _sequence_ is considered to
-  have ended when any non-window-cycling-command is received by `swayrd`
+  order while a _sequence_ of window cycling commands is in progress.  LRU
+  updates are reactivated when the _sequence_ ends.  A _sequence_ is considered
+  to have ended when any non-window-cycling-command is received by `swayrd`
   (e.g. a `nop` command).
 
   Note: LRU update inhibition also applies to focus changes made outside of
   `swayr`, for instance by using sway commands directly.
-  
-- When the setting is `false` (the default): `swayrd` will handle focus events
-  the same way regardless of whether a window cycling sequence is in progress or
-  not.
 
-Note that the key release binding solution lends itself to using 
+- When the setting is `false` (the default), `swayrd` will handle focus events
+  the same way regardless of whether a window cycling sequence is in progress
+  or not.
+
+Note that the key release binding solution lends itself to using
 `seq_inhibit=true`.
 
 ### <a id="swayr-version-changes">Version changes</a>
