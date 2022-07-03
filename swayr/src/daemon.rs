@@ -42,6 +42,7 @@ pub fn run_daemon() {
     let config = config::load_config();
     let lockin_delay = config.get_focus_lockin_delay();
     let auto_nop_delay = &config.get_misc_auto_nop_delay();
+    let seq_inhibit = config.get_misc_seq_inhibit();
 
     {
         let fdata = fdata.clone();
@@ -53,7 +54,7 @@ pub fn run_daemon() {
     {
         let fdata = fdata.clone();
         thread::spawn(move || {
-            focus_lock_in_handler(focus_rx, fdata, lockin_delay);
+            focus_lock_in_handler(focus_rx, fdata, lockin_delay, seq_inhibit);
         });
     }
 
@@ -244,7 +245,7 @@ pub fn serve_client_requests(
                             log::debug!("Executing auto-nop.");
                             cmds::exec_swayr_cmd(cmds::ExecSwayrCmdArgs {
                                 cmd: &cmds::SwayrCommand::Nop,
-                                focus_data: Some(&fdata),
+                                focus_data: &fdata,
                             });
                             inhibit = true;
                         }
@@ -287,7 +288,7 @@ fn handle_client_request(mut stream: UnixStream, fdata: &FocusData) {
         if let Ok(cmd) = serde_json::from_str::<cmds::SwayrCommand>(&cmd_str) {
             cmds::exec_swayr_cmd(cmds::ExecSwayrCmdArgs {
                 cmd: &cmd,
-                focus_data: Some(fdata),
+                focus_data: fdata,
             });
         } else {
             log::error!(
@@ -326,6 +327,7 @@ fn focus_lock_in_handler(
     focus_chan: mpsc::Receiver<FocusMessage>,
     fdata: FocusData,
     lockin_delay: Duration,
+    seq_inhibit: bool,
 ) {
     // Focus event that has not yet been locked-in to the LRU order
     let mut pending_fev: Option<FocusEvent> = None;
@@ -348,6 +350,12 @@ fn focus_lock_in_handler(
         };
 
         let mut fev = match fmsg {
+            FocusMessage::TickUpdateInhibit
+            | FocusMessage::TickUpdateActivate
+                if !seq_inhibit =>
+            {
+                continue
+            }
             FocusMessage::TickUpdateInhibit => {
                 inhibit.set();
                 continue;
@@ -379,6 +387,12 @@ fn focus_lock_in_handler(
             };
 
             match fmsg {
+                FocusMessage::TickUpdateInhibit
+                | FocusMessage::TickUpdateActivate
+                    if !seq_inhibit =>
+                {
+                    continue
+                }
                 FocusMessage::TickUpdateInhibit => {
                     // inhibit requested before currently focused container
                     // was locked-in, set it as pending in case no other

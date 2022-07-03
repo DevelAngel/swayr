@@ -388,6 +388,7 @@ lockin_delay = 750
 
 [misc]
 auto_nop_delay = 3000
+seq_inhibit = false
 ```
 
 In the following, all sections are explained.
@@ -534,6 +535,24 @@ A more elegant solution using a key release binding is discussed at the end of
 the [Usage](#swayr-usage) section.  However, that requires a PR to sway which
 has not been merged so far.
 
+The `seq_inhibit` boolean controls how `swayrd` behaves during a _sequence_ of
+[window cycling commands](#swayr-cycling-commands).
+
+- When the setting is `true`, `swayrd` will inhibit updates to the window LRU
+  order while a _sequence_ of window cycling commands is in progress. LRU updates
+  are reactivated when the _sequence_ ends. A _sequence_ is considered to
+  have ended when any non-window-cycling-command is received by `swayrd`
+  (e.g. a `nop` command).
+
+  Note: LRU update inhibition also applies to focus changes made outside of
+  `swayr`, for instance by using sway commands directly.
+  
+- When the setting is `false` (the default): `swayrd` will handle focus events
+  the same way regardless of whether a window cycling sequence is in progress or
+  not.
+
+Note that the key release binding solution lends itself to using 
+`seq_inhibit=true`.
 
 ### <a id="swayr-version-changes">Version changes</a>
 

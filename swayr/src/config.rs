@@ -60,10 +60,13 @@ pub struct Focus {
     lockin_delay: Option<u64>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Default)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Misc {
     /// Delay after which an automatic Nop command is sent.
     auto_nop_delay: Option<u64>,
+
+    /// Inhibit LRU updates during sequences of window cycling commands
+    seq_inhibit: Option<bool>,
 }
 
 fn tilde_expand_file_names(file_names: Vec<String>) -> Vec<String> {
@@ -212,6 +215,14 @@ impl Config {
             .and_then(|m| m.auto_nop_delay)
             .map(Duration::from_millis)
     }
+
+    pub fn get_misc_seq_inhibit(&self) -> bool {
+        self.misc
+            .as_ref()
+            .and_then(|f| f.seq_inhibit)
+            .or_else(|| Misc::default().seq_inhibit)
+            .expect("No misc.seq_inhibit defined.")
+    }
 }
 
 impl Layout {
@@ -325,6 +336,15 @@ impl Default for Focus {
     fn default() -> Self {
         Self {
             lockin_delay: Some(750),
+        }
+    }
+}
+
+impl Default for Misc {
+    fn default() -> Self {
+        Self {
+            auto_nop_delay: None,
+            seq_inhibit: Some(false),
         }
     }
 }

@@ -287,7 +287,7 @@ impl SwayrCommand {
 
 pub struct ExecSwayrCmdArgs<'a> {
     pub cmd: &'a SwayrCommand,
-    pub focus_data: Option<&'a FocusData>,
+    pub focus_data: &'a FocusData,
 }
 
 impl DisplayFormat for SwayrCommand {
@@ -349,6 +349,7 @@ static SWITCH_TO_MATCHING_DATA: Lazy<Mutex<SwitchToMatchingData>> =
 
 pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
     log::info!("Running SwayrCommand {:?}", args.cmd);
+    let fdata = args.focus_data;
 
     let mut last_command = LAST_COMMAND.lock().expect("Could not lock mutex");
     let mut switch_to_matching_data = SWITCH_TO_MATCHING_DATA
@@ -361,12 +362,10 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
         switch_to_matching_data.reset(true);
     }
 
-    let fdata = || args.focus_data.expect("No focus data");
-
     if args.cmd.is_prev_next_window_variant() {
-        fdata().send(FocusMessage::TickUpdateInhibit);
-    } else if last_command.is_prev_next_window_variant() {
-        fdata().send(FocusMessage::TickUpdateActivate);
+        fdata.send(FocusMessage::TickUpdateInhibit);
+    } else {
+        fdata.send(FocusMessage::TickUpdateActivate);
     }
 
     match args.cmd {
@@ -380,10 +379,7 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
             switch_to_matching_data.skip_lru = *skip_lru;
             switch_to_matching_data.skip_origin = *skip_origin;
 
-            switch_to_urgent_or_lru_window(
-                &mut switch_to_matching_data,
-                fdata(),
-            )
+            switch_to_urgent_or_lru_window(&mut switch_to_matching_data, fdata)
         }
         SwayrCommand::SwitchToAppOrUrgentOrLRUWindow {
             name,
@@ -398,7 +394,7 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
             switch_to_app_or_urgent_or_lru_window(
                 name,
                 &mut switch_to_matching_data,
-                fdata(),
+                fdata,
             )
         }
         SwayrCommand::SwitchToMarkOrUrgentOrLRUWindow {
@@ -414,7 +410,7 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
             switch_to_mark_or_urgent_or_lru_window(
                 con_mark,
                 &mut switch_to_matching_data,
-                fdata(),
+                fdata,
             )
         }
         SwayrCommand::SwitchToMatchingOrUrgentOrLRUWindow {
@@ -430,47 +426,45 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
             switch_to_matching_or_urgent_or_lru_window(
                 criteria,
                 &mut switch_to_matching_data,
-                fdata(),
+                fdata,
             )
         }
-        SwayrCommand::SwitchWindow => switch_window(fdata()),
-        SwayrCommand::SwitchWorkspace => switch_workspace(fdata()),
+        SwayrCommand::SwitchWindow => switch_window(fdata),
+        SwayrCommand::SwitchWorkspace => switch_workspace(fdata),
         SwayrCommand::SwitchOutput => switch_output(),
         SwayrCommand::SwitchWorkspaceOrWindow => {
-            switch_workspace_or_window(fdata())
+            switch_workspace_or_window(fdata)
         }
         SwayrCommand::SwitchWorkspaceContainerOrWindow => {
-            switch_workspace_container_or_window(fdata())
+            switch_workspace_container_or_window(fdata)
         }
-        SwayrCommand::SwitchTo => switch_to(fdata()),
-        SwayrCommand::QuitWindow { kill } => quit_window(fdata(), *kill),
-        SwayrCommand::QuitWorkspaceOrWindow => {
-            quit_workspace_or_window(fdata())
-        }
+        SwayrCommand::SwitchTo => switch_to(fdata),
+        SwayrCommand::QuitWindow { kill } => quit_window(fdata, *kill),
+        SwayrCommand::QuitWorkspaceOrWindow => quit_workspace_or_window(fdata),
         SwayrCommand::QuitWorkspaceContainerOrWindow => {
-            quit_workspace_container_or_window(fdata())
+            quit_workspace_container_or_window(fdata)
         }
         SwayrCommand::MoveFocusedToWorkspace => {
-            move_focused_to_workspace(fdata())
+            move_focused_to_workspace(fdata)
         }
-        SwayrCommand::MoveFocusedTo => move_focused_to(fdata()),
-        SwayrCommand::SwapFocusedWith => swap_focused_with(fdata()),
+        SwayrCommand::MoveFocusedTo => move_focused_to(fdata),
+        SwayrCommand::SwapFocusedWith => swap_focused_with(fdata),
         SwayrCommand::NextWindow { windows } => focus_window_in_direction(
             Direction::Forward,
             windows,
-            fdata(),
+            fdata,
             always_true,
         ),
         SwayrCommand::PrevWindow { windows } => focus_window_in_direction(
             Direction::Backward,
             windows,
-            fdata(),
+            fdata,
             always_true,
         ),
         SwayrCommand::NextTiledWindow { windows } => focus_window_in_direction(
             Direction::Forward,
             windows,
-            fdata(),
+            fdata,
             |dn: &t::DisplayNode| {
                 !dn.node.is_floating()
                     && dn.tree.is_child_of_tiled_container(dn.node.id)
@@ -479,7 +473,7 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
         SwayrCommand::PrevTiledWindow { windows } => focus_window_in_direction(
             Direction::Backward,
             windows,
-            fdata(),
+            fdata,
             |dn: &t::DisplayNode| {
                 !dn.node.is_floating()
                     && dn.tree.is_child_of_tiled_container(dn.node.id)
@@ -489,7 +483,7 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
             focus_window_in_direction(
                 Direction::Forward,
                 windows,
-                fdata(),
+                fdata,
                 |dn: &t::DisplayNode| {
                     !dn.node.is_floating()
                         && dn
@@ -502,7 +496,7 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
             focus_window_in_direction(
                 Direction::Backward,
                 windows,
-                fdata(),
+                fdata,
                 |dn: &t::DisplayNode| {
                     !dn.node.is_floating()
                         && dn
@@ -515,7 +509,7 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
             focus_window_in_direction(
                 Direction::Forward,
                 windows,
-                fdata(),
+                fdata,
                 |dn: &t::DisplayNode| dn.node.is_floating(),
             )
         }
@@ -523,7 +517,7 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
             focus_window_in_direction(
                 Direction::Backward,
                 windows,
-                fdata(),
+                fdata,
                 |dn: &t::DisplayNode| dn.node.is_floating(),
             )
         }
@@ -531,14 +525,14 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
             focus_window_of_same_layout_in_direction(
                 Direction::Forward,
                 windows,
-                fdata(),
+                fdata,
             )
         }
         SwayrCommand::PrevWindowOfSameLayout { windows } => {
             focus_window_of_same_layout_in_direction(
                 Direction::Backward,
                 windows,
-                fdata(),
+                fdata,
             )
         }
         SwayrCommand::TileWorkspace { floating } => {
