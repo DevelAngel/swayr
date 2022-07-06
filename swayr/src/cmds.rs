@@ -662,7 +662,7 @@ pub fn focus_urgent_or_matching_or_lru_window<P>(
     let focused_id = focused.map(|f| f.node.id).unwrap_or(-1);
 
     // Initialize the fallback on first invocation.
-    if stm_data.visited.is_empty() {
+    let initialized_now = if stm_data.visited.is_empty() {
         // The currently focused window is already visited, obviously.
         if let Some(f) = focused {
             // The focused window is the fallback we want to return to.
@@ -680,7 +680,10 @@ pub fn focus_urgent_or_matching_or_lru_window<P>(
             .map(|w| w.node.id);
 
         log::debug!("Initialized SwitchToMatchingData: {:?}", stm_data);
-    }
+        true
+    } else {
+        false
+    };
 
     // We might have changed focus through other means (normal sway commands)
     // so just add the current window to visited unconditionally.
@@ -717,19 +720,29 @@ pub fn focus_urgent_or_matching_or_lru_window<P>(
                 stm_data.reset(false);
                 focus_window_by_id(id);
             } else {
+                log::debug!("Origin is already focused or is gone; resetting.");
                 stm_data.reset(false);
+                if !initialized_now {
+                    focus_urgent_or_matching_or_lru_window(
+                        wins, fdata, stm_data, pred,
+                    );
+                }
+            }
+        } else {
+            log::debug!("No origin window; resetting.");
+            stm_data.reset(false);
+            if !initialized_now {
                 focus_urgent_or_matching_or_lru_window(
                     wins, fdata, stm_data, pred,
                 );
             }
-        } else {
-            log::debug!("No origin window");
-            stm_data.reset(false);
-            focus_urgent_or_matching_or_lru_window(wins, fdata, stm_data, pred);
         }
     } else {
+        log::debug!("Cycle exhausted; resetting.");
         stm_data.reset(false);
-        focus_urgent_or_matching_or_lru_window(wins, fdata, stm_data, pred);
+        if !initialized_now {
+            focus_urgent_or_matching_or_lru_window(wins, fdata, stm_data, pred);
+        }
     }
 }
 
