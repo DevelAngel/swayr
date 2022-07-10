@@ -12,6 +12,10 @@ swayr v0.20.0
   it's success.  Now it follows the general contract of the
   `switch-to-XXX-or-urgent-or-lru-window` family of commands explained above.
 - There's a new `misc.auto_nop_delay` option.
+- There's a new `misc.seq_inhibit` option controlling if during a
+  `next/prev-window` sequence recording of focus times is deactivated.  This
+  option defaults to `false` whereas it used to be hard-coded standard behavior
+  in previous swayr versions.
 
 swayr v0.19.0
 =============
