@@ -67,14 +67,15 @@ As said, which windows match is specific to each command:
   a single window at a time.)
 * `switch-to-matching-or-urgent-or-lru-window <criteria>` matches windows
   according to the the given criteria query (see section `CRITERIA` in `man
-  sway(5)`).  The following criteria are supported: `app_id=<regex or
-  __focused__>`, `class=<regex or __focused__>`, `instance=<regex or
-  __focused__>`, `title=<regex or __focused__>`, `con_mark=<regex>`,
-  `con_id=<uint or __focused__>`, `pid=<uint>`, `floating`, and `tiling`.
+  sway(5)`).  The following criteria are supported: `app_id=<regex |
+  __focused__>`, `class=<regex | __focused__>`, `instance=<regex |
+  __focused__>`, `title=<regex | __focused__>`, `con_mark=<regex>`,
+  `con_id=<uint | __focused__>`, `shell=<"xdg_shell" | "xwayland" |
+  __focused__>`, `pid=<uint>`, `floating`, and `tiling`.
   
-  In addition, there's the criterion `app_name=<regex or __focused__>` not
-  known to sway itself which is matched against the application's name which
-  can either be `app_id`, `window_properties.class`, or
+  In addition, there's the criterion `app_name=<regex | __focused__>` not known
+  to sway itself which is matched against the application's name which can
+  either be `app_id`, `window_properties.class`, or
   `window_properties.instance` (whatever is filled).
 
   All regular expressions are [Rust's regex crates

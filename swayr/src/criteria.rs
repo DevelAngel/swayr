@@ -15,9 +15,9 @@
 
 //! Implementation of sway's criteria API.
 
-use regex::Regex;
-
 use crate::{shared::ipc::NodeMethods, tree as t};
+use regex::Regex;
+use swayipc as s;
 
 #[derive(Debug)]
 pub enum RegexOrFocused {
@@ -28,6 +28,12 @@ pub enum RegexOrFocused {
 #[derive(Debug)]
 pub enum I64OrFocused {
     I64(i64),
+    Focused,
+}
+
+#[derive(Debug)]
+pub enum ShellTypeOrFocused {
+    ShellType(s::ShellType),
     Focused,
 }
 
@@ -43,6 +49,7 @@ pub enum Criterion {
     ConMark(Regex),
     ConId(I64OrFocused),
     Pid(i32),
+    Shell(ShellTypeOrFocused),
     Floating,
     Tiling,
     // TODO: There are more...
@@ -68,11 +75,9 @@ peg::parser! {
         rule string_literal() -> String =
             "\"" s:[^'"']* "\"" { s.into_iter().collect() }
 
-        rule rx_focused() -> RegexOrFocused = "__focused__" {RegexOrFocused::Focused}
-
         rule regex_or_focused() -> RegexOrFocused =
-            rx_focused()
-            / s:string_literal() {RegexOrFocused::Regex(regex_from_str(&s))}
+            "__focused__" {RegexOrFocused::Focused}
+        / s:string_literal() {RegexOrFocused::Regex(regex_from_str(&s))}
 
         rule i64_focused() -> I64OrFocused = "__focused__" {I64OrFocused::Focused}
         rule i64_or_focused() -> I64OrFocused =
@@ -96,10 +101,16 @@ peg::parser! {
             i:i64_or_focused() {Criterion::ConId(i)}
         rule pid() -> Criterion = "pid" space() "=" space()
             n:i32_literal() {Criterion::Pid(n)}
+        rule shell_type_or_focused() -> ShellTypeOrFocused =
+            "\"xdg_shell\"" {ShellTypeOrFocused::ShellType(s::ShellType::XdgShell)}
+        / "\"xwayland\"" {ShellTypeOrFocused::ShellType(s::ShellType::Xwayland)}
+        / "__focused__" {ShellTypeOrFocused::Focused}
+        rule shell() -> Criterion = "shell" space() "=" space()
+            stof:shell_type_or_focused() {Criterion::Shell(stof)}
 
         rule criterion() -> Criterion =
             tiling() / floating()
-            / app_id() / class() / instance() / app_name() / title()
+            / app_id() / class() / instance() / app_name() / title() / shell()
             / con_mark()
             / con_id()
             / pid()
@@ -122,10 +133,13 @@ pub fn parse_criteria(criteria: &str) -> Option<Criteria> {
 #[test]
 fn test_criteria_parser() {
     match criteria_parser::criteria(
-        "[tiling floating app_id=__focused__ app_id=\"foot\" class=\"emacs\" instance = \"the.instance\" title=\"something with :;&$\" con_mark=\"^.*foo$\"\tapp_name=\"Hugo\" con_id = __focused__ con_id=17 pid=23223]",
+        "[tiling floating app_id=__focused__ app_id=\"foot\" class=\"emacs\" instance = \"the.instance\" title=\"something with :;&$\" con_mark=\"^.*foo$\"\tapp_name=\"Hugo\" con_id = __focused__ con_id=17 pid=23223 shell=\"xdg_shell\" shell=\"xwayland\" shell=__focused__]",
     ) {
         Ok(c) => println!("Criteria: {:?}", c),
-        Err(err) => println!("Could not parse: {}", err),
+        Err(err) => {
+            //eprintln!("Could not parse: {}", err);
+            assert!(false, "Could not parse: {}", err);
+        },
     }
 }
 
@@ -214,6 +228,18 @@ pub fn criteria_to_predicate<'a>(
                                 .window_properties
                                 .as_ref()
                                 .and_then(|p| p.instance.as_ref()),
+                        ),
+                        None => false,
+                    },
+                },
+                Criterion::Shell(val) => match val {
+                    ShellTypeOrFocused::ShellType(t) => {
+                        w.node.shell.as_ref() == Some(t)
+                    }
+                    ShellTypeOrFocused::Focused => match focused {
+                        Some(win) => are_some_and_equal(
+                            w.node.shell.as_ref(),
+                            win.node.shell.as_ref(),
                         ),
                         None => false,
                     },
