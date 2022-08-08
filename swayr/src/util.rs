@@ -56,7 +56,9 @@ fn desktop_entry_folders() -> Vec<Box<p::Path>> {
 
     // XDG_DATA_HOME/applications
     if let Some(dd) = directories::BaseDirs::new() {
-        dirs.push(dd.data_local_dir().to_path_buf().into_boxed_path());
+        let mut pb = dd.data_local_dir().to_path_buf();
+        pb.push("applications/");
+        dirs.push(pb.into_boxed_path());
     }
 
     let default_dirs =
@@ -74,6 +76,10 @@ fn desktop_entry_folders() -> Vec<Box<p::Path>> {
 
     dirs.sort();
     dirs.dedup();
+
+    for path in &dirs {
+        log::debug!("found desktop entry folder: {}", path.display());
+    }
 
     dirs
 }
