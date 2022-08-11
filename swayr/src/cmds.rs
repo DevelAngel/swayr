@@ -50,7 +50,7 @@ pub fn run_sway_command(args: &[&str]) {
     run_sway_command_1(&cmd);
 }
 
-#[derive(clap::Parser, Debug, Deserialize, Serialize, PartialEq, Clone)]
+#[derive(clap::Parser, Debug, Deserialize, Serialize, PartialEq, Eq, Clone)]
 pub enum ConsiderFloating {
     /// Include floating windows.
     IncludeFloating,
@@ -58,7 +58,7 @@ pub enum ConsiderFloating {
     ExcludeFloating,
 }
 
-#[derive(clap::Parser, Debug, Deserialize, Serialize, PartialEq, Clone)]
+#[derive(clap::Parser, Debug, Deserialize, Serialize, PartialEq, Eq, Clone)]
 pub enum ConsiderWindows {
     /// Consider windows of all workspaces.
     AllWorkspaces,
@@ -66,7 +66,7 @@ pub enum ConsiderWindows {
     CurrentWorkspace,
 }
 
-#[derive(clap::Parser, PartialEq, Debug, Clone, Deserialize, Serialize)]
+#[derive(clap::Parser, PartialEq, Eq, Debug, Clone, Deserialize, Serialize)]
 pub enum SwayrCommand {
     /// No-operation. Interrupts any in-progress prev/next sequence but has
     /// no other effect
@@ -226,6 +226,14 @@ pub enum SwayrCommand {
         #[clap(subcommand)]
         windows: ConsiderWindows,
     },
+    NextMatchingWindow {
+        /// The criteria query defining which windows to switch to.
+        criteria: String,
+    },
+    PrevMatchingWindow {
+        /// The criteria query defining which windows to switch to.
+        criteria: String,
+    },
     /// Move the currently focused window or container to the selected
     /// workspace.
     MoveFocusedToWorkspace,
@@ -281,6 +289,8 @@ impl SwayrCommand {
                 | SwayrCommand::PrevFloatingWindow { .. }
                 | SwayrCommand::NextWindowOfSameLayout { .. }
                 | SwayrCommand::PrevWindowOfSameLayout { .. }
+                | SwayrCommand::NextMatchingWindow { .. }
+                | SwayrCommand::PrevMatchingWindow { .. }
         )
     }
 }
@@ -534,6 +544,20 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
                 windows,
                 fdata,
             )
+        }
+        SwayrCommand::NextMatchingWindow { criteria } => {
+            focus_matching_window_in_direction(
+                Direction::Forward,
+                criteria,
+                fdata,
+            );
+        }
+        SwayrCommand::PrevMatchingWindow { criteria } => {
+            focus_matching_window_in_direction(
+                Direction::Backward,
+                criteria,
+                fdata,
+            );
         }
         SwayrCommand::TileWorkspace { floating } => {
             tile_current_workspace(floating, false)
@@ -1078,6 +1102,63 @@ pub enum Direction {
     Forward,
 }
 
+fn focus_window_in_direction_1(
+    wins: &[t::DisplayNode],
+    dir: Direction,
+    fdata: &FocusData,
+    pred: impl Fn(&t::DisplayNode) -> bool,
+) {
+    let mut wins: Vec<&t::DisplayNode> =
+        wins.iter().filter(|w| pred(w)).collect();
+
+    if wins.len() < 2 {
+        return;
+    }
+
+    wins.sort_by(|a, b| {
+        let lru_a = fdata.last_focus_tick(a.node.id);
+        let lru_b = fdata.last_focus_tick(b.node.id);
+        lru_a.cmp(&lru_b).reverse()
+    });
+
+    let is_focused_window: Box<dyn Fn(&t::DisplayNode) -> bool> =
+        if !wins.iter().any(|w| w.node.focused) {
+            let last_focused_win_id = wins.get(0).unwrap().node.id;
+            Box::new(move |dn| dn.node.id == last_focused_win_id)
+        } else {
+            Box::new(|dn| dn.node.focused)
+        };
+
+    let mut iter: Box<dyn Iterator<Item = &&t::DisplayNode>> = match dir {
+        Direction::Forward => Box::new(wins.iter().rev().cycle()),
+        Direction::Backward => Box::new(wins.iter().cycle()),
+    };
+
+    loop {
+        let win = iter.next().unwrap();
+        if is_focused_window(win) {
+            let win = iter.next().unwrap();
+            focus_window_by_id(win.node.id);
+            return;
+        }
+    }
+}
+
+fn focus_matching_window_in_direction(
+    dir: Direction,
+    criteria: &str,
+    fdata: &FocusData,
+) {
+    let root = ipc::get_root_node(false);
+    let tree = t::get_tree(&root);
+    let wins = tree.get_windows(fdata);
+
+    if let Some(crits) = criteria::parse_criteria(criteria) {
+        let pred = criteria::criteria_to_predicate(crits, &wins);
+        focus_window_in_direction_1(&wins, dir, fdata, pred);
+    }
+}
+
 pub fn focus_window_in_direction(
     dir: Direction,
     consider_wins: &ConsiderWindows,
@@ -1098,39 +1179,7 @@ pub fn focus_window_in_direction(
         });
     }
 
-    wins.retain(pred);
-
-    if wins.len() < 2 {
-        return;
-    }
-
-    wins.sort_by(|a, b| {
-        let lru_a = fdata.last_focus_tick(a.node.id);
-        let lru_b = fdata.last_focus_tick(b.node.id);
-        lru_a.cmp(&lru_b).reverse()
-    });
-
-    let is_focused_window: Box<dyn Fn(&t::DisplayNode) -> bool> =
-        if !wins.iter().any(|w| w.node.focused) {
-            let last_focused_win_id = wins.get(0).unwrap().node.id;
-            Box::new(move |dn| dn.node.id == last_focused_win_id)
-        } else {
-            Box::new(|dn| dn.node.focused)
-        };
-
-    let mut iter: Box<dyn Iterator<Item = &t::DisplayNode>> = match dir {
-        Direction::Forward => Box::new(wins.iter().rev().cycle()),
-        Direction::Backward => Box::new(wins.iter().cycle()),
-    };
-
-    loop {
-        let win = iter.next().unwrap();
-        if is_focused_window(win) {
-            let win = iter.next().unwrap();
-            focus_window_by_id(win.node.id);
-            return;
-        }
-    }
+    focus_window_in_direction_1(&wins, dir, fdata, pred);
 }
 
 pub fn focus_window_of_same_layout_in_direction(

@@ -5,6 +5,8 @@ swayr v0.21.0
   __focused__>` matching windows being on a workspace matching the given
   `regex` or windows being on the same workspace as the focused window (in the
   `__focused__` case).
+- New commands `next-matching-window` / `prev-matching-window` which take
+  CRITERIA queries defining the windows to be visited.
 
 swayr v0.20.0
 =============

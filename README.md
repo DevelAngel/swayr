@@ -69,9 +69,10 @@ As said, which windows match is specific to each command:
   according to the the given criteria query (see section `CRITERIA` in `man
   sway(5)`).  The following criteria are supported: `app_id=<regex |
   __focused__>`, `class=<regex | __focused__>`, `instance=<regex |
-  __focused__>`, `title=<regex | __focused__>`, `con_mark=<regex>`,
-  `con_id=<uint | __focused__>`, `shell=<"xdg_shell" | "xwayland" |
-  __focused__>`, `pid=<uint>`, `floating`, and `tiling`.
+  __focused__>`, `title=<regex | __focused__>`,`workspace=<regex |
+  __focused__>`, `con_mark=<regex>`, `con_id=<uint | __focused__>`,
+  `shell=<"xdg_shell" | "xwayland" | __focused__>`, `pid=<uint>`, `floating`,
+  and `tiling`.
   
   In addition, there's the criterion `app_name=<regex | __focused__>` not known
   to sway itself which is matched against the application's name which can
@@ -160,6 +161,8 @@ Those commands cycle through (a subset of windows) in last-recently-used order.
   stacked container, it is like `next-tiled-window` / `prev-tiled-window` if
   the current windows is in a tiled container, and is like `next-window` /
   `prev-window` otherwise.
+* `next-matching-window` / `prev-matching-window` both take a CRITERIA query
+  defining the windows to be visited (see section `CRITERIA` in `man sway(5)`).
 
 #### Layout modification commands
 
