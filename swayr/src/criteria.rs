@@ -15,7 +15,7 @@
 
 //! Implementation of sway's criteria API.
 
-use crate::{shared::ipc::NodeMethods, tree as t};
+use crate::{shared::ipc, shared::ipc::NodeMethods, tree as t};
 use regex::Regex;
 use swayipc as s;
 
@@ -49,6 +49,7 @@ pub enum Criterion {
     ConMark(Regex),
     ConId(I64OrFocused),
     Pid(i32),
+    Workspace(RegexOrFocused),
     Shell(ShellTypeOrFocused),
     Floating,
     Tiling,
@@ -101,6 +102,8 @@ peg::parser! {
             i:i64_or_focused() {Criterion::ConId(i)}
         rule pid() -> Criterion = "pid" space() "=" space()
             n:i32_literal() {Criterion::Pid(n)}
+        rule workspace() -> Criterion = "workspace" space() "=" space()
+            rof:regex_or_focused() {Criterion::Workspace(rof)}
         rule shell_type_or_focused() -> ShellTypeOrFocused =
             "\"xdg_shell\"" {ShellTypeOrFocused::ShellType(s::ShellType::XdgShell)}
         / "\"xwayland\"" {ShellTypeOrFocused::ShellType(s::ShellType::Xwayland)}
@@ -111,6 +114,7 @@ peg::parser! {
         rule criterion() -> Criterion =
             tiling() / floating()
             / app_id() / class() / instance() / app_name() / title() / shell()
+            / workspace()
             / con_mark()
             / con_id()
             / pid()
@@ -133,7 +137,7 @@ pub fn parse_criteria(criteria: &str) -> Option<Criteria> {
 #[test]
 fn test_criteria_parser() {
     match criteria_parser::criteria(
-        "[tiling floating app_id=__focused__ app_id=\"foot\" class=\"emacs\" instance = \"the.instance\" title=\"something with :;&$\" con_mark=\"^.*foo$\"\tapp_name=\"Hugo\" con_id = __focused__ con_id=17 pid=23223 shell=\"xdg_shell\" shell=\"xwayland\" shell=__focused__]",
+        "[tiling floating app_id=__focused__ app_id=\"foot\" class=\"emacs\" instance = \"the.instance\" title=\"something with :;&$\" con_mark=\"^.*foo$\"\tapp_name=\"Hugo\" con_id = __focused__ con_id=17 pid=23223 shell=\"xdg_shell\" shell=\"xwayland\" shell=__focused__ workspace=\"test\" workspace=__focused__]",
     ) {
         Ok(c) => println!("Criteria: {:?}", c),
         Err(err) => {
@@ -252,6 +256,31 @@ pub fn criteria_to_predicate<'a>(
                     w.node.marks.iter().any(|m| rx.is_match(m))
                 }
                 Criterion::Pid(pid) => w.node.pid == Some(*pid),
+                Criterion::Workspace(val) => match val {
+                    RegexOrFocused::Regex(rx) => {
+                        let ws_name = w
+                            .tree
+                            .get_parent_node_of_type(
+                                w.node.id,
+                                ipc::Type::Workspace,
+                            )
+                            .map(|ws| ws.get_name().to_owned());
+                        is_some_and_rx_matches(ws_name.as_ref(), rx)
+                    }
+                    RegexOrFocused::Focused => match focused {
+                        Some(win) => are_some_and_equal(
+                            w.tree.get_parent_node_of_type(
+                                w.node.id,
+                                ipc::Type::Workspace,
+                            ),
+                            win.tree.get_parent_node_of_type(
+                                win.node.id,
+                                ipc::Type::Workspace,
+                            ),
+                        ),
+                        None => false,
+                    },
+                },
                 Criterion::Floating => w.node.is_floating(),
                 Criterion::Tiling => !w.node.is_floating(),
                 Criterion::Title(val) => match val {

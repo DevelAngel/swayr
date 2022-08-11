@@ -1,3 +1,11 @@
+swayr v0.21.0
+=============
+
+- There's a new criterion for CRITERIA queries: `workspace=<regex |
+  __focused__>` matching windows being on a workspace matching the given
+  `regex` or windows being on the same workspace as the focused window (in the
+  `__focused__` case).
+
 swayr v0.20.0
 =============
 
