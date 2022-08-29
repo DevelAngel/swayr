@@ -729,6 +729,7 @@ pub fn focus_urgent_or_matching_or_lru_window<P>(
         stm_data.visited.push(win.node.id);
         focus_window_by_id(win.node.id);
     } else if !skip_lru
+        && stm_data.lru.is_some()
         && stm_data.lru != Some(focused_id)
         && !visited.contains(&stm_data.lru.unwrap())
         && wins.iter().any(|w| w.node.id == stm_data.lru.unwrap())
