@@ -39,6 +39,10 @@ pub enum ShellTypeOrFocused {
 
 #[derive(Debug)]
 pub enum Criterion {
+    // And/Or/Not aren't specified by sway.
+    And(Vec<Criterion>),
+    Or(Vec<Criterion>),
+    Not(Box<Criterion>),
     AppId(RegexOrFocused),
     Class(RegexOrFocused),
     Instance(RegexOrFocused),
@@ -111,21 +115,39 @@ peg::parser! {
         rule shell() -> Criterion = "shell" space() "=" space()
             stof:shell_type_or_focused() {Criterion::Shell(stof)}
 
+        rule and() -> Criterion =
+            "[" space() ("AND" / "and" / "&&")? space()
+                l:(criterion() ** space())
+                space() "]" space()
+        { Criterion::And(l) }
+
+        rule or() -> Criterion =
+            "[" space() ("OR" / "or" / "||") space()
+                l:(criterion() ** space())
+                space() "]" space()
+        { Criterion::Or(l) }
+
+        rule not() -> Criterion =
+            ("NOT" / "not" / "!") space() c:criterion() space()
+        { Criterion::Not(Box::new(c)) }
+
         rule criterion() -> Criterion =
-            tiling() / floating()
+            and() / or() / not()
+            / tiling() / floating()
             / app_id() / class() / instance() / app_name() / title() / shell()
             / workspace()
             / con_mark()
             / con_id()
             / pid()
 
-        pub rule criteria() -> Criteria =
-            "[" space() l:(criterion() ** space()) space() "]" { l }
+        pub rule parse() -> Criterion =
+            space() c:criterion()
+        { c }
   }
 }
 
-pub fn parse_criteria(criteria: &str) -> Option<Criteria> {
-    match criteria_parser::criteria(criteria) {
+pub fn parse_criteria(criteria: &str) -> Option<Criterion> {
+    match criteria_parser::parse(criteria) {
         Ok(c) => Some(c),
         Err(err) => {
             log::error!("Could not parse criteria query {}: {}", criteria, err);
@@ -133,21 +155,6 @@ pub fn parse_criteria(criteria: &str) -> Option<Criteria> {
         }
     }
 }
-
-#[test]
-fn test_criteria_parser() {
-    match criteria_parser::criteria(
-        "[tiling floating app_id=__focused__ app_id=\"foot\" class=\"emacs\" instance = \"the.instance\" title=\"something with :;&$\" con_mark=\"^.*foo$\"\tapp_name=\"Hugo\" con_id = __focused__ con_id=17 pid=23223 shell=\"xdg_shell\" shell=\"xwayland\" shell=__focused__ workspace=\"test\" workspace=__focused__]",
-    ) {
-        Ok(c) => println!("Criteria: {:?}", c),
-        Err(err) => {
-            //eprintln!("Could not parse: {}", err);
-            assert!(false, "Could not parse: {}", err);
-        },
-    }
-}
-
-pub type Criteria = Vec<Criterion>;
 
 fn is_some_and_rx_matches(s: Option<&String>, rx: &Regex) -> bool {
     s.is_some() && rx.is_match(s.unwrap())
@@ -160,146 +167,211 @@ fn are_some_and_equal<T: std::cmp::PartialEq>(
     a.is_some() && b.is_some() && a.unwrap() == b.unwrap()
 }
 
-pub fn criteria_to_predicate<'a>(
-    criteria: Criteria,
+fn eval_criterion<'a>(
+    criterion: &'a Criterion,
+    w: &'a t::DisplayNode,
+    focused: Option<&'a t::DisplayNode>,
+) -> bool {
+    match criterion {
+        Criterion::And(criteria) => {
+            criteria.iter().all(|crit| eval_criterion(crit, w, focused))
+        }
+        Criterion::Or(criteria) => {
+            criteria.iter().any(|crit| eval_criterion(crit, w, focused))
+        }
+        Criterion::Not(crit) => !eval_criterion(crit, w, focused),
+        Criterion::AppId(val) => match val {
+            RegexOrFocused::Regex(rx) => {
+                is_some_and_rx_matches(w.node.app_id.as_ref(), rx)
+            }
+            RegexOrFocused::Focused => match focused {
+                Some(win) => are_some_and_equal(
+                    w.node.app_id.as_ref(),
+                    win.node.app_id.as_ref(),
+                ),
+                None => false,
+            },
+        },
+        Criterion::AppName(val) => match val {
+            RegexOrFocused::Regex(rx) => rx.is_match(w.node.get_app_name()),
+            RegexOrFocused::Focused => match focused {
+                Some(win) => w.node.get_app_name() != win.node.get_app_name(),
+                None => false,
+            },
+        },
+        Criterion::Class(val) => match val {
+            RegexOrFocused::Regex(rx) => is_some_and_rx_matches(
+                w.node
+                    .window_properties
+                    .as_ref()
+                    .and_then(|wp| wp.class.as_ref()),
+                rx,
+            ),
+            RegexOrFocused::Focused => match focused {
+                Some(win) => are_some_and_equal(
+                    w.node
+                        .window_properties
+                        .as_ref()
+                        .and_then(|p| p.class.as_ref()),
+                    win.node
+                        .window_properties
+                        .as_ref()
+                        .and_then(|p| p.class.as_ref()),
+                ),
+                None => false,
+            },
+        },
+        Criterion::Instance(val) => match val {
+            RegexOrFocused::Regex(rx) => is_some_and_rx_matches(
+                w.node
+                    .window_properties
+                    .as_ref()
+                    .and_then(|wp| wp.instance.as_ref()),
+                rx,
+            ),
+            RegexOrFocused::Focused => match focused {
+                Some(win) => are_some_and_equal(
+                    w.node
+                        .window_properties
+                        .as_ref()
+                        .and_then(|p| p.instance.as_ref()),
+                    win.node
+                        .window_properties
+                        .as_ref()
+                        .and_then(|p| p.instance.as_ref()),
+                ),
+                None => false,
+            },
+        },
+        Criterion::Shell(val) => match val {
+            ShellTypeOrFocused::ShellType(t) => {
+                w.node.shell.as_ref() == Some(t)
+            }
+            ShellTypeOrFocused::Focused => match focused {
+                Some(win) => are_some_and_equal(
+                    w.node.shell.as_ref(),
+                    win.node.shell.as_ref(),
+                ),
+                None => false,
+            },
+        },
+        Criterion::ConId(val) => match val {
+            I64OrFocused::I64(id) => w.node.id == *id,
+            I64OrFocused::Focused => w.node.focused,
+        },
+        Criterion::ConMark(rx) => w.node.marks.iter().any(|m| rx.is_match(m)),
+        Criterion::Pid(pid) => w.node.pid == Some(*pid),
+        Criterion::Workspace(val) => match val {
+            RegexOrFocused::Regex(rx) => {
+                let ws_name = w
+                    .tree
+                    .get_parent_node_of_type(w.node.id, ipc::Type::Workspace)
+                    .map(|ws| ws.get_name().to_owned());
+                is_some_and_rx_matches(ws_name.as_ref(), rx)
+            }
+            RegexOrFocused::Focused => match focused {
+                Some(win) => are_some_and_equal(
+                    w.tree.get_parent_node_of_type(
+                        w.node.id,
+                        ipc::Type::Workspace,
+                    ),
+                    win.tree.get_parent_node_of_type(
+                        win.node.id,
+                        ipc::Type::Workspace,
+                    ),
+                ),
+                None => false,
+            },
+        },
+        Criterion::Floating => w.node.is_floating(),
+        Criterion::Tiling => !w.node.is_floating(),
+        Criterion::Title(val) => match val {
+            RegexOrFocused::Regex(rx) => {
+                is_some_and_rx_matches(w.node.name.as_ref(), rx)
+            }
+            RegexOrFocused::Focused => match focused {
+                Some(win) => are_some_and_equal(
+                    w.node.name.as_ref(),
+                    win.node.name.as_ref(),
+                ),
+                None => false,
+            },
+        },
+    }
+}
+
+pub fn criterion_to_predicate<'a>(
+    criterion: &'a Criterion,
     all_windows: &'a [t::DisplayNode],
 ) -> impl Fn(&t::DisplayNode) -> bool + 'a {
     let focused = all_windows.iter().find(|x| x.node.focused);
 
-    move |w: &t::DisplayNode| {
-        for c in &criteria {
-            let result = match c {
-                Criterion::AppId(val) => match val {
-                    RegexOrFocused::Regex(rx) => {
-                        is_some_and_rx_matches(w.node.app_id.as_ref(), rx)
-                    }
-                    RegexOrFocused::Focused => match focused {
-                        Some(win) => are_some_and_equal(
-                            w.node.app_id.as_ref(),
-                            win.node.app_id.as_ref(),
-                        ),
-                        None => false,
-                    },
-                },
-                Criterion::AppName(val) => match val {
-                    RegexOrFocused::Regex(rx) => {
-                        rx.is_match(w.node.get_app_name())
-                    }
-                    RegexOrFocused::Focused => match focused {
-                        Some(win) => {
-                            w.node.get_app_name() != win.node.get_app_name()
-                        }
-                        None => false,
-                    },
-                },
-                Criterion::Class(val) => match val {
-                    RegexOrFocused::Regex(rx) => is_some_and_rx_matches(
-                        w.node
-                            .window_properties
-                            .as_ref()
-                            .and_then(|wp| wp.class.as_ref()),
-                        rx,
-                    ),
-                    RegexOrFocused::Focused => match focused {
-                        Some(win) => are_some_and_equal(
-                            w.node
-                                .window_properties
-                                .as_ref()
-                                .and_then(|p| p.class.as_ref()),
-                            win.node
-                                .window_properties
-                                .as_ref()
-                                .and_then(|p| p.class.as_ref()),
-                        ),
-                        None => false,
-                    },
-                },
-                Criterion::Instance(val) => match val {
-                    RegexOrFocused::Regex(rx) => is_some_and_rx_matches(
-                        w.node
-                            .window_properties
-                            .as_ref()
-                            .and_then(|wp| wp.instance.as_ref()),
-                        rx,
-                    ),
-                    RegexOrFocused::Focused => match focused {
-                        Some(win) => are_some_and_equal(
-                            w.node
-                                .window_properties
-                                .as_ref()
-                                .and_then(|p| p.instance.as_ref()),
-                            win.node
-                                .window_properties
-                                .as_ref()
-                                .and_then(|p| p.instance.as_ref()),
-                        ),
-                        None => false,
-                    },
-                },
-                Criterion::Shell(val) => match val {
-                    ShellTypeOrFocused::ShellType(t) => {
-                        w.node.shell.as_ref() == Some(t)
-                    }
-                    ShellTypeOrFocused::Focused => match focused {
-                        Some(win) => are_some_and_equal(
-                            w.node.shell.as_ref(),
-                            win.node.shell.as_ref(),
-                        ),
-                        None => false,
-                    },
-                },
-                Criterion::ConId(val) => match val {
-                    I64OrFocused::I64(id) => w.node.id == *id,
-                    I64OrFocused::Focused => w.node.focused,
-                },
-                Criterion::ConMark(rx) => {
-                    w.node.marks.iter().any(|m| rx.is_match(m))
-                }
-                Criterion::Pid(pid) => w.node.pid == Some(*pid),
-                Criterion::Workspace(val) => match val {
-                    RegexOrFocused::Regex(rx) => {
-                        let ws_name = w
-                            .tree
-                            .get_parent_node_of_type(
-                                w.node.id,
-                                ipc::Type::Workspace,
-                            )
-                            .map(|ws| ws.get_name().to_owned());
-                        is_some_and_rx_matches(ws_name.as_ref(), rx)
-                    }
-                    RegexOrFocused::Focused => match focused {
-                        Some(win) => are_some_and_equal(
-                            w.tree.get_parent_node_of_type(
-                                w.node.id,
-                                ipc::Type::Workspace,
-                            ),
-                            win.tree.get_parent_node_of_type(
-                                win.node.id,
-                                ipc::Type::Workspace,
-                            ),
-                        ),
-                        None => false,
-                    },
-                },
-                Criterion::Floating => w.node.is_floating(),
-                Criterion::Tiling => !w.node.is_floating(),
-                Criterion::Title(val) => match val {
-                    RegexOrFocused::Regex(rx) => {
-                        is_some_and_rx_matches(w.node.name.as_ref(), rx)
-                    }
-                    RegexOrFocused::Focused => match focused {
-                        Some(win) => are_some_and_equal(
-                            w.node.name.as_ref(),
-                            win.node.name.as_ref(),
-                        ),
-                        None => false,
-                    },
-                },
-            };
-            if !result {
-                return false;
+    move |w: &t::DisplayNode| eval_criterion(criterion, w, focused)
+}
+
+#[test]
+fn test_criteria_parser() {
+    match criteria_parser::parse(
+        "[tiling floating app_id=__focused__ app_id=\"foot\" class=\"emacs\" instance = \"the.instance\" title=\"something with :;&$\" con_mark=\"^.*foo$\"\tapp_name=\"Hugo\" con_id = __focused__ con_id=17 pid=23223 shell=\"xdg_shell\" shell=\"xwayland\" shell=__focused__ workspace=\"test\" workspace=__focused__]",
+    ) {
+        Ok(c) => assert!(matches!(c, Criterion::And(..))),
+        Err(err) => {
+            assert!(false, "Could not parse: {}", err);
+        },
+    }
+}
+
+#[test]
+fn test_criteria_parser_and() {
+    for c in ["[]", "[and]", "[AND]", "[&&]"] {
+        match criteria_parser::parse(c) {
+            Ok(c) => {
+                println!("Criteria: {:?}", c);
+                assert!(match c {
+                    Criterion::And(v) => v.is_empty(),
+                    _ => false,
+                })
+            }
+            Err(err) => {
+                assert!(false, "Could not parse: {}", err);
             }
         }
-        true
+    }
+}
+
+#[test]
+fn test_criteria_parser_or() {
+    for c in ["[or]", "[OR]", "[||]"] {
+        match criteria_parser::parse(c) {
+            Ok(c) => {
+                println!("Criteria: {:?}", c);
+                assert!(match c {
+                    Criterion::Or(v) => v.is_empty(),
+                    _ => false,
+                })
+            }
+            Err(err) => {
+                assert!(false, "Could not parse: {}", err);
+            }
+        }
+    }
+}
+
+#[test]
+fn test_criteria_parser_not() {
+    for c in ["not tiling", "NOT tiling", "!tiling", "! tiling"] {
+        match criteria_parser::parse(c) {
+            Ok(c) => {
+                println!("Criteria: {:?}", c);
+                assert!(match c {
+                    Criterion::Not(x) =>
+                        matches!(x.as_ref(), Criterion::Tiling),
+                    _ => false,
+                })
+            }
+            Err(err) => {
+                assert!(false, "Could not parse: {}", err);
+            }
+        }
     }
 }

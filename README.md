@@ -66,23 +66,7 @@ As said, which windows match is specific to each command:
   the given mark.  (As `man sway(5)` defines, each mark can only be applied to
   a single window at a time.)
 * `switch-to-matching-or-urgent-or-lru-window <criteria>` matches windows
-  according to the the given criteria query (see section `CRITERIA` in `man
-  sway(5)`).  The following criteria are supported: `app_id=<regex |
-  __focused__>`, `class=<regex | __focused__>`, `instance=<regex |
-  __focused__>`, `title=<regex | __focused__>`,`workspace=<regex |
-  __focused__>`, `con_mark=<regex>`, `con_id=<uint | __focused__>`,
-  `shell=<"xdg_shell" | "xwayland" | __focused__>`, `pid=<uint>`, `floating`,
-  and `tiling`.
-  
-  In addition, there's the criterion `app_name=<regex | __focused__>` not known
-  to sway itself which is matched against the application's name which can
-  either be `app_id`, `window_properties.class`, or
-  `window_properties.instance` (whatever is filled).
-
-  All regular expressions are [Rust's regex crates
-  regexes](https://docs.rs/regex/latest/regex/index.html).  With the special
-  value `__focused__`, comparison is performed literally.
-
+  according to the the given [criteria query](#swayr-commands-criteria).
 
 #### Menu switchers
 
@@ -161,8 +145,8 @@ Those commands cycle through (a subset of windows) in last-recently-used order.
   stacked container, it is like `next-tiled-window` / `prev-tiled-window` if
   the current windows is in a tiled container, and is like `next-window` /
   `prev-window` otherwise.
-* `next-matching-window` / `prev-matching-window` both take a CRITERIA query
-  defining the windows to be visited (see section `CRITERIA` in `man sway(5)`).
+* `next-matching-window` / `prev-matching-window` both take a [criteria
+  query](#swayr-commands-criteria).
 
 #### Layout modification commands
 
@@ -209,6 +193,49 @@ These commands change the layout of the current workspace.
   frozen when the first cycling command is processed and remains so until a
   non-cycling command is received.  The `nop` command can conveniently serve to
   interrupt a sequence without having any other side effects.
+  
+#### <a id="swayr-commands-criteria">Criteria</a>
+
+Swayr supports most of the criteria querys defined by Sway, see section
+`CRITERIA` in `man sway(5)`.  Right now, these are:
+* `app_id=<regex | __focused__>`
+* `class=<regex | __focused__>` 
+* `instance=<regex | __focused__>`
+* `title=<regex | __focused__>`
+* `workspace=<regex | __focused__>`
+* `con_mark=<regex>`
+* `con_id=<uint | __focused__>`
+* `shell=<"xdg_shell" | "xwayland" | __focused__>`
+* `pid=<uint>`
+* `floating`
+* `tiling`
+* `app_name=<regex | __focused__>` (not in sway!)
+  
+The last criterion `app_name` is matched against the application's name which
+can either be `app_id`, `window_properties.class`, or
+`window_properties.instance` (whatever is filled).
+
+All regular expressions are [Rust's regex crates
+regexes](https://docs.rs/regex/latest/regex/index.html).  With the special
+value `__focused__`, comparison is performed literally.
+
+In addition to the simple criteria listed above, criteria queries can be
+combined using `and`, `or`, and `not` with the syntax:
+* `[and <crit1> <crit2> ...]` which is equivalent to `[<crit1> <crit2> ...]`,
+  i.e., the `and` is optional for compatibility with sway which only supports
+  this syntax and has no `or` and `not`.  `[and]` and `[]` always match.
+* `[or <crit1> <crit2> ...]` where `[or]` never matches.
+* `not <crit>` where the following criterion is negated.
+
+The combinators may also be written in all-caps, i.e., `AND`, `OR`, and `NOT`,
+or as `&&`, `||`, and `!`.
+
+Obviously, criteria may be nested, so this is a valid one:
+```
+[|| [app_id="firefox" tiling]
+    [&& !app_id="firefox" floating workspace=__focused__]]
+```
+
 
 ### <a id="swayr-screenshots">Screenshots</a>
 

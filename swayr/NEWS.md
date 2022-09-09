@@ -1,3 +1,9 @@
+swayr v0.22.0
+=============
+
+- Criteria queries now can have disjunctions (`or`, `OR`, `||`) and negation
+  (`NOT`, `!`) in addition to conjunction (implicit or `and`, `AND`, `&&`).
+
 swayr v0.21.0
 =============
 

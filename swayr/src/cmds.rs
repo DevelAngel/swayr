@@ -808,7 +808,7 @@ fn switch_to_matching_or_urgent_or_lru_window(
     let wins = tree.get_windows(fdata);
 
     if let Some(crit) = criteria::parse_criteria(criteria) {
-        let pred = criteria::criteria_to_predicate(crit, &wins);
+        let pred = criteria::criterion_to_predicate(&crit, &wins);
         focus_urgent_or_matching_or_lru_window(
             &wins,
             fdata,
@@ -1112,7 +1112,7 @@ fn focus_window_in_direction_1(
     let mut wins: Vec<&t::DisplayNode> =
         wins.iter().filter(|w| pred(w)).collect();
 
-    if wins.len() < 2 {
+    if wins.is_empty() {
         return;
     }
 
@@ -1155,7 +1155,7 @@ fn focus_matching_window_in_direction(
     let wins = tree.get_windows(fdata);
 
     if let Some(crits) = criteria::parse_criteria(criteria) {
-        let pred = criteria::criteria_to_predicate(crits, &wins);
+        let pred = criteria::criterion_to_predicate(&crits, &wins);
         focus_window_in_direction_1(&wins, dir, fdata, pred);
     }
 }
