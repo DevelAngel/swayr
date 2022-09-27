@@ -24,7 +24,7 @@ pub mod pactl;
 pub mod sysinfo;
 pub mod window;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum RefreshReason {
     ClickEvent,
     SwayEvent,
