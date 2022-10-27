@@ -22,7 +22,7 @@ pub struct BarModuleNmcli {
 
 fn run_nmcli() -> Result<String, String> {
     let cmd = "nmcli";
-    let args = "-c no -g IN-USE,SSID,SIGNAL,BARS dev wifi".split(" ");
+    let args = "-c no -g IN-USE,SSID,SIGNAL,BARS dev wifi".split(' ');
     let output = std::process::Command::new(cmd)
         .args(args)
         .output()
@@ -66,8 +66,8 @@ fn refresh_state(state: &mut State, fmt_str: &str, html_escape: bool) {
         state.name = None;
         state.signal = None;
         state.bars = None;
-        if let Some(line) = output.lines().find(|line| line.starts_with("*")) {
-            let mut parts = line.split(":");
+        if let Some(line) = output.lines().find(|line| line.starts_with('*')) {
+            let mut parts = line.split(':');
             parts.next();
             state.name = Some(parts.next().unwrap().to_string());
             state.signal = Some(parts.next().unwrap().to_string());

@@ -1,3 +1,8 @@
+swayrbar 0.3.0
+==============
+
+- There's a new `nmcli` wifi module contributed by Karl Eklund.
+
 swayrbar 0.2.0
 ==============
 

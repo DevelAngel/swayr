@@ -3,7 +3,7 @@ swayr v0.23.0
 
 - New commands `steal-window` and `steal-window-or-container` let you select a
   window (or container) from another workspace using the menu program and move
-  it to the current workspace.
+  it to the current workspace.  Contributed by Rouven Czerwinski.
 
 swayr v0.22.0
 =============
