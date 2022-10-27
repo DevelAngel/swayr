@@ -22,6 +22,7 @@ pub mod battery;
 pub mod date;
 pub mod pactl;
 pub mod sysinfo;
+pub mod nmcli;
 pub mod window;
 
 #[derive(Debug, PartialEq, Eq)]

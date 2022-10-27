@@ -806,6 +806,16 @@ By default, it has the following click bindings:
 * `WheelUp` and `WheelDown` increase/decrease the volume of the default sink.
 
 
+#### The `nmcli` module
+
+The `nmcli` module requires NetworkManager and the `nmcli` command line tool.
+It can display information about the wi-fi connection.  It supports the
+following placeholders:
+* `{name}` wi-fi network name.
+* `{signal}` wireless signal strength.
+* `{bars}` a visualization of connection strength, like "▂▄▆_".
+
+
 #### The `date` module
 
 The `date` module shows the date and time by defining the `format` using

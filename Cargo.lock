@@ -764,7 +764,7 @@ dependencies = [
 
 [[package]]
 name = "swayrbar"
-version = "0.2.4"
+version = "0.2.4-nmcli"
 dependencies = [
  "battery",
  "chrono",
