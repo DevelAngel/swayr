@@ -75,6 +75,12 @@ output, etc.) and act on that.
 
 * `switch-window` displays all windows in the order urgent first, then
   last-recently-used, focused last and focuses the selected.
+* `steal-window` displays all windows in order urgent first, the
+   last-recently-used, focused last and moves the window into the current
+   workspace.
+* `steal-window-or-container` displays all windows and containers in order
+   urgent first, the last-recently-used, focused last and moves the window or
+   container into the current workspace.
 * `switch-workspace` displays all workspaces in LRU order and switches to the
   selected one.
 * `switch-output` shows all outputs in the menu and focuses the selected one.

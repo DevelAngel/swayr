@@ -150,6 +150,12 @@ pub enum SwayrCommand {
     },
     /// Focus the selected window.
     SwitchWindow,
+    /// Steal the selected window from another workspace into the current
+    /// workspace.
+    StealWindow,
+    /// Steal the selected window or container from another workspace into the
+    /// current workspace.
+    StealWindowOrContainer,
     /// Switch to the selected workspace.
     SwitchWorkspace,
     /// Switch to the selected workspace.
@@ -440,6 +446,8 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
             )
         }
         SwayrCommand::SwitchWindow => switch_window(fdata),
+        SwayrCommand::StealWindow => steal_window(fdata),
+        SwayrCommand::StealWindowOrContainer => steal_window_or_container(fdata),
         SwayrCommand::SwitchWorkspace => switch_workspace(fdata),
         SwayrCommand::SwitchOutput => switch_output(),
         SwayrCommand::SwitchWorkspaceOrWindow => {
@@ -580,6 +588,8 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
                 SwayrCommand::SwapFocusedWith,
                 SwayrCommand::QuitWorkspaceOrWindow,
                 SwayrCommand::SwitchWindow,
+                SwayrCommand::StealWindow,
+                SwayrCommand::StealWindowOrContainer,
                 SwayrCommand::SwitchWorkspace,
                 SwayrCommand::SwitchOutput,
                 SwayrCommand::SwitchWorkspaceOrWindow,
@@ -646,6 +656,11 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
     }
 
     *last_command = args.cmd.clone();
+}
+
+fn steal_window_by_id(id: i64) -> i64 {
+    run_sway_command(&[format!("[con_id={}]", id).as_str(), "move to workspace current"]);
+    id
 }
 
 fn focus_window_by_id(id: i64) -> i64 {
@@ -887,10 +902,44 @@ fn select_and_focus(prompt: &str, choices: &[t::DisplayNode]) {
     }
 }
 
+fn select_and_steal(prompt: &str, choices: &[t::DisplayNode]) {
+    match util::select_from_menu(prompt, choices) {
+        Ok(tn) => match tn.node.get_type() {
+            ipc::Type::Window | ipc::Type::Container => {
+                steal_window_by_id(tn.node.id);
+            },
+            ipc::Type::Workspace => {
+                log::info!("Can't steal whole workspace")
+            }
+            t => {
+                log::error!("Cannot handle {:?} in select_and_steal", t)
+            }
+        },
+        Err(non_matching_input) => {
+            log::error!("Cannot handle {:?} in select and steal", non_matching_input)
+        }
+    }
+}
+
 pub fn switch_window(fdata: &FocusData) {
     let root = ipc::get_root_node(true);
     let tree = t::get_tree(&root);
     select_and_focus("Select window", &tree.get_windows(fdata));
+}
+
+pub fn steal_window(fdata: &FocusData) {
+    let root = ipc::get_root_node(true);
+    let tree = t::get_tree(&root);
+    select_and_steal("Select window", &tree.get_windows(fdata));
+}
+
+pub fn steal_window_or_container(fdata: &FocusData) {
+    let root = ipc::get_root_node(true);
+    let tree = t::get_tree(&root);
+    select_and_steal(
+        "Select window or container",
+        &tree.get_workspaces_containers_and_windows(fdata)
+    );
 }
 
 pub fn switch_workspace(fdata: &FocusData) {
