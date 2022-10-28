@@ -648,7 +648,7 @@ Right now, there are the following modules:
 4. The `date` module can show, you guess it, the current date and time!
 5. The `pactl` module can show the current volume percentage and muted state.
    Clicks can increase/decrease the volume or toggle the mute state.
-6. The `nmcli` module uses NetworkManager's `nmcli` command line too to show
+6. The `nmcli` module uses NetworkManager's `nmcli` command line tool to show
    the currently connected wifi and its signal strength.
 
 
