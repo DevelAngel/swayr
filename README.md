@@ -648,6 +648,9 @@ Right now, there are the following modules:
 4. The `date` module can show, you guess it, the current date and time!
 5. The `pactl` module can show the current volume percentage and muted state.
    Clicks can increase/decrease the volume or toggle the mute state.
+6. The `nmcli` module uses NetworkManager's `nmcli` command line too to show
+   the currently connected wifi and its signal strength.
+
 
 I guess there will be more modules in the future as time permits.
 [Patches](#questions-and-patches) are certainly very welcome!
@@ -809,9 +812,9 @@ By default, it has the following click bindings:
 #### The `nmcli` module
 
 The `nmcli` module requires NetworkManager and the `nmcli` command line tool.
-It can display information about the wi-fi connection.  It supports the
+It can display information about the wifi connection.  It supports the
 following placeholders:
-* `{name}` wi-fi network name.
+* `{name}` wifi network name.
 * `{signal}` wireless signal strength.
 * `{bars}` a visualization of connection strength, like "▂▄▆_".
 
