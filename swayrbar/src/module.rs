@@ -20,9 +20,9 @@ use swaybar_types as s;
 
 pub mod battery;
 pub mod date;
+pub mod nmcli;
 pub mod pactl;
 pub mod sysinfo;
-pub mod nmcli;
 pub mod window;
 
 #[derive(Debug, PartialEq, Eq)]

@@ -365,7 +365,6 @@ static SWITCH_TO_MATCHING_DATA: Lazy<Mutex<SwitchToMatchingData>> =
 
 pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
     log::info!("Running SwayrCommand {:?}", args.cmd);
-    let fdata = args.focus_data;
 
     let mut last_command = LAST_COMMAND.lock().expect("Could not lock mutex");
     let mut switch_to_matching_data = SWITCH_TO_MATCHING_DATA
@@ -377,12 +376,23 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
     if *args.cmd != *last_command {
         switch_to_matching_data.reset(true);
     }
+    *last_command = args.cmd.clone();
 
+    let fdata = args.focus_data;
     if args.cmd.is_prev_next_window_variant() {
         fdata.send(FocusMessage::TickUpdateInhibit);
     } else {
         fdata.send(FocusMessage::TickUpdateActivate);
     }
+
+    exec_swayr_cmd_1(args, &mut switch_to_matching_data);
+}
+
+fn exec_swayr_cmd_1(
+    args: ExecSwayrCmdArgs,
+    switch_to_matching_data: &mut MutexGuard<SwitchToMatchingData>,
+) {
+    let fdata = args.focus_data;
 
     match args.cmd {
         SwayrCommand::Nop => {}
@@ -395,7 +405,7 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
             switch_to_matching_data.skip_lru = *skip_lru;
             switch_to_matching_data.skip_origin = *skip_origin;
 
-            switch_to_urgent_or_lru_window(&mut switch_to_matching_data, fdata)
+            switch_to_urgent_or_lru_window(switch_to_matching_data, fdata)
         }
         SwayrCommand::SwitchToAppOrUrgentOrLRUWindow {
             name,
@@ -409,7 +419,7 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
 
             switch_to_app_or_urgent_or_lru_window(
                 name,
-                &mut switch_to_matching_data,
+                switch_to_matching_data,
                 fdata,
             )
         }
@@ -425,7 +435,7 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
 
             switch_to_mark_or_urgent_or_lru_window(
                 con_mark,
-                &mut switch_to_matching_data,
+                switch_to_matching_data,
                 fdata,
             )
         }
@@ -441,7 +451,7 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
 
             switch_to_matching_or_urgent_or_lru_window(
                 criteria,
-                &mut switch_to_matching_data,
+                switch_to_matching_data,
                 fdata,
             )
         }
@@ -649,15 +659,16 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
 
             if let Ok(c) = util::select_from_menu("Select swayr command", &cmds)
             {
-                exec_swayr_cmd(ExecSwayrCmdArgs {
-                    cmd: c,
-                    focus_data: args.focus_data,
-                });
+                exec_swayr_cmd_1(
+                    ExecSwayrCmdArgs {
+                        cmd: c,
+                        focus_data: args.focus_data,
+                    },
+                    switch_to_matching_data,
+                );
             }
         }
     }
-
-    *last_command = args.cmd.clone();
 }
 
 fn steal_window_by_id(id: i64) -> i64 {
