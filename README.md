@@ -504,14 +504,17 @@ directory (and therefore, the same title) wouldn't be distinguishable.
 application icon should start with `img:{app_icon}:text:`.
 
 **Hint for rofi**: `rofi` supports icons with the syntax
-`"<text>\u0000icon\u00001f<image-file>"`, so a suitable `window_format` with
-application icon should end with `"\u0000icon\u001f<image-file>"`.  Also note
+`"<text>\u0000icon\u001f<image-file>"`, so a suitable window_format with
+application icon should end with `"\u0000icon\u001f{app_icon}"`.  Also note
 that you must enclose your `window_format` value with double-quotes and not
 with single-quotes.  Singe-quote strings are literal strings in
 [TOML](https://toml.io/en/v1.0.0#string) where no escape-sequences are
 processed whereas for double-quoted strings (so-called basic strings)
 escape-sequences are processed.  `rofi` requires a null character and a
 PARAGRAPH SEPARATOR for image sequences.
+
+**Hint for fuzzel**: I've been told that `fuzzel` supports the very same icon
+syntax as discussed for `rofi` above.
 
 #### The layout section
 
