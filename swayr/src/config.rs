@@ -297,6 +297,7 @@ impl Default for Format {
             urgency_end: Some("</span>".to_string()),
             icon_dirs: Some(vec![
                 "/usr/share/icons/hicolor/scalable/apps".to_string(),
+                "/usr/share/icons/hicolor/128x128/apps".to_string(),
                 "/usr/share/icons/hicolor/64x64/apps".to_string(),
                 "/usr/share/icons/hicolor/48x48/apps".to_string(),
                 "/usr/share/icons/Adwaita/64x64/apps".to_string(),
