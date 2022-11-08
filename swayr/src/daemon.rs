@@ -62,7 +62,7 @@ pub fn run_daemon() {
 }
 
 fn connect_and_subscribe() -> s::Fallible<s::EventStream> {
-    s::Connection::new()?.subscribe(&[
+    s::Connection::new()?.subscribe([
         s::EventType::Window,
         s::EventType::Workspace,
         s::EventType::Shutdown,

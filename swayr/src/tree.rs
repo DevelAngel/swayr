@@ -222,7 +222,7 @@ impl<'a> Tree<'a> {
             self.push_subtree_sorted(o, Rc::clone(&v), fdata);
         }
 
-        let x = self.as_display_nodes(&*v.borrow(), IndentLevel::TreeDepth(1));
+        let x = self.as_display_nodes(&v.borrow(), IndentLevel::TreeDepth(1));
         x
     }
 
@@ -236,7 +236,7 @@ impl<'a> Tree<'a> {
             self.push_subtree_sorted(ws, Rc::clone(&v), fdata);
         }
 
-        let x = self.as_display_nodes(&*v.borrow(), IndentLevel::TreeDepth(2));
+        let x = self.as_display_nodes(&v.borrow(), IndentLevel::TreeDepth(2));
         x
     }
 
