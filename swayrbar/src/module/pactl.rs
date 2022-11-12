@@ -86,21 +86,18 @@ fn subst_placeholders(fmt: &str, html_escape: bool, state: &State) -> String {
     })
 }
 
-impl BarModuleFn for BarModulePactl {
-    fn create(config: config::ModuleConfig) -> Box<dyn BarModuleFn>
-    where
-        Self: Sized,
-    {
-        Box::new(BarModulePactl {
-            config,
-            state: Mutex::new(State {
-                volume: 255_u8,
-                muted: false,
-                cached_text: String::new(),
-            }),
-        })
-    }
+pub fn create(config: config::ModuleConfig) -> Box<dyn BarModuleFn> {
+    Box::new(BarModulePactl {
+        config,
+        state: Mutex::new(State {
+            volume: 255_u8,
+            muted: false,
+            cached_text: String::new(),
+        }),
+    })
+}
 
+impl BarModuleFn for BarModulePactl {
     fn default_config(instance: String) -> config::ModuleConfig
     where
         Self: Sized,

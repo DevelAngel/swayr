@@ -1,3 +1,9 @@
+swayrbar 0.3.1
+==============
+
+- The `nmcli` module has been generalized to support the `iwctl` tool, too.
+  Just specify one of these two names as the module name.
+
 swayrbar 0.3.0
 ==============
 

@@ -20,9 +20,9 @@ use swaybar_types as s;
 
 pub mod battery;
 pub mod date;
-pub mod nmcli;
 pub mod pactl;
 pub mod sysinfo;
+pub mod wifi;
 pub mod window;
 
 #[derive(Debug, PartialEq, Eq)]
@@ -34,10 +34,6 @@ pub enum RefreshReason {
 pub type NameInstanceAndReason = (String, String, RefreshReason);
 
 pub trait BarModuleFn: Sync + Send {
-    fn create(config: config::ModuleConfig) -> Box<dyn BarModuleFn>
-    where
-        Self: Sized;
-
     fn default_config(instance: String) -> config::ModuleConfig
     where
         Self: Sized;

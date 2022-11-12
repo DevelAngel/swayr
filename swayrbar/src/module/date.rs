@@ -36,16 +36,16 @@ fn chrono_format(s: &str) -> String {
     chrono::Local::now().format(s).to_string()
 }
 
-impl BarModuleFn for BarModuleDate {
-    fn create(cfg: config::ModuleConfig) -> Box<dyn BarModuleFn> {
-        Box::new(BarModuleDate {
-            config: cfg,
-            state: Mutex::new(State {
-                cached_text: String::new(),
-            }),
-        })
-    }
+pub fn create(cfg: config::ModuleConfig) -> Box<dyn BarModuleFn> {
+    Box::new(BarModuleDate {
+        config: cfg,
+        state: Mutex::new(State {
+            cached_text: String::new(),
+        }),
+    })
+}
 
+impl BarModuleFn for BarModuleDate {
     fn default_config(instance: String) -> config::ModuleConfig {
         config::ModuleConfig {
             name: NAME.to_owned(),

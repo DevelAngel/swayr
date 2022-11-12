@@ -104,19 +104,19 @@ fn subst_placeholders(fmt: &str, html_escape: bool, state: &State) -> String {
     })
 }
 
-impl BarModuleFn for BarModuleBattery {
-    fn create(config: config::ModuleConfig) -> Box<dyn BarModuleFn> {
-        Box::new(BarModuleBattery {
-            config,
-            state: Mutex::new(State {
-                state_of_charge: 0.0,
-                state_of_health: 0.0,
-                state: "Unknown".to_owned(),
-                cached_text: String::new(),
-            }),
-        })
-    }
+pub fn create(config: config::ModuleConfig) -> Box<dyn BarModuleFn> {
+    Box::new(BarModuleBattery {
+        config,
+        state: Mutex::new(State {
+            state_of_charge: 0.0,
+            state_of_health: 0.0,
+            state: "Unknown".to_owned(),
+            cached_text: String::new(),
+        }),
+    })
+}
 
+impl BarModuleFn for BarModuleBattery {
     fn default_config(instance: String) -> config::ModuleConfig {
         config::ModuleConfig {
             name: NAME.to_owned(),

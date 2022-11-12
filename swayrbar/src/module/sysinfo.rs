@@ -121,22 +121,22 @@ fn subst_placeholders(fmt: &str, html_escape: bool, state: &State) -> String {
     })
 }
 
-impl BarModuleFn for BarModuleSysInfo {
-    fn create(config: config::ModuleConfig) -> Box<dyn BarModuleFn> {
-        Box::new(BarModuleSysInfo {
-            config,
-            system: Mutex::new(si::System::new_all()),
-            state: Mutex::new(State {
-                cpu_usage: 0.0,
-                mem_usage: 0.0,
-                load_avg_1: 0.0,
-                load_avg_5: 0.0,
-                load_avg_15: 0.0,
-                cached_text: String::new(),
-            }),
-        })
-    }
+pub fn create(config: config::ModuleConfig) -> Box<dyn BarModuleFn> {
+    Box::new(BarModuleSysInfo {
+        config,
+        system: Mutex::new(si::System::new_all()),
+        state: Mutex::new(State {
+            cpu_usage: 0.0,
+            mem_usage: 0.0,
+            load_avg_1: 0.0,
+            load_avg_5: 0.0,
+            load_avg_15: 0.0,
+            cached_text: String::new(),
+        }),
+    })
+}
 
+impl BarModuleFn for BarModuleSysInfo {
     fn default_config(instance: String) -> config::ModuleConfig {
         config::ModuleConfig {
             name: NAME.to_owned(),

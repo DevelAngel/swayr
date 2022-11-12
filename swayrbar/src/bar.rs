@@ -96,12 +96,13 @@ fn create_modules(config: config::Config) -> Vec<Box<dyn BarModuleFn>> {
     let mut mods = vec![];
     for mc in config.modules {
         let m = match mc.name.as_str() {
-            "window" => module::window::BarModuleWindow::create(mc),
-            "sysinfo" => module::sysinfo::BarModuleSysInfo::create(mc),
-            "battery" => module::battery::BarModuleBattery::create(mc),
-            "date" => module::date::BarModuleDate::create(mc),
-            "pactl" => module::pactl::BarModulePactl::create(mc),
-            "nmcli" => module::nmcli::BarModuleNmcli::create(mc),
+            "window" => module::window::create(mc),
+            "sysinfo" => module::sysinfo::create(mc),
+            "battery" => module::battery::create(mc),
+            "date" => module::date::create(mc),
+            "pactl" => module::pactl::create(mc),
+            "nmcli" => module::wifi::create(module::wifi::WifiTool::Nmcli, mc),
+            "iwctl" => module::wifi::create(module::wifi::WifiTool::Iwctl, mc),
             unknown => {
                 log::warn!("Unknown module name '{}'.  Ignoring...", unknown);
                 continue;
@@ -221,7 +222,7 @@ fn execute_command(cmd: &[String]) {
 }
 
 fn sway_subscribe() -> si::Fallible<si::EventStream> {
-    si::Connection::new()?.subscribe(&[
+    si::Connection::new()?.subscribe([
         si::EventType::Window,
         si::EventType::Shutdown,
         si::EventType::Workspace,

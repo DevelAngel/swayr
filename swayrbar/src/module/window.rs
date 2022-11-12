@@ -75,19 +75,19 @@ fn subst_placeholders(s: &str, html_escape: bool, state: &State) -> String {
     })
 }
 
-impl BarModuleFn for BarModuleWindow {
-    fn create(config: config::ModuleConfig) -> Box<dyn BarModuleFn> {
-        Box::new(BarModuleWindow {
-            config,
-            state: Mutex::new(State {
-                name: String::new(),
-                app_name: String::new(),
-                pid: INITIAL_PID,
-                cached_text: String::new(),
-            }),
-        })
-    }
+pub fn create(config: config::ModuleConfig) -> Box<dyn BarModuleFn> {
+    Box::new(BarModuleWindow {
+        config,
+        state: Mutex::new(State {
+            name: String::new(),
+            app_name: String::new(),
+            pid: INITIAL_PID,
+            cached_text: String::new(),
+        }),
+    })
+}
 
+impl BarModuleFn for BarModuleWindow {
     fn default_config(instance: String) -> config::ModuleConfig {
         config::ModuleConfig {
             name: NAME.to_owned(),
@@ -155,7 +155,7 @@ impl BarModuleFn for BarModuleWindow {
         let state = self.state.lock().expect("Could not lock state.");
         let cmd = cmd
             .iter()
-            .map(|arg| subst_placeholders(arg, false, &*state))
+            .map(|arg| subst_placeholders(arg, false, &state))
             .collect();
         Some(cmd)
     }
