@@ -653,6 +653,8 @@ Right now, there are the following modules:
    Clicks can increase/decrease the volume or toggle the mute state.
 6. The `nmcli` module uses NetworkManager's `nmcli` command line tool to show
    the currently connected wifi and its signal strength.
+7. The `iwctl` module the `iwctl` command line tool to show the currently
+   connected wifi and its signal strength.
 
 
 I guess there will be more modules in the future as time permits.
@@ -818,9 +820,17 @@ The `nmcli` module requires NetworkManager and the `nmcli` command line tool.
 It can display information about the wifi connection.  It supports the
 following placeholders:
 * `{name}` wifi network name.
-* `{signal}` wireless signal strength.
+* `{signal}` wireless signal strength (in %).
 * `{bars}` a visualization of connection strength, like "▂▄▆_".
 
+#### The `iwctl` module
+
+The `iwctl` module requires the `iwctl` command line tool which comes with
+`iwd`.  It can display information about the wifi connection.  It supports the
+following placeholders:
+* `{name}` wifi network name.
+* `{signal}` wireless signal strength (in dBm).
+* `{bars}` a visualization of connection strength, like "▂▄▆_".
 
 #### The `date` module
 
