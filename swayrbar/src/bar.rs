@@ -204,15 +204,13 @@ fn handle_click(
 
 fn execute_command(cmd: &[String]) {
     log::debug!("Executing command: {:?}", cmd);
-    match p::Command::new(&cmd[0]).args(&cmd[1..]).status() {
-        Ok(exit_status) => {
-            // TODO: Better use exit_ok() once that has stabilized.
-            if !exit_status.success() {
-                log::warn!(
-                    "Command finished with status code {:?}.",
-                    exit_status.code()
-                )
-            }
+    let child = p::Command::new(&cmd[0]).args(&cmd[1..]).spawn();
+    match child {
+        Ok(_child) => {
+            // For now, if we could at least start the process, that's good
+            // enough.  We could wait for it and check its exit state in
+            // another thread and log if anything went wrong to give meaningful
+            // log output.  But that's not implemented yet.
         }
         Err(err) => {
             log::error!("Error running shell command '{}':", cmd.join(" "));
