@@ -17,7 +17,7 @@
 
 use crate::config;
 use crate::module;
-use crate::module::{BarModuleFn, NameInstanceAndReason, RefreshReason};
+use crate::module::{BarModuleFn, RefreshReason};
 use env_logger::Env;
 use serde_json;
 use std::io;
@@ -68,26 +68,21 @@ pub fn start(opts: Opts) {
     let sender_for_input = sender.clone();
     thread::spawn(move || handle_input(mods_for_input, sender_for_input));
 
-    let window_mods: Vec<(String, String)> = mods
+    let window_mods_active = mods
         .iter()
-        .filter(|m| m.get_config().name == "window")
-        .map(|m| (m.get_config().name.clone(), m.get_config().instance.clone()))
-        .collect();
-    if !window_mods.is_empty() {
+        .any(|m| m.get_config().name == crate::module::window::NAME);
+    if window_mods_active {
         // There's at least one window module, so subscribe to focus events for
         // immediate refreshes.
-        thread::spawn(move || handle_sway_events(window_mods, sender));
+        thread::spawn(move || handle_sway_events(sender));
     }
 
     generate_status(&mods, receiver);
 }
 
-fn tick_periodically(
-    refresh_interval: u64,
-    sender: SyncSender<Option<NameInstanceAndReason>>,
-) {
+fn tick_periodically(refresh_interval: u64, sender: SyncSender<RefreshReason>) {
     loop {
-        send_refresh_event(&sender, None);
+        send_refresh_event(&sender, RefreshReason::TimerEvent);
         thread::sleep(Duration::from_millis(refresh_interval));
     }
 }
@@ -115,7 +110,7 @@ fn create_modules(config: config::Config) -> Vec<Box<dyn BarModuleFn>> {
 
 fn handle_input(
     mods: Arc<Vec<Box<dyn BarModuleFn>>>,
-    sender: SyncSender<Option<NameInstanceAndReason>>,
+    sender: SyncSender<RefreshReason>,
 ) {
     let mut sb = String::new();
     io::stdin()
@@ -148,20 +143,17 @@ fn handle_input(
             }
         };
         log::debug!("Received click: {:?}", click);
-        let event = handle_click(click, mods.clone());
-        if event.is_some() {
+        if let Some(event) = handle_click(click, mods.clone()) {
             send_refresh_event(&sender, event);
         }
     }
 }
 
 fn send_refresh_event(
-    sender: &SyncSender<Option<NameInstanceAndReason>>,
-    event: Option<NameInstanceAndReason>,
+    sender: &SyncSender<RefreshReason>,
+    event: RefreshReason,
 ) {
-    if event.is_some() {
-        log::debug!("Sending refresh event {:?}", event);
-    }
+    log::debug!("Sending refresh event {:?}", event);
     if let Err(err) = sender.send(event) {
         log::error!("Error at send: {}", err);
     }
@@ -170,7 +162,7 @@ fn send_refresh_event(
 fn handle_click(
     click: sbt::Click,
     mods: Arc<Vec<Box<dyn BarModuleFn>>>,
-) -> Option<NameInstanceAndReason> {
+) -> Option<RefreshReason> {
     let name = click.name?;
     let instance = click.instance?;
     let button_str = format!("{:?}", click.button);
@@ -188,11 +180,10 @@ fn handle_click(
                 if cfg.name == module::window::NAME {
                     return None;
                 }
-                return Some((
-                    cfg.name.clone(),
-                    cfg.instance.clone(),
-                    RefreshReason::ClickEvent,
-                ));
+                return Some(RefreshReason::ClickEvent {
+                    name: cfg.name.clone(),
+                    instance: cfg.instance.clone(),
+                });
             }
         }
     }
@@ -225,10 +216,7 @@ fn sway_subscribe() -> si::Fallible<si::EventStream> {
     ])
 }
 
-fn handle_sway_events(
-    window_mods: Vec<(String, String)>,
-    sender: SyncSender<Option<NameInstanceAndReason>>,
-) {
+fn handle_sway_events(sender: SyncSender<RefreshReason>) {
     let mut resets = 0;
     let max_resets = 10;
 
@@ -251,18 +239,14 @@ fn handle_sway_events(
                     match ev_result {
                         Ok(ev) => match ev {
                             si::Event::Window(_) | si::Event::Workspace(_) => {
-                                log::trace!(
+                                log::debug!(
                                     "Window or Workspace event: {:?}",
                                     ev
                                 );
-                                for m in &window_mods {
-                                    let event = Some((
-                                        m.0.to_owned(),
-                                        m.1.to_owned(),
-                                        RefreshReason::SwayEvent,
-                                    ));
-                                    send_refresh_event(&sender, event);
-                                }
+                                send_refresh_event(
+                                    &sender,
+                                    RefreshReason::SwayEvent,
+                                );
                             }
                             si::Event::Shutdown(sd_ev) => {
                                 log::debug!(
@@ -287,13 +271,10 @@ fn handle_sway_events(
     }
 }
 
-fn generate_status_1(
-    mods: &[Box<dyn BarModuleFn>],
-    name_and_instance: &Option<NameInstanceAndReason>,
-) {
+fn generate_status_1(mods: &[Box<dyn BarModuleFn>], reason: RefreshReason) {
     let mut blocks = vec![];
     for m in mods {
-        blocks.push(m.build(name_and_instance));
+        blocks.push(m.build(&reason));
     }
     let json = serde_json::to_string_pretty(&blocks)
         .unwrap_or_else(|_| "".to_string());
@@ -302,7 +283,7 @@ fn generate_status_1(
 
 fn generate_status(
     mods: &[Box<dyn BarModuleFn>],
-    receiver: Receiver<Option<NameInstanceAndReason>>,
+    receiver: Receiver<RefreshReason>,
 ) {
     println!("{{\"version\": 1, \"click_events\": true}}");
     // status_command should output an infinite array meaning we emit an
@@ -310,6 +291,6 @@ fn generate_status(
     println!("[");
 
     for ev in receiver.iter() {
-        generate_status_1(mods, &ev)
+        generate_status_1(mods, ev)
     }
 }

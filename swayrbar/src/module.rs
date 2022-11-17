@@ -27,11 +27,10 @@ pub mod window;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum RefreshReason {
-    ClickEvent,
+    TimerEvent,
+    ClickEvent { name: String, instance: String },
     SwayEvent,
 }
-
-pub type NameInstanceAndReason = (String, String, RefreshReason);
 
 pub trait BarModuleFn: Sync + Send {
     fn default_config(instance: String) -> config::ModuleConfig
@@ -53,24 +52,7 @@ pub trait BarModuleFn: Sync + Send {
         }
     }
 
-    fn build(&self, nai: &Option<NameInstanceAndReason>) -> s::Block;
-
-    fn should_refresh(
-        &self,
-        nai: &Option<NameInstanceAndReason>,
-        periodic: bool,
-        reasons: &[RefreshReason],
-    ) -> bool {
-        let cfg = self.get_config();
-        match nai {
-            None => periodic,
-            Some((n, i, r)) => {
-                n == &cfg.name
-                    && i == &cfg.instance
-                    && reasons.iter().any(|x| x == r)
-            }
-        }
-    }
+    fn build(&self, reason: &RefreshReason) -> s::Block;
 
     fn subst_cmd_args<'a>(&'a self, cmd: &'a [String]) -> Vec<String>;
 }

@@ -16,7 +16,7 @@
 //! The pactl `swayrbar` module.
 
 use crate::config;
-use crate::module::{BarModuleFn, NameInstanceAndReason};
+use crate::module::{BarModuleFn, RefreshReason};
 use crate::shared::fmt::subst_placeholders;
 use once_cell::sync::Lazy;
 use regex::Regex;
@@ -24,8 +24,6 @@ use std::collections::HashMap;
 use std::process::Command;
 use std::sync::Mutex;
 use swaybar_types as s;
-
-use super::RefreshReason;
 
 const NAME: &str = "pactl";
 
@@ -144,10 +142,16 @@ impl BarModuleFn for BarModulePactl {
         &self.config
     }
 
-    fn build(&self, nai: &Option<NameInstanceAndReason>) -> s::Block {
+    fn build(&self, reason: &RefreshReason) -> s::Block {
         let mut state = self.state.lock().expect("Could not lock state.");
 
-        if self.should_refresh(nai, true, &[RefreshReason::ClickEvent]) {
+        if match reason {
+            RefreshReason::TimerEvent => true,
+            RefreshReason::ClickEvent { name, instance } => {
+                name == &self.config.name && instance == &self.config.instance
+            }
+            RefreshReason::SwayEvent => false,
+        } {
             refresh_state(
                 &mut state,
                 &self.config.format,

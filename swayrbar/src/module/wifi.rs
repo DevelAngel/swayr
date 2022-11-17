@@ -1,6 +1,5 @@
-use super::RefreshReason;
 use crate::config;
-use crate::module::BarModuleFn;
+use crate::module::{BarModuleFn, RefreshReason};
 use crate::shared::fmt::subst_placeholders;
 use once_cell::sync::Lazy;
 use regex::Regex;
@@ -199,10 +198,10 @@ impl BarModuleFn for BarModuleWifi {
         &self.config
     }
 
-    fn build(&self, nai: &Option<super::NameInstanceAndReason>) -> s::Block {
+    fn build(&self, reason: &RefreshReason) -> s::Block {
         let mut state = self.state.lock().expect("Could not lock state.");
 
-        if self.should_refresh(nai, true, &[RefreshReason::ClickEvent]) {
+        if matches!(reason, RefreshReason::TimerEvent) {
             refresh_state(
                 &self.tool,
                 &mut state,

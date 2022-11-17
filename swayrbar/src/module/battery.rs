@@ -16,7 +16,7 @@
 //! The date `swayrbar` module.
 
 use crate::config;
-use crate::module::{BarModuleFn, NameInstanceAndReason};
+use crate::module::{BarModuleFn, RefreshReason};
 use crate::shared::fmt::subst_placeholders;
 use battery as bat;
 use std::collections::HashSet;
@@ -131,10 +131,10 @@ impl BarModuleFn for BarModuleBattery {
         &self.config
     }
 
-    fn build(&self, nai: &Option<NameInstanceAndReason>) -> s::Block {
+    fn build(&self, reason: &RefreshReason) -> s::Block {
         let mut state = self.state.lock().expect("Could not lock state.");
 
-        if self.should_refresh(nai, true, &[]) {
+        if matches!(reason, RefreshReason::TimerEvent) {
             refresh_state(
                 &mut state,
                 &self.config.format,

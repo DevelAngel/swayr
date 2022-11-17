@@ -16,7 +16,7 @@
 //! The date `swayrbar` module.
 
 use crate::config;
-use crate::module::{BarModuleFn, NameInstanceAndReason};
+use crate::module::{BarModuleFn, RefreshReason};
 use crate::shared::fmt::subst_placeholders;
 use std::collections::HashMap;
 use std::sync::Mutex;
@@ -153,11 +153,11 @@ impl BarModuleFn for BarModuleSysInfo {
         &self.config
     }
 
-    fn build(&self, nai: &Option<NameInstanceAndReason>) -> s::Block {
+    fn build(&self, reason: &RefreshReason) -> s::Block {
         let mut sys = self.system.lock().expect("Could not lock state.");
         let mut state = self.state.lock().expect("Could not lock state.");
 
-        if self.should_refresh(nai, true, &[]) {
+        if matches!(reason, RefreshReason::TimerEvent) {
             refresh_state(
                 &mut sys,
                 &mut state,

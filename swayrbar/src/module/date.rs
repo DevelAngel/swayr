@@ -18,7 +18,7 @@
 use std::sync::Mutex;
 
 use crate::module::config;
-use crate::module::{BarModuleFn, NameInstanceAndReason};
+use crate::module::{BarModuleFn, RefreshReason};
 use swaybar_types as s;
 
 const NAME: &str = "date";
@@ -60,10 +60,10 @@ impl BarModuleFn for BarModuleDate {
         &self.config
     }
 
-    fn build(&self, nai: &Option<NameInstanceAndReason>) -> s::Block {
+    fn build(&self, reason: &RefreshReason) -> s::Block {
         let mut state = self.state.lock().expect("Could not lock state.");
 
-        if self.should_refresh(nai, true, &[]) {
+        if matches!(reason, RefreshReason::TimerEvent) {
             state.cached_text = chrono_format(&self.config.format);
         }
 

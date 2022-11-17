@@ -19,13 +19,11 @@ use std::collections::HashMap;
 use std::sync::Mutex;
 
 use crate::config;
-use crate::module::{BarModuleFn, NameInstanceAndReason};
+use crate::module::{BarModuleFn, RefreshReason};
 use crate::shared::fmt::subst_placeholders;
 use crate::shared::ipc;
 use crate::shared::ipc::NodeMethods;
 use swaybar_types as s;
-
-use super::RefreshReason;
 
 pub const NAME: &str = "window";
 
@@ -114,14 +112,13 @@ impl BarModuleFn for BarModuleWindow {
         &self.config
     }
 
-    fn build(&self, nai: &Option<NameInstanceAndReason>) -> s::Block {
+    fn build(&self, reason: &RefreshReason) -> s::Block {
         let mut state = self.state.lock().expect("Could not lock state.");
 
         // In contrast to other modules, this one should only refresh its state
-        // initially at startup and when explicitly named by `nai` (caused by a
-        // window or workspace event).
+        // initially at startup and on SwayEvents.
         if state.pid == INITIAL_PID
-            || (self.should_refresh(nai, false, &[RefreshReason::SwayEvent]))
+            || matches!(reason, RefreshReason::SwayEvent)
         {
             refresh_state(
                 &mut state,
