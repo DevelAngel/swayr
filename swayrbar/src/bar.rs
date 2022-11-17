@@ -238,14 +238,24 @@ fn handle_sway_events(sender: SyncSender<RefreshReason>) {
                     resets = 0;
                     match ev_result {
                         Ok(ev) => match ev {
-                            si::Event::Window(_) | si::Event::Workspace(_) => {
+                            si::Event::Window(ev) => {
                                 log::debug!(
                                     "Window or Workspace event: {:?}",
                                     ev
                                 );
                                 send_refresh_event(
                                     &sender,
-                                    RefreshReason::SwayEvent,
+                                    RefreshReason::SwayWindowEvent(ev),
+                                );
+                            }
+                            si::Event::Workspace(ev) => {
+                                log::debug!(
+                                    "Window or Workspace event: {:?}",
+                                    ev
+                                );
+                                send_refresh_event(
+                                    &sender,
+                                    RefreshReason::SwayWorkspaceEvent(ev),
                                 );
                             }
                             si::Event::Shutdown(sd_ev) => {

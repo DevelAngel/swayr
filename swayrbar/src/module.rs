@@ -17,6 +17,7 @@ use std::collections::HashMap;
 
 use crate::config;
 use swaybar_types as s;
+use swayipc as si;
 
 pub mod battery;
 pub mod date;
@@ -25,11 +26,12 @@ pub mod sysinfo;
 pub mod wifi;
 pub mod window;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug)]
 pub enum RefreshReason {
     TimerEvent,
     ClickEvent { name: String, instance: String },
-    SwayEvent,
+    SwayWindowEvent(Box<si::WindowEvent>),
+    SwayWorkspaceEvent(Box<si::WorkspaceEvent>),
 }
 
 pub trait BarModuleFn: Sync + Send {

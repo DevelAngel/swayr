@@ -24,6 +24,7 @@ use crate::shared::fmt::subst_placeholders;
 use crate::shared::ipc;
 use crate::shared::ipc::NodeMethods;
 use swaybar_types as s;
+use swayipc as si;
 
 pub const NAME: &str = "window";
 
@@ -43,12 +44,12 @@ pub struct BarModuleWindow {
     state: Mutex<State>,
 }
 
-fn refresh_state(state: &mut State, fmt_str: &str, html_escape: bool) {
-    let root = ipc::get_root_node(false);
-    let focused_win = root
-        .iter()
-        .find(|n| n.focused && n.get_type() == ipc::Type::Window);
-
+fn refresh_state_1(
+    state: &mut State,
+    fmt_str: &str,
+    html_escape: bool,
+    focused_win: Option<&swayipc::Node>,
+) {
     match focused_win {
         Some(win) => {
             state.name = win.get_name().to_owned();
@@ -63,6 +64,14 @@ fn refresh_state(state: &mut State, fmt_str: &str, html_escape: bool) {
             state.cached_text.clear();
         }
     };
+}
+
+fn refresh_state(state: &mut State, fmt_str: &str, html_escape: bool) {
+    let root = ipc::get_root_node(false);
+    let focused_win = root
+        .iter()
+        .find(|n| n.focused && n.get_type() == ipc::Type::Window);
+    refresh_state_1(state, fmt_str, html_escape, focused_win);
 }
 
 fn subst_placeholders(s: &str, html_escape: bool, state: &State) -> String {
@@ -116,15 +125,42 @@ impl BarModuleFn for BarModuleWindow {
         let mut state = self.state.lock().expect("Could not lock state.");
 
         // In contrast to other modules, this one should only refresh its state
-        // initially at startup and on SwayEvents.
-        if state.pid == INITIAL_PID
-            || matches!(reason, RefreshReason::SwayEvent)
-        {
-            refresh_state(
+        // initially at startup and on sway events.
+        match reason {
+            RefreshReason::SwayWindowEvent(ev) => match ev.change {
+                si::WindowChange::Focus | si::WindowChange::Title => {
+                    refresh_state_1(
+                        &mut state,
+                        &self.config.format,
+                        self.config.is_html_escape(),
+                        Some(&ev.container),
+                    )
+                }
+                si::WindowChange::Close => refresh_state_1(
+                    &mut state,
+                    &self.config.format,
+                    self.config.is_html_escape(),
+                    None,
+                ),
+                _ => (),
+            },
+            RefreshReason::SwayWorkspaceEvent(ev)
+                if ev.change == si::WorkspaceChange::Init =>
+            {
+                // We are on an empty workspace now, so clear the state.
+                refresh_state_1(
+                    &mut state,
+                    &self.config.format,
+                    self.config.is_html_escape(),
+                    None,
+                )
+            }
+            _ if state.pid == INITIAL_PID => refresh_state(
                 &mut state,
                 &self.config.format,
                 self.config.is_html_escape(),
-            );
+            ),
+            _ => (),
         }
 
         s::Block {

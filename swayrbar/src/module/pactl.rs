@@ -150,7 +150,7 @@ impl BarModuleFn for BarModulePactl {
             RefreshReason::ClickEvent { name, instance } => {
                 name == &self.config.name && instance == &self.config.instance
             }
-            RefreshReason::SwayEvent => false,
+            _ => false,
         } {
             refresh_state(
                 &mut state,
