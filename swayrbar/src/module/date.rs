@@ -88,7 +88,7 @@ impl BarModuleFn for BarModuleDate {
         }
     }
 
-    fn subst_args<'a>(&'a self, cmd: &'a [String]) -> Option<Vec<String>> {
-        Some(cmd.iter().map(|arg| chrono_format(arg)).collect())
+    fn subst_cmd_args<'a>(&'a self, cmd: &'a [String]) -> Vec<String> {
+        cmd.iter().map(|arg| chrono_format(arg)).collect()
     }
 }

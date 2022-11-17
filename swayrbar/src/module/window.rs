@@ -151,12 +151,10 @@ impl BarModuleFn for BarModuleWindow {
         }
     }
 
-    fn subst_args<'b>(&'b self, cmd: &'b [String]) -> Option<Vec<String>> {
+    fn subst_cmd_args<'b>(&'b self, cmd: &'b [String]) -> Vec<String> {
         let state = self.state.lock().expect("Could not lock state.");
-        let cmd = cmd
-            .iter()
+        cmd.iter()
             .map(|arg| subst_placeholders(arg, false, &state))
-            .collect();
-        Some(cmd)
+            .collect()
     }
 }

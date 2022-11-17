@@ -176,12 +176,10 @@ impl BarModuleFn for BarModulePactl {
         }
     }
 
-    fn subst_args<'a>(&'a self, cmd: &'a [String]) -> Option<Vec<String>> {
+    fn subst_cmd_args<'a>(&'a self, cmd: &'a [String]) -> Vec<String> {
         let state = self.state.lock().expect("Could not lock state.");
-        Some(
-            cmd.iter()
-                .map(|arg| subst_placeholders(arg, false, &state))
-                .collect(),
-        )
+        cmd.iter()
+            .map(|arg| subst_placeholders(arg, false, &state))
+            .collect()
     }
 }

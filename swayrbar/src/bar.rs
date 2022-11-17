@@ -177,10 +177,8 @@ fn handle_click(
     for m in mods.iter() {
         if let Some(on_click) = m.get_on_click_map(&name, &instance) {
             if let Some(cmd) = on_click.get(&button_str) {
-                match m.subst_args(cmd) {
-                    Some(cmd) => execute_command(&cmd),
-                    None => execute_command(cmd),
-                }
+                let cmd = m.subst_cmd_args(cmd);
+                execute_command(&cmd);
                 let cfg = m.get_config();
                 // No refresh for click events for window modules because the
                 // refresh will be triggered by a sway event anyhow.

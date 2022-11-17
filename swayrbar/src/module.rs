@@ -72,5 +72,5 @@ pub trait BarModuleFn: Sync + Send {
         }
     }
 
-    fn subst_args<'a>(&'a self, cmd: &'a [String]) -> Option<Vec<String>>;
+    fn subst_cmd_args<'a>(&'a self, cmd: &'a [String]) -> Vec<String>;
 }
