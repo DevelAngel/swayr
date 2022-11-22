@@ -18,7 +18,7 @@
 use once_cell::sync::Lazy;
 use regex::Regex;
 
-use crate::config as cfg;
+use crate::daemon::CONFIG;
 use std::collections::HashMap;
 use std::io::{BufRead, Write};
 use std::path as p;
@@ -235,7 +235,7 @@ fn test_icon_stuff() {
 }
 
 pub trait DisplayFormat {
-    fn format_for_display(&self, config: &cfg::Config) -> String;
+    fn format_for_display(&self) -> String;
     fn get_indent_level(&self) -> usize;
 }
 
@@ -248,9 +248,8 @@ where
 {
     let mut map: HashMap<String, &TS> = HashMap::new();
     let mut strs: Vec<String> = vec![];
-    let cfg = cfg::load_config();
     for c in choices {
-        let s = c.format_for_display(&cfg);
+        let s = c.format_for_display();
         strs.push(s.clone());
 
         // Workaround: rofi has "\u0000icon\u001f/path/to/icon.png" as image
@@ -265,8 +264,8 @@ where
         map.insert(s, c);
     }
 
-    let menu_exec = cfg.get_menu_executable();
-    let args: Vec<String> = cfg
+    let menu_exec = CONFIG.get_menu_executable();
+    let args: Vec<String> = CONFIG
         .get_menu_args()
         .iter()
         .map(|a| a.replace("{prompt}", prompt))

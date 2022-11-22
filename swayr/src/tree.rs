@@ -15,7 +15,7 @@
 
 //! Convenience data structures built from the IPC structs.
 
-use crate::config;
+use crate::daemon::CONFIG;
 use crate::focus::FocusData;
 use crate::shared::fmt::subst_placeholders;
 use crate::shared::ipc;
@@ -24,6 +24,7 @@ use crate::util;
 use crate::util::DisplayFormat;
 use once_cell::sync::Lazy;
 use regex::Regex;
+use serde::Serialize;
 use std::cell::RefCell;
 use std::cmp;
 use std::collections::HashMap;
@@ -43,9 +44,13 @@ enum IndentLevel {
     TreeDepth(usize),
 }
 
+#[derive(Serialize)]
 pub struct DisplayNode<'a> {
+    #[serde(flatten)]
     pub node: &'a s::Node,
+    #[serde(skip_serializing)]
     pub tree: &'a Tree<'a>,
+    #[serde(skip_serializing)]
     indent_level: IndentLevel,
 }
 
@@ -305,14 +310,14 @@ fn format_marks(marks: &[String]) -> String {
 }
 
 impl DisplayFormat for DisplayNode<'_> {
-    fn format_for_display(&self, cfg: &config::Config) -> String {
-        let indent = cfg.get_format_indent();
-        let html_escape = cfg.get_format_html_escape();
-        let urgency_start = cfg.get_format_urgency_start();
-        let urgency_end = cfg.get_format_urgency_end();
-        let icon_dirs = cfg.get_format_icon_dirs();
+    fn format_for_display(&self) -> String {
+        let indent = CONFIG.get_format_indent();
+        let html_escape = CONFIG.get_format_html_escape();
+        let urgency_start = CONFIG.get_format_urgency_start();
+        let urgency_end = CONFIG.get_format_urgency_end();
+        let icon_dirs = CONFIG.get_format_icon_dirs();
         // fallback_icon has no default value.
-        let fallback_icon: Option<Box<std::path::Path>> = cfg
+        let fallback_icon: Option<Box<std::path::Path>> = CONFIG
             .get_format_fallback_icon()
             .as_ref()
             .map(|i| std::path::Path::new(i).to_owned().into_boxed_path());
@@ -322,10 +327,10 @@ impl DisplayFormat for DisplayNode<'_> {
 
         let fmt = match self.node.get_type() {
             ipc::Type::Root => String::from("Cannot format Root"),
-            ipc::Type::Output => cfg.get_format_output_format(),
-            ipc::Type::Workspace => cfg.get_format_workspace_format(),
-            ipc::Type::Container => cfg.get_format_container_format(),
-            ipc::Type::Window => cfg.get_format_window_format(),
+            ipc::Type::Output => CONFIG.get_format_output_format(),
+            ipc::Type::Workspace => CONFIG.get_format_workspace_format(),
+            ipc::Type::Container => CONFIG.get_format_container_format(),
+            ipc::Type::Window => CONFIG.get_format_window_format(),
         };
         let fmt = fmt
             .replace(

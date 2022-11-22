@@ -22,6 +22,7 @@ use crate::focus::FocusEvent;
 use crate::focus::FocusMessage;
 use crate::layout;
 use crate::util;
+use once_cell::sync::Lazy;
 use std::collections::HashMap;
 use std::io::Read;
 use std::os::unix::net::{UnixListener, UnixStream};
@@ -32,6 +33,8 @@ use std::thread;
 use std::time::Duration;
 use swayipc as s;
 
+pub static CONFIG: Lazy<Config> = Lazy::new(config::load_config);
+
 pub fn run_daemon() {
     let (focus_tx, focus_rx) = mpsc::channel();
     let fdata = FocusData {
@@ -39,15 +42,14 @@ pub fn run_daemon() {
         focus_chan: focus_tx,
     };
 
-    let config = config::load_config();
-    let lockin_delay = config.get_focus_lockin_delay();
-    let auto_nop_delay = &config.get_misc_auto_nop_delay();
-    let seq_inhibit = config.get_misc_seq_inhibit();
+    let lockin_delay = CONFIG.get_focus_lockin_delay();
+    let auto_nop_delay = &CONFIG.get_misc_auto_nop_delay();
+    let seq_inhibit = CONFIG.get_misc_seq_inhibit();
 
     {
         let fdata = fdata.clone();
         thread::spawn(move || {
-            monitor_sway_events(fdata, &config);
+            monitor_sway_events(fdata);
         });
     }
 
@@ -69,7 +71,7 @@ fn connect_and_subscribe() -> s::Fallible<s::EventStream> {
     ])
 }
 
-pub fn monitor_sway_events(fdata: FocusData, config: &Config) {
+pub fn monitor_sway_events(fdata: FocusData) {
     let mut focus_counter = 0;
     let mut resets = 0;
     let max_resets = 10;
@@ -97,7 +99,6 @@ pub fn monitor_sway_events(fdata: FocusData, config: &Config) {
                                 show_extra_props_state = handle_window_event(
                                     win_ev,
                                     &fdata,
-                                    config,
                                     focus_counter,
                                 );
                             }
@@ -143,7 +144,6 @@ pub fn monitor_sway_events(fdata: FocusData, config: &Config) {
 fn handle_window_event(
     ev: Box<s::WindowEvent>,
     fdata: &FocusData,
-    config: &config::Config,
     focus_val: u64,
 ) -> bool {
     let s::WindowEvent {
@@ -151,7 +151,7 @@ fn handle_window_event(
     } = *ev;
     match change {
         s::WindowChange::Focus => {
-            layout::maybe_auto_tile(config);
+            layout::maybe_auto_tile(&CONFIG);
             fdata.send(FocusMessage::FocusEvent(FocusEvent {
                 node_id: container.id,
                 ev_focus_ctr: focus_val,
@@ -160,19 +160,19 @@ fn handle_window_event(
             true
         }
         s::WindowChange::New => {
-            layout::maybe_auto_tile(config);
+            layout::maybe_auto_tile(&CONFIG);
             fdata.ensure_id(container.id);
             log::debug!("Handled window event type {:?}", change);
             true
         }
         s::WindowChange::Close => {
             fdata.remove_focus_data(container.id);
-            layout::maybe_auto_tile(config);
+            layout::maybe_auto_tile(&CONFIG);
             log::debug!("Handled window event type {:?}", change);
             true
         }
         s::WindowChange::Move | s::WindowChange::Floating => {
-            layout::maybe_auto_tile(config);
+            layout::maybe_auto_tile(&CONFIG);
             log::debug!("Handled window event type {:?}", change);
             false // We don't affect the extra_props state here.
         }

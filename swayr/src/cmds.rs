@@ -15,7 +15,6 @@
 
 //! Functions and data structures of the swayr client.
 
-use crate::config as cfg;
 use crate::criteria;
 use crate::focus::FocusData;
 use crate::focus::FocusMessage;
@@ -307,7 +306,7 @@ pub struct ExecSwayrCmdArgs<'a> {
 }
 
 impl DisplayFormat for SwayrCommand {
-    fn format_for_display(&self, _: &cfg::Config) -> std::string::String {
+    fn format_for_display(&self) -> std::string::String {
         // TODO: It would be very nice if the display format was exactly like
         // the swayr invocation in the shell.  Can that somehow be retrieved
         // from clap?
@@ -1486,7 +1485,7 @@ struct SwaymsgCmd {
 }
 
 impl DisplayFormat for SwaymsgCmd {
-    fn format_for_display(&self, _: &cfg::Config) -> std::string::String {
+    fn format_for_display(&self) -> String {
         self.cmd.clone()
     }
 
