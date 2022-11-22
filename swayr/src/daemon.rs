@@ -31,6 +31,7 @@ use std::sync::{mpsc, Condvar};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
+
 use swayipc as s;
 
 pub static CONFIG: Lazy<Config> = Lazy::new(config::load_config);

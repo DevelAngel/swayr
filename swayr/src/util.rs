@@ -23,7 +23,6 @@ use std::collections::HashMap;
 use std::io::{BufRead, Write};
 use std::path as p;
 use std::process as proc;
-use std::sync::Mutex;
 
 pub fn get_swayr_socket_path() -> String {
     // We prefer checking the env variable instead of
@@ -102,11 +101,11 @@ fn desktop_entries() -> Vec<Box<p::Path>> {
     entries
 }
 
-fn find_icon(icon_name: &str, icon_dirs: &[String]) -> Option<Box<p::Path>> {
+fn find_icon(icon_name: &str, icon_dirs: &[String]) -> Option<p::PathBuf> {
     let p = p::Path::new(icon_name);
     if p.is_file() {
         log::debug!("(1) Icon name '{}' -> {}", icon_name, p.display());
-        return Some(p.to_path_buf().into_boxed_path());
+        return Some(p.to_path_buf());
     }
 
     for dir in icon_dirs {
@@ -120,7 +119,7 @@ fn find_icon(icon_name: &str, icon_dirs: &[String]) -> Option<Box<p::Path>> {
                     icon_name,
                     icon_file.display()
                 );
-                return Some(icon_file.to_path_buf().into_boxed_path());
+                return Some(icon_file.to_path_buf());
             }
         }
     }
@@ -134,16 +133,16 @@ static WM_CLASS_OR_ICON_RX: Lazy<Regex> =
 static REV_DOMAIN_NAME_RX: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"^(?:[a-zA-Z0-9-]+\.)+([a-zA-Z0-9-]+)$").unwrap());
 
-fn get_app_id_to_icon_map(
+pub fn get_app_id_to_icon_map(
     icon_dirs: &[String],
-) -> HashMap<String, Box<p::Path>> {
-    let mut map: HashMap<String, Box<p::Path>> = HashMap::new();
+) -> HashMap<String, p::PathBuf> {
+    let mut map: HashMap<String, p::PathBuf> = HashMap::new();
 
     for e in desktop_entries() {
         if let Ok(f) = std::fs::File::open(&e) {
             let buf = std::io::BufReader::new(f);
             let mut wm_class: Option<String> = None;
-            let mut icon: Option<Box<p::Path>> = None;
+            let mut icon: Option<p::PathBuf> = None;
 
             // Get App-Id and Icon from desktop file.
             for line in buf.lines() {
@@ -200,38 +199,6 @@ fn get_app_id_to_icon_map(
         map
     );
     map
-}
-
-// Well, this type definition is pretty useless since it's only used in
-// get_icon anyway but clippy suggested it...
-type AppIdToIconMap = Lazy<Mutex<Option<HashMap<String, Box<p::Path>>>>>;
-static APP_ID_TO_ICON_MAP: AppIdToIconMap = Lazy::new(|| Mutex::new(None));
-
-pub fn get_icon(app_id: &str, icon_dirs: &[String]) -> Option<Box<p::Path>> {
-    let mut opt = APP_ID_TO_ICON_MAP.lock().unwrap();
-
-    if opt.is_none() {
-        opt.replace(get_app_id_to_icon_map(icon_dirs));
-    }
-
-    opt.as_ref().unwrap().get(app_id).map(|i| i.to_owned())
-}
-
-#[test]
-fn test_icon_stuff() {
-    let icon_dirs = vec![
-        String::from("/usr/share/icons/hicolor/scalable/apps"),
-        String::from("/usr/share/icons/hicolor/48x48/apps"),
-        String::from("/usr/share/icons/Adwaita/48x48/apps"),
-        String::from("/usr/share/pixmaps"),
-    ];
-    let m = get_app_id_to_icon_map(&icon_dirs);
-    println!("Found {} icon entries:\n{:#?}", m.len(), m);
-
-    let apps = vec!["Emacs", "Alacritty", "firefoxdeveloperedition", "gimp"];
-    for app in apps {
-        println!("Icon for {}: {:?}", app, get_icon(app, &icon_dirs))
-    }
 }
 
 pub trait DisplayFormat {

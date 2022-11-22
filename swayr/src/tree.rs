@@ -20,7 +20,6 @@ use crate::focus::FocusData;
 use crate::shared::fmt::subst_placeholders;
 use crate::shared::ipc;
 use crate::shared::ipc::NodeMethods;
-use crate::util;
 use crate::util::DisplayFormat;
 use once_cell::sync::Lazy;
 use regex::Regex;
@@ -28,8 +27,14 @@ use serde::Serialize;
 use std::cell::RefCell;
 use std::cmp;
 use std::collections::HashMap;
+use std::path as p;
 use std::rc::Rc;
 use swayipc as s;
+
+pub type AppIdToIconMap = Lazy<HashMap<String, p::PathBuf>>;
+pub static APP_ID_TO_ICON_MAP: AppIdToIconMap = Lazy::new(|| {
+    crate::util::get_app_id_to_icon_map(&CONFIG.get_format_icon_dirs())
+});
 
 pub struct Tree<'a> {
     root: &'a s::Node,
@@ -52,6 +57,7 @@ pub struct DisplayNode<'a> {
     pub tree: &'a Tree<'a>,
     #[serde(skip_serializing)]
     indent_level: IndentLevel,
+    pub swayr_icon: Option<std::path::PathBuf>,
 }
 
 impl<'a> Tree<'a> {
@@ -108,6 +114,7 @@ impl<'a> Tree<'a> {
             .map(|node| DisplayNode {
                 node,
                 tree: self,
+                swayr_icon: get_icon(node),
                 indent_level,
             })
             .collect()
@@ -266,6 +273,22 @@ impl<'a> Tree<'a> {
     }
 }
 
+fn get_icon(node: &s::Node) -> Option<std::path::PathBuf> {
+    if node.get_type() == ipc::Type::Window {
+        let app_name_no_version =
+            APP_NAME_AND_VERSION_RX.replace(node.get_app_name(), "$1");
+        let icon = APP_ID_TO_ICON_MAP
+            .get(node.get_app_name())
+            .or_else(|| APP_ID_TO_ICON_MAP.get(app_name_no_version.as_ref()))
+            .or_else(|| {
+                APP_ID_TO_ICON_MAP.get(&app_name_no_version.to_lowercase())
+            });
+        icon.map(|i| i.to_owned())
+    } else {
+        None
+    }
+}
+
 fn init_id_parent<'a>(
     n: &'a s::Node,
     parent: Option<&'a s::Node>,
@@ -315,15 +338,11 @@ impl DisplayFormat for DisplayNode<'_> {
         let html_escape = CONFIG.get_format_html_escape();
         let urgency_start = CONFIG.get_format_urgency_start();
         let urgency_end = CONFIG.get_format_urgency_end();
-        let icon_dirs = CONFIG.get_format_icon_dirs();
         // fallback_icon has no default value.
-        let fallback_icon: Option<Box<std::path::Path>> = CONFIG
+        let fallback_icon: Option<std::path::PathBuf> = CONFIG
             .get_format_fallback_icon()
             .as_ref()
-            .map(|i| std::path::Path::new(i).to_owned().into_boxed_path());
-
-        let app_name_no_version =
-            APP_NAME_AND_VERSION_RX.replace(self.node.get_app_name(), "$1");
+            .map(|i| std::path::Path::new(i).to_owned());
 
         let fmt = match self.node.get_type() {
             ipc::Type::Root => String::from("Cannot format Root"),
@@ -355,17 +374,9 @@ impl DisplayFormat for DisplayNode<'_> {
             )
             .replace(
                 "{app_icon}",
-                util::get_icon(self.node.get_app_name(), &icon_dirs)
-                    .or_else(|| {
-                        util::get_icon(&app_name_no_version, &icon_dirs)
-                    })
-                    .or_else(|| {
-                        util::get_icon(
-                            &app_name_no_version.to_lowercase(),
-                            &icon_dirs,
-                        )
-                    })
-                    .or(fallback_icon)
+                self.swayr_icon
+                    .as_ref()
+                    .or(fallback_icon.as_ref())
                     .map(|i| i.to_string_lossy().into_owned())
                     .unwrap_or_else(String::new)
                     .as_str(),
