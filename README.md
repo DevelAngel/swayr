@@ -278,10 +278,10 @@ Then you can install swayr like so:
 cargo install swayr
 ```
 
-For getting updates easily, I recommend the cargo `install-update` plugin.
+For getting updates easily, I recommend the cargo `cargo-update` plugin.
 ```sh
 # Install it once.
-cargo install install-update
+cargo install cargo-update
 
 # Then you can update all installed rust binary crates including swayr using:
 cargo install-update --all
