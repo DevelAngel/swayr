@@ -362,7 +362,9 @@ impl SwitchToMatchingData {
 static SWITCH_TO_MATCHING_DATA: Lazy<Mutex<SwitchToMatchingData>> =
     Lazy::new(|| Mutex::new(SwitchToMatchingData::new()));
 
-pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
+pub fn exec_swayr_cmd(
+    args: ExecSwayrCmdArgs,
+) -> Result<SwayrCmdRetVal, String> {
     log::info!("Running SwayrCommand {:?}", args.cmd);
 
     let mut last_command = LAST_COMMAND.lock().expect("Could not lock mutex");
@@ -384,17 +386,34 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) {
         fdata.send(FocusMessage::TickUpdateActivate);
     }
 
-    exec_swayr_cmd_1(args, &mut switch_to_matching_data);
+    exec_swayr_cmd_1(args, &mut switch_to_matching_data)
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub enum SwayrCmdRetVal {
+    Unit,
+    Message(String),
+}
+
+impl ToString for SwayrCmdRetVal {
+    fn to_string(&self) -> String {
+        match self {
+            SwayrCmdRetVal::Unit => String::new(),
+            SwayrCmdRetVal::Message(msg) => msg.to_string(),
+        }
+    }
+}
+
+pub type SwayrCommandResult = Result<SwayrCmdRetVal, String>;
 
 fn exec_swayr_cmd_1(
     args: ExecSwayrCmdArgs,
     switch_to_matching_data: &mut MutexGuard<SwitchToMatchingData>,
-) {
+) -> SwayrCommandResult {
     let fdata = args.focus_data;
 
     match args.cmd {
-        SwayrCommand::Nop => {}
+        SwayrCommand::Nop => Ok(SwayrCmdRetVal::Unit),
         SwayrCommand::SwitchToUrgentOrLRUWindow {
             skip_urgent,
             skip_lru,
@@ -404,7 +423,9 @@ fn exec_swayr_cmd_1(
             switch_to_matching_data.skip_lru = *skip_lru;
             switch_to_matching_data.skip_origin = *skip_origin;
 
-            switch_to_urgent_or_lru_window(switch_to_matching_data, fdata)
+            switch_to_urgent_or_lru_window(switch_to_matching_data, fdata);
+            // TODO: Return real result!
+            Ok(SwayrCmdRetVal::Unit)
         }
         SwayrCommand::SwitchToAppOrUrgentOrLRUWindow {
             name,
@@ -420,7 +441,9 @@ fn exec_swayr_cmd_1(
                 name,
                 switch_to_matching_data,
                 fdata,
-            )
+            );
+            // TODO: Return real result!
+            Ok(SwayrCmdRetVal::Unit)
         }
         SwayrCommand::SwitchToMarkOrUrgentOrLRUWindow {
             con_mark,
@@ -436,7 +459,9 @@ fn exec_swayr_cmd_1(
                 con_mark,
                 switch_to_matching_data,
                 fdata,
-            )
+            );
+            // TODO: Return real result!
+            Ok(SwayrCmdRetVal::Unit)
         }
         SwayrCommand::SwitchToMatchingOrUrgentOrLRUWindow {
             criteria,
@@ -452,62 +477,126 @@ fn exec_swayr_cmd_1(
                 criteria,
                 switch_to_matching_data,
                 fdata,
-            )
+            );
+            // TODO: Return real result!
+            Ok(SwayrCmdRetVal::Unit)
         }
-        SwayrCommand::SwitchWindow => switch_window(fdata),
-        SwayrCommand::StealWindow => steal_window(fdata),
+        SwayrCommand::SwitchWindow => {
+            switch_window(fdata);
+            // TODO: Return real result!
+            Ok(SwayrCmdRetVal::Unit)
+        }
+        SwayrCommand::StealWindow => {
+            steal_window(fdata);
+            // TODO: Return real result!
+            Ok(SwayrCmdRetVal::Unit)
+        }
         SwayrCommand::StealWindowOrContainer => {
-            steal_window_or_container(fdata)
+            steal_window_or_container(fdata);
+            // TODO: Return real result!
+            Ok(SwayrCmdRetVal::Unit)
         }
-        SwayrCommand::SwitchWorkspace => switch_workspace(fdata),
-        SwayrCommand::SwitchOutput => switch_output(),
+        SwayrCommand::SwitchWorkspace => {
+            switch_workspace(fdata);
+            // TODO: Return real result!
+            Ok(SwayrCmdRetVal::Unit)
+        }
+        SwayrCommand::SwitchOutput => {
+            switch_output();
+            // TODO: Return real result!
+            Ok(SwayrCmdRetVal::Unit)
+        }
         SwayrCommand::SwitchWorkspaceOrWindow => {
-            switch_workspace_or_window(fdata)
+            switch_workspace_or_window(fdata);
+            // TODO: Return real result!
+            Ok(SwayrCmdRetVal::Unit)
         }
         SwayrCommand::SwitchWorkspaceContainerOrWindow => {
-            switch_workspace_container_or_window(fdata)
+            switch_workspace_container_or_window(fdata);
+            // TODO: Return real result!
+            Ok(SwayrCmdRetVal::Unit)
         }
-        SwayrCommand::SwitchTo => switch_to(fdata),
-        SwayrCommand::QuitWindow { kill } => quit_window(fdata, *kill),
-        SwayrCommand::QuitWorkspaceOrWindow => quit_workspace_or_window(fdata),
+        SwayrCommand::SwitchTo => {
+            switch_to(fdata);
+            // TODO: Return real result!
+            Ok(SwayrCmdRetVal::Unit)
+        }
+        SwayrCommand::QuitWindow { kill } => {
+            quit_window(fdata, *kill);
+            // TODO: Return real result!
+            Ok(SwayrCmdRetVal::Unit)
+        }
+        SwayrCommand::QuitWorkspaceOrWindow => {
+            quit_workspace_or_window(fdata);
+            // TODO: Return real result!
+            Ok(SwayrCmdRetVal::Unit)
+        }
         SwayrCommand::QuitWorkspaceContainerOrWindow => {
-            quit_workspace_container_or_window(fdata)
+            quit_workspace_container_or_window(fdata);
+            // TODO: Return real result!
+            Ok(SwayrCmdRetVal::Unit)
         }
         SwayrCommand::MoveFocusedToWorkspace => {
-            move_focused_to_workspace(fdata)
+            move_focused_to_workspace(fdata);
+            // TODO: Return real result!
+            Ok(SwayrCmdRetVal::Unit)
         }
-        SwayrCommand::MoveFocusedTo => move_focused_to(fdata),
-        SwayrCommand::SwapFocusedWith => swap_focused_with(fdata),
-        SwayrCommand::NextWindow { windows } => focus_window_in_direction(
-            Direction::Forward,
-            windows,
-            fdata,
-            always_true,
-        ),
-        SwayrCommand::PrevWindow { windows } => focus_window_in_direction(
-            Direction::Backward,
-            windows,
-            fdata,
-            always_true,
-        ),
-        SwayrCommand::NextTiledWindow { windows } => focus_window_in_direction(
-            Direction::Forward,
-            windows,
-            fdata,
-            |dn: &t::DisplayNode| {
-                !dn.node.is_floating()
-                    && dn.tree.is_child_of_tiled_container(dn.node.id)
-            },
-        ),
-        SwayrCommand::PrevTiledWindow { windows } => focus_window_in_direction(
-            Direction::Backward,
-            windows,
-            fdata,
-            |dn: &t::DisplayNode| {
-                !dn.node.is_floating()
-                    && dn.tree.is_child_of_tiled_container(dn.node.id)
-            },
-        ),
+        SwayrCommand::MoveFocusedTo => {
+            move_focused_to(fdata);
+            // TODO: Return real result!
+            Ok(SwayrCmdRetVal::Unit)
+        }
+        SwayrCommand::SwapFocusedWith => {
+            swap_focused_with(fdata);
+            // TODO: Return real result!
+            Ok(SwayrCmdRetVal::Unit)
+        }
+        SwayrCommand::NextWindow { windows } => {
+            focus_window_in_direction(
+                Direction::Forward,
+                windows,
+                fdata,
+                always_true,
+            );
+            // TODO: Return real result!
+            Ok(SwayrCmdRetVal::Unit)
+        }
+        SwayrCommand::PrevWindow { windows } => {
+            focus_window_in_direction(
+                Direction::Backward,
+                windows,
+                fdata,
+                always_true,
+            );
+            // TODO: Return real result!
+            Ok(SwayrCmdRetVal::Unit)
+        }
+        SwayrCommand::NextTiledWindow { windows } => {
+            focus_window_in_direction(
+                Direction::Forward,
+                windows,
+                fdata,
+                |dn: &t::DisplayNode| {
+                    !dn.node.is_floating()
+                        && dn.tree.is_child_of_tiled_container(dn.node.id)
+                },
+            );
+            // TODO: Return real result!
+            Ok(SwayrCmdRetVal::Unit)
+        }
+        SwayrCommand::PrevTiledWindow { windows } => {
+            focus_window_in_direction(
+                Direction::Backward,
+                windows,
+                fdata,
+                |dn: &t::DisplayNode| {
+                    !dn.node.is_floating()
+                        && dn.tree.is_child_of_tiled_container(dn.node.id)
+                },
+            );
+            // TODO: Return real result!
+            Ok(SwayrCmdRetVal::Unit)
+        }
         SwayrCommand::NextTabbedOrStackedWindow { windows } => {
             focus_window_in_direction(
                 Direction::Forward,
@@ -519,7 +608,9 @@ fn exec_swayr_cmd_1(
                             .tree
                             .is_child_of_tabbed_or_stacked_container(dn.node.id)
                 },
-            )
+            );
+            // TODO: Return real result!
+            Ok(SwayrCmdRetVal::Unit)
         }
         SwayrCommand::PrevTabbedOrStackedWindow { windows } => {
             focus_window_in_direction(
@@ -532,7 +623,9 @@ fn exec_swayr_cmd_1(
                             .tree
                             .is_child_of_tabbed_or_stacked_container(dn.node.id)
                 },
-            )
+            );
+            // TODO: Return real result!
+            Ok(SwayrCmdRetVal::Unit)
         }
         SwayrCommand::NextFloatingWindow { windows } => {
             focus_window_in_direction(
@@ -540,7 +633,9 @@ fn exec_swayr_cmd_1(
                 windows,
                 fdata,
                 |dn: &t::DisplayNode| dn.node.is_floating(),
-            )
+            );
+            // TODO: Return real result!
+            Ok(SwayrCmdRetVal::Unit)
         }
         SwayrCommand::PrevFloatingWindow { windows } => {
             focus_window_in_direction(
@@ -548,21 +643,27 @@ fn exec_swayr_cmd_1(
                 windows,
                 fdata,
                 |dn: &t::DisplayNode| dn.node.is_floating(),
-            )
+            );
+            // TODO: Return real result!
+            Ok(SwayrCmdRetVal::Unit)
         }
         SwayrCommand::NextWindowOfSameLayout { windows } => {
             focus_window_of_same_layout_in_direction(
                 Direction::Forward,
                 windows,
                 fdata,
-            )
+            );
+            // TODO: Return real result!
+            Ok(SwayrCmdRetVal::Unit)
         }
         SwayrCommand::PrevWindowOfSameLayout { windows } => {
             focus_window_of_same_layout_in_direction(
                 Direction::Backward,
                 windows,
                 fdata,
-            )
+            );
+            // TODO: Return real result!
+            Ok(SwayrCmdRetVal::Unit)
         }
         SwayrCommand::NextMatchingWindow { criteria } => {
             focus_matching_window_in_direction(
@@ -570,6 +671,8 @@ fn exec_swayr_cmd_1(
                 criteria,
                 fdata,
             );
+            // TODO: Return real result!
+            Ok(SwayrCmdRetVal::Unit)
         }
         SwayrCommand::PrevMatchingWindow { criteria } => {
             focus_matching_window_in_direction(
@@ -577,21 +680,39 @@ fn exec_swayr_cmd_1(
                 criteria,
                 fdata,
             );
+            // TODO: Return real result!
+            Ok(SwayrCmdRetVal::Unit)
         }
         SwayrCommand::TileWorkspace { floating } => {
-            tile_current_workspace(floating, false)
+            tile_current_workspace(floating, false);
+            // TODO: Return real result!
+            Ok(SwayrCmdRetVal::Unit)
         }
         SwayrCommand::TabWorkspace { floating } => {
-            tab_current_workspace(floating)
+            tab_current_workspace(floating);
+            // TODO: Return real result!
+            Ok(SwayrCmdRetVal::Unit)
         }
         SwayrCommand::ShuffleTileWorkspace { floating } => {
-            tile_current_workspace(floating, true)
+            tile_current_workspace(floating, true);
+            // TODO: Return real result!
+            Ok(SwayrCmdRetVal::Unit)
         }
         SwayrCommand::ToggleTabShuffleTileWorkspace { floating } => {
-            toggle_tab_tile_current_workspace(floating)
+            toggle_tab_tile_current_workspace(floating);
+            // TODO: Return real result!
+            Ok(SwayrCmdRetVal::Unit)
         }
-        SwayrCommand::ConfigureOutputs => configure_outputs(),
-        SwayrCommand::ExecuteSwaymsgCommand => exec_swaymsg_command(),
+        SwayrCommand::ConfigureOutputs => {
+            configure_outputs();
+            // TODO: Return real result!
+            Ok(SwayrCmdRetVal::Unit)
+        }
+        SwayrCommand::ExecuteSwaymsgCommand => {
+            exec_swaymsg_command();
+            // TODO: Return real result!
+            Ok(SwayrCmdRetVal::Unit)
+        }
         SwayrCommand::ExecuteSwayrCommand => {
             let mut cmds = vec![
                 SwayrCommand::MoveFocusedToWorkspace,
@@ -656,15 +777,15 @@ fn exec_swayr_cmd_1(
                 })
             }
 
-            if let Ok(c) = util::select_from_menu("Select swayr command", &cmds)
-            {
-                exec_swayr_cmd_1(
+            match util::select_from_menu("Select swayr command", &cmds) {
+                Ok(c) => exec_swayr_cmd_1(
                     ExecSwayrCmdArgs {
                         cmd: c,
                         focus_data: args.focus_data,
                     },
                     switch_to_matching_data,
-                );
+                ),
+                _ => Err("No swayr command selected".to_owned()),
             }
         }
     }

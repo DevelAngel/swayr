@@ -27,11 +27,18 @@ struct Opts {
     command: swayr::cmds::SwayrCommand,
 }
 
-fn main() {
+fn main() -> Result<(), String> {
     env_logger::Builder::from_env(Env::default().default_filter_or("warn"))
         .init();
     let opts: Opts = Opts::parse();
-    if let Err(err) = swayr::client::send_swayr_cmd(opts.command) {
-        log::error!("Could not send command: {}", err);
+    match swayr::client::send_swayr_cmd(opts.command) {
+        Ok(val) => {
+            println!("{}", val.to_string());
+            Ok(())
+        }
+        Err(err) => {
+            eprintln!("ERROR: {}", err);
+            Err(err)
+        }
     }
 }

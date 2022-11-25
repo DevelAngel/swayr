@@ -24,7 +24,6 @@ use crate::layout;
 use crate::util;
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
-use std::io::Read;
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::sync::RwLock;
 use std::sync::{mpsc, Condvar};
@@ -244,10 +243,14 @@ pub fn serve_client_requests(
                     if r.1.timed_out() {
                         if !inhibit {
                             log::debug!("Executing auto-nop.");
-                            cmds::exec_swayr_cmd(cmds::ExecSwayrCmdArgs {
-                                cmd: &cmds::SwayrCommand::Nop,
-                                focus_data: &fdata,
-                            });
+                            if let Err(err) =
+                                cmds::exec_swayr_cmd(cmds::ExecSwayrCmdArgs {
+                                    cmd: &cmds::SwayrCommand::Nop,
+                                    focus_data: &fdata,
+                                })
+                            {
+                                log::error!("Error in auto-nop: {}", err);
+                            }
                             inhibit = true;
                         }
                     } else {
@@ -258,7 +261,9 @@ pub fn serve_client_requests(
         });
     }
 
-    match UnixListener::bind(util::get_swayr_socket_path()) {
+    let sock = util::get_swayr_socket_path();
+    log::debug!("swayrd starts listening on {}.", sock);
+    match UnixListener::bind(sock) {
         Ok(listener) => {
             for stream in listener.incoming() {
                 match stream {
@@ -283,22 +288,28 @@ pub fn serve_client_requests(
     }
 }
 
-fn handle_client_request(mut stream: UnixStream, fdata: &FocusData) {
-    let mut cmd_str = String::new();
-    if stream.read_to_string(&mut cmd_str).is_ok() {
-        if let Ok(cmd) = serde_json::from_str::<cmds::SwayrCommand>(&cmd_str) {
-            cmds::exec_swayr_cmd(cmds::ExecSwayrCmdArgs {
+fn handle_client_request(stream: UnixStream, fdata: &FocusData) {
+    match serde_json::from_reader::<_, cmds::SwayrCommand>(&stream) {
+        Ok(cmd) => {
+            log::debug!("Received command: {:?}", cmd);
+            if let Err(err) = stream.shutdown(std::net::Shutdown::Read) {
+                log::error!("Could not shutdown stream for read: {}", err)
+            }
+            let result = cmds::exec_swayr_cmd(cmds::ExecSwayrCmdArgs {
                 cmd: &cmd,
                 focus_data: fdata,
             });
-        } else {
-            log::error!(
-                "Could not serialize following string to SwayrCommand.\n{}",
-                cmd_str
-            );
+            log::debug!("Executed command, returning result {:?}", result);
+            if let Err(err) = serde_json::to_writer(&stream, &result) {
+                log::error!("Couldn't send result back to client: {}", err);
+            }
+            if let Err(err) = stream.shutdown(std::net::Shutdown::Write) {
+                log::error!("Could not shutdown stream for read: {}", err)
+            }
         }
-    } else {
-        log::error!("Could not read command from client.");
+        Err(err) => {
+            log::error!("Could not read command from client: {}", err);
+        }
     }
 }
 
