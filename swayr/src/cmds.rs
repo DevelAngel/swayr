@@ -818,17 +818,15 @@ fn get_windows_as_json(
     )
 }
 
-fn steal_window_by_id(id: i64) -> i64 {
+fn steal_window_by_id(id: i64) {
     run_sway_command(&[
         format!("[con_id={}]", id).as_str(),
         "move to workspace current",
     ]);
-    id
 }
 
-fn focus_window_by_id(id: i64) -> i64 {
+fn focus_window_by_id(id: i64) {
     run_sway_command(&[format!("[con_id={}]", id).as_str(), "focus"]);
-    id
 }
 
 fn quit_window_by_id(id: i64) {
