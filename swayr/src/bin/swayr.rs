@@ -16,10 +16,7 @@
 //! The `swayr` binary.
 
 use clap::Parser;
-use env_logger::Env;
 
-/// Windows are sorted urgent first, then windows in LRU order, focused window
-/// last.  Licensed under the GPLv3 (or later).
 #[derive(clap::Parser)]
 #[clap(about, version, author)]
 struct Opts {
@@ -28,8 +25,6 @@ struct Opts {
 }
 
 fn main() -> Result<(), String> {
-    env_logger::Builder::from_env(Env::default().default_filter_or("warn"))
-        .init();
     let opts: Opts = Opts::parse();
     match swayr::client::send_swayr_cmd(opts.command) {
         Ok(val) => {

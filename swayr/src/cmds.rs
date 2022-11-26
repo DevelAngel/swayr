@@ -278,6 +278,17 @@ pub enum SwayrCommand {
     ExecuteSwayrCommand,
     /// Configure outputs.
     ConfigureOutputs,
+    /// Returns a JSON array of all sway nodes being actual application windows
+    /// with some extra properties not present in sway IPC (`swayr_icon`,
+    /// `swayr_type`).
+    GetWindowsAsJson {
+        #[clap(
+            short,
+            long,
+            help = "Determines if windows on the scratchpad are to be included."
+        )]
+        include_scratchpad: bool,
+    },
 }
 
 impl SwayrCommand {
@@ -708,6 +719,9 @@ fn exec_swayr_cmd_1(
             // TODO: Return real result!
             Ok(SwayrCmdRetVal::Unit)
         }
+        SwayrCommand::GetWindowsAsJson { include_scratchpad } => {
+            get_windows_as_json(fdata, *include_scratchpad)
+        }
         SwayrCommand::ExecuteSwaymsgCommand => {
             exec_swaymsg_command();
             // TODO: Return real result!
@@ -789,6 +803,19 @@ fn exec_swayr_cmd_1(
             }
         }
     }
+}
+
+fn get_windows_as_json(
+    fdata: &FocusData,
+    include_scratchpad: bool,
+) -> Result<SwayrCmdRetVal, String> {
+    let root = ipc::get_root_node(include_scratchpad);
+    let tree = t::get_tree(&root);
+    let wins = tree.get_windows(fdata);
+    serde_json::to_string_pretty(&wins).map_or_else(
+        |e| Err(e.to_string()),
+        |json| Ok(SwayrCmdRetVal::Message(json)),
+    )
 }
 
 fn steal_window_by_id(id: i64) -> i64 {

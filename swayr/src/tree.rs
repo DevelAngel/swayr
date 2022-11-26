@@ -58,6 +58,7 @@ pub struct DisplayNode<'a> {
     #[serde(skip_serializing)]
     indent_level: IndentLevel,
     pub swayr_icon: Option<std::path::PathBuf>,
+    pub swayr_type: ipc::Type,
 }
 
 impl<'a> Tree<'a> {
@@ -111,11 +112,19 @@ impl<'a> Tree<'a> {
         indent_level: IndentLevel,
     ) -> Vec<DisplayNode> {
         v.iter()
-            .map(|node| DisplayNode {
-                node,
-                tree: self,
-                swayr_icon: get_icon(node),
-                indent_level,
+            .map(|node| {
+                let t = node.get_type();
+                DisplayNode {
+                    node,
+                    tree: self,
+                    indent_level,
+                    swayr_icon: if t == ipc::Type::Window {
+                        get_icon(node)
+                    } else {
+                        None
+                    },
+                    swayr_type: t,
+                }
             })
             .collect()
     }

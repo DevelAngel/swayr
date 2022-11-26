@@ -18,6 +18,7 @@
 use std::{cell::RefCell, sync::Mutex};
 
 use once_cell::sync::Lazy;
+use serde::{Deserialize, Serialize};
 use swayipc as s;
 
 static SWAY_IPC_CONNECTION: Lazy<Mutex<RefCell<s::Connection>>> =
@@ -70,7 +71,7 @@ impl<'a> Iterator for NodeIter<'a> {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub enum Type {
     Root,
     Output,

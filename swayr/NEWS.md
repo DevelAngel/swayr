@@ -1,3 +1,10 @@
+swayr v0.24.0
+=============
+
+- New command `get-windows-as-json` returning a JSON array of all windows in
+  sway's IPC representation extended by the attributes `swayr_icon` and
+  `swayr_type`.
+
 swayr v0.23.0
 =============
 

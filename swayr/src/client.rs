@@ -27,8 +27,6 @@ pub fn send_swayr_cmd(
     stream
         .shutdown(std::net::Shutdown::Write)
         .map_err(|e| e.to_string())?;
-    let result =
-        serde_json::from_reader::<_, Result<SwayrCmdRetVal, String>>(&stream)
-            .expect("Could not read response from swayrd");
-    result
+    serde_json::from_reader::<_, Result<SwayrCmdRetVal, String>>(&stream)
+        .expect("Could not read response from swayrd")
 }
