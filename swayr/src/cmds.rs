@@ -32,21 +32,29 @@ use std::sync::Mutex;
 use std::sync::MutexGuard;
 use swayipc as s;
 
-pub fn run_sway_command_1(cmd: &str) {
+pub fn run_sway_command_1(cmd: &str) -> Result<SwayrCmdRetVal, String> {
     log::debug!("Running sway command: {}", cmd);
     match s::Connection::new() {
-        Ok(mut con) => {
-            if let Err(err) = con.run_command(cmd) {
-                log::error!("Could not run sway command: {}", err)
+        Ok(mut con) => match con.run_command(cmd) {
+            Err(err) => {
+                log::error!("Could not run sway command: {}", err);
+                Err(err.to_string())
             }
+            _ => Ok(SwayrCmdRetVal::Message(format!(
+                "Executed sway command '{}'",
+                cmd
+            ))),
+        },
+        Err(err) => {
+            log::error!("Couldn't create sway ipc connection: {}", err);
+            Err(err.to_string())
         }
-        Err(err) => panic!("{}", err),
     }
 }
 
-pub fn run_sway_command(args: &[&str]) {
+pub fn run_sway_command(args: &[&str]) -> Result<SwayrCmdRetVal, String> {
     let cmd = args.join(" ");
-    run_sway_command_1(&cmd);
+    run_sway_command_1(&cmd)
 }
 
 #[derive(clap::Parser, Debug, Deserialize, Serialize, PartialEq, Eq, Clone)]
@@ -484,11 +492,7 @@ fn exec_swayr_cmd_1(
                 fdata,
             )
         }
-        SwayrCommand::SwitchWindow => {
-            switch_window(fdata);
-            // TODO: Return real result!
-            Ok(SwayrCmdRetVal::Unit)
-        }
+        SwayrCommand::SwitchWindow => switch_window(fdata),
         SwayrCommand::StealWindow => {
             steal_window(fdata);
             // TODO: Return real result!
@@ -817,8 +821,8 @@ fn steal_window_by_id(id: i64) {
     ]);
 }
 
-fn focus_window_by_id(id: i64) {
-    run_sway_command(&[format!("[con_id={}]", id).as_str(), "focus"]);
+fn focus_window_by_id(id: i64) -> Result<SwayrCmdRetVal, String> {
+    run_sway_command(&[format!("[con_id={}]", id).as_str(), "focus"])
 }
 
 fn quit_window_by_id(id: i64) {
@@ -896,7 +900,7 @@ where
     }) {
         log::debug!("Switching to by urgency or matching predicate");
         stm_data.visited.push(win.node.id);
-        focus_window_by_id(win.node.id);
+        focus_window_by_id(win.node.id)?;
         Ok(SwayrCmdRetVal::Message(format!(
             "Focused node with id {} by urgency or matching predicate.",
             win.node.id
@@ -910,7 +914,7 @@ where
         log::debug!("Switching to LRU");
         let id = stm_data.lru.unwrap();
         stm_data.visited.push(id);
-        focus_window_by_id(id);
+        focus_window_by_id(id)?;
         Ok(SwayrCmdRetVal::Message(format!(
             "Focused node with id {} because it's the LRU window.",
             id
@@ -920,7 +924,7 @@ where
         if let Some(id) = stm_data.origin {
             if id != focused_id && wins.iter().any(|w| w.node.id == id) {
                 stm_data.reset(false);
-                focus_window_by_id(id);
+                focus_window_by_id(id)?;
                 Ok(SwayrCmdRetVal::Message(format!(
                     "Focused node with id {} because it's the origin window.",
                     id
@@ -1034,37 +1038,56 @@ fn chop_sway_shortcut(input: &str) -> &str {
     }
 }
 
-fn handle_non_matching_input(input: &str) {
+fn handle_non_matching_input(input: &str) -> Result<SwayrCmdRetVal, String> {
     if input.is_empty() {
-        return;
+        return Err(
+            "Cannot handle empty string as non-matching input.".to_owned()
+        );
     }
 
     if let Some(c) = SPECIAL_SWAY.captures(input) {
-        run_sway_command(&c[1].split_ascii_whitespace().collect::<Vec<&str>>());
+        let cmd = c[1].split_ascii_whitespace().collect::<Vec<&str>>();
+        run_sway_command(&cmd);
+        Ok(SwayrCmdRetVal::Message(format!(
+            "Executed '{}' as sway command for non-matching input.",
+            cmd.join(" ")
+        )))
     } else {
         let ws = chop_workspace_shortcut(input);
         create_workspace(ws);
+        Ok(SwayrCmdRetVal::Message(format!(
+            "Created workspace {} for non-matching input.",
+            ws
+        )))
     }
 }
 
-fn select_and_focus(prompt: &str, choices: &[t::DisplayNode]) {
+fn select_and_focus(
+    prompt: &str,
+    choices: &[t::DisplayNode],
+) -> Result<SwayrCmdRetVal, String> {
     match util::select_from_menu(prompt, choices) {
         Ok(tn) => match tn.node.get_type() {
             ipc::Type::Output => {
-                if !tn.node.is_scratchpad() {
-                    run_sway_command(&["focus output", tn.node.get_name()]);
+                if tn.node.is_scratchpad() {
+                    Err("Cannot switch to the scratchpad output.".to_owned())
+                } else {
+                    run_sway_command(&["focus output", tn.node.get_name()])
                 }
             }
             ipc::Type::Workspace => {
-                if !tn.node.is_scratchpad() {
-                    run_sway_command(&["workspace", tn.node.get_name()]);
+                if tn.node.is_scratchpad() {
+                    Err("Cannot switch to the scratchpad workspace.".to_owned())
+                } else {
+                    run_sway_command(&["workspace", tn.node.get_name()])
                 }
             }
             ipc::Type::Window | ipc::Type::Container => {
-                focus_window_by_id(tn.node.id);
+                focus_window_by_id(tn.node.id)
             }
             t => {
-                log::error!("Cannot handle {:?} in select_and_focus", t)
+                log::error!("Cannot handle {:?} in select_and_focus", t);
+                Err(format!("Cannot handle node type {:?}.", t))
             }
         },
         Err(non_matching_input) => {
@@ -1095,10 +1118,10 @@ fn select_and_steal(prompt: &str, choices: &[t::DisplayNode]) {
     }
 }
 
-pub fn switch_window(fdata: &FocusData) {
+pub fn switch_window(fdata: &FocusData) -> Result<SwayrCmdRetVal, String> {
     let root = ipc::get_root_node(true);
     let tree = t::get_tree(&root);
-    select_and_focus("Select window", &tree.get_windows(fdata));
+    select_and_focus("Select window", &tree.get_windows(fdata))
 }
 
 fn retain_nodes_of_non_current_workspaces(
@@ -1264,17 +1287,17 @@ fn select_and_move_focused_to(prompt: &str, choices: &[t::DisplayNode]) {
         Ok(tn) => match tn.node.get_type() {
             ipc::Type::Output => {
                 if tn.node.is_scratchpad() {
-                    run_sway_command_1("move container to scratchpad")
+                    run_sway_command_1("move container to scratchpad");
                 } else {
                     run_sway_command(&[
                         "move container to output",
                         tn.node.get_name(),
-                    ])
+                    ]);
                 }
             }
             ipc::Type::Workspace => {
                 if tn.node.is_scratchpad() {
-                    run_sway_command_1("move container to scratchpad")
+                    run_sway_command_1("move container to scratchpad");
                 } else {
                     move_focused_to_workspace_1(tn.node.get_name())
                 }
@@ -1324,7 +1347,7 @@ pub fn swap_focused_with(fdata: &FocusData) {
                     "with",
                     "con_id",
                     &format!("{}", tn.node.id),
-                ])
+                ]);
             }
             t => log::error!("Cannot move focused to {:?}", t),
         },
@@ -1654,7 +1677,9 @@ pub fn exec_swaymsg_command() {
     let cmds = get_swaymsg_commands();
     let cmd = util::select_from_menu("Execute swaymsg command", &cmds);
     match cmd {
-        Ok(cmd) => run_sway_command_1(&cmd.cmd),
+        Ok(cmd) => {
+            run_sway_command_1(&cmd.cmd);
+        }
         Err(cmd) if !cmd.is_empty() => {
             let cmd = chop_sway_shortcut(&cmd);
             run_sway_command_1(cmd);
