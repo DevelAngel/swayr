@@ -311,33 +311,17 @@ Beyond starting the daemon, you will want to bind swayr commands to some keys
 like so:
 
 ```
-bindsym $mod+Space exec env RUST_BACKTRACE=1 \
-    swayr switch-window >> /tmp/swayr.log 2>&1
-
-bindsym $mod+Delete exec env RUST_BACKTRACE=1 \
-    swayr quit-window >> /tmp/swayr.log 2>&1
-
-bindsym $mod+Tab exec env RUST_BACKTRACE=1 \
-    swayr switch-to-urgent-or-lru-window >> /tmp/swayr.log 2>&1
-
-bindsym $mod+Next exec env RUST_BACKTRACE=1 \
-    swayr next-window all-workspaces >> /tmp/swayr.log 2>&2
-
-bindsym $mod+Prior exec env RUST_BACKTRACE=1 \
-    swayr prev-window all-workspaces >> /tmp/swayr.log 2>&2
-
-bindsym $mod+Shift+Space exec env RUST_BACKTRACE=1 \
-    swayr switch-workspace-or-window >> /tmp/swayr.log 2>&1
-
-bindsym $mod+c exec env RUST_BACKTRACE=1 \
-    swayr execute-swaymsg-command >> /tmp/swayr.log 2>&1
-
-bindsym $mod+Shift+c exec env RUST_BACKTRACE=1 \
-    swayr execute-swayr-command >> /tmp/swayr.log 2>&1
+bindsym $mod+Space       exec swayr switch-window
+bindsym $mod+Delete      exec swayr quit-window
+bindsym $mod+Tab         exec swayr switch-to-urgent-or-lru-window
+bindsym $mod+Next        exec swayr next-window all-workspaces
+bindsym $mod+Prior       exec swayr prev-window all-workspaces
+bindsym $mod+Shift+Space exec swayr switch-workspace-or-window
+bindsym $mod+c           exec swayr execute-swaymsg-command
+bindsym $mod+Shift+c     exec swayr execute-swayr-command
 ```
 
-Of course, configure the keys to your liking.  Again, enabling rust backtraces
-and logging are optional.
+Of course, configure the keys to your liking.
 
 Pending a fix for [Sway issue
 #6456](https://github.com/swaywm/sway/issues/6456) or a merge of [Sway PR
