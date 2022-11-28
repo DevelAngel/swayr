@@ -434,9 +434,7 @@ fn exec_swayr_cmd_1(
             switch_to_matching_data.skip_lru = *skip_lru;
             switch_to_matching_data.skip_origin = *skip_origin;
 
-            switch_to_urgent_or_lru_window(switch_to_matching_data, fdata);
-            // TODO: Return real result!
-            Ok(SwayrCmdRetVal::Unit)
+            switch_to_urgent_or_lru_window(switch_to_matching_data, fdata)
         }
         SwayrCommand::SwitchToAppOrUrgentOrLRUWindow {
             name,
@@ -452,9 +450,7 @@ fn exec_swayr_cmd_1(
                 name,
                 switch_to_matching_data,
                 fdata,
-            );
-            // TODO: Return real result!
-            Ok(SwayrCmdRetVal::Unit)
+            )
         }
         SwayrCommand::SwitchToMarkOrUrgentOrLRUWindow {
             con_mark,
@@ -470,9 +466,7 @@ fn exec_swayr_cmd_1(
                 con_mark,
                 switch_to_matching_data,
                 fdata,
-            );
-            // TODO: Return real result!
-            Ok(SwayrCmdRetVal::Unit)
+            )
         }
         SwayrCommand::SwitchToMatchingOrUrgentOrLRUWindow {
             criteria,
@@ -841,11 +835,11 @@ pub fn get_outputs() -> Vec<s::Output> {
 pub fn switch_to_urgent_or_lru_window(
     stm_data: &mut MutexGuard<SwitchToMatchingData>,
     fdata: &FocusData,
-) {
+) -> Result<SwayrCmdRetVal, String> {
     let root = ipc::get_root_node(false);
     let tree = t::get_tree(&root);
     let wins = tree.get_windows(fdata);
-    focus_urgent_or_matching_or_lru_window(&wins, fdata, stm_data, |_| false);
+    focus_urgent_or_matching_or_lru_window(&wins, fdata, stm_data, |_| false)
 }
 
 pub fn focus_urgent_or_matching_or_lru_window<P>(
@@ -968,27 +962,27 @@ pub fn switch_to_app_or_urgent_or_lru_window(
     name: &str,
     stm_data: &mut MutexGuard<SwitchToMatchingData>,
     fdata: &FocusData,
-) {
+) -> Result<SwayrCmdRetVal, String> {
     let root = ipc::get_root_node(false);
     let tree = t::get_tree(&root);
     let wins = tree.get_windows(fdata);
     let pred = |w: &t::DisplayNode| w.node.get_app_name() == name;
 
-    focus_urgent_or_matching_or_lru_window(&wins, fdata, stm_data, pred);
+    focus_urgent_or_matching_or_lru_window(&wins, fdata, stm_data, pred)
 }
 
 pub fn switch_to_mark_or_urgent_or_lru_window(
     con_mark: &str,
     stm_data: &mut MutexGuard<SwitchToMatchingData>,
     fdata: &FocusData,
-) {
+) -> Result<SwayrCmdRetVal, String> {
     let root = ipc::get_root_node(false);
     let tree = t::get_tree(&root);
     let wins = tree.get_windows(fdata);
     let con_mark = &con_mark.to_owned();
     let pred = |w: &t::DisplayNode| w.node.marks.contains(con_mark);
 
-    focus_urgent_or_matching_or_lru_window(&wins, fdata, stm_data, pred);
+    focus_urgent_or_matching_or_lru_window(&wins, fdata, stm_data, pred)
 }
 
 fn switch_to_matching_or_urgent_or_lru_window(
