@@ -32,7 +32,7 @@ use std::sync::Mutex;
 use std::sync::MutexGuard;
 use swayipc as s;
 
-pub fn run_sway_command_1(cmd: &str) -> Result<SwayrCmdRetVal, String> {
+pub fn run_sway_command_1(cmd: &str) -> Result<String, String> {
     log::debug!("Running sway command: {}", cmd);
     match s::Connection::new() {
         Ok(mut con) => match con.run_command(cmd) {
@@ -40,10 +40,7 @@ pub fn run_sway_command_1(cmd: &str) -> Result<SwayrCmdRetVal, String> {
                 log::error!("Could not run sway command: {}", err);
                 Err(err.to_string())
             }
-            _ => Ok(SwayrCmdRetVal::Message(format!(
-                "Executed sway command '{}'",
-                cmd
-            ))),
+            _ => Ok(format!("Executed sway command '{}'", cmd)),
         },
         Err(err) => {
             log::error!("Couldn't create sway ipc connection: {}", err);
@@ -52,7 +49,7 @@ pub fn run_sway_command_1(cmd: &str) -> Result<SwayrCmdRetVal, String> {
     }
 }
 
-pub fn run_sway_command(args: &[&str]) -> Result<SwayrCmdRetVal, String> {
+pub fn run_sway_command(args: &[&str]) -> Result<String, String> {
     let cmd = args.join(" ");
     run_sway_command_1(&cmd)
 }
@@ -381,9 +378,7 @@ impl SwitchToMatchingData {
 static SWITCH_TO_MATCHING_DATA: Lazy<Mutex<SwitchToMatchingData>> =
     Lazy::new(|| Mutex::new(SwitchToMatchingData::new()));
 
-pub fn exec_swayr_cmd(
-    args: ExecSwayrCmdArgs,
-) -> Result<SwayrCmdRetVal, String> {
+pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) -> Result<String, String> {
     log::info!("Running SwayrCommand {:?}", args.cmd);
 
     let mut last_command = LAST_COMMAND.lock().expect("Could not lock mutex");
@@ -408,31 +403,14 @@ pub fn exec_swayr_cmd(
     exec_swayr_cmd_1(args, &mut switch_to_matching_data)
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub enum SwayrCmdRetVal {
-    Unit,
-    Message(String),
-}
-
-impl ToString for SwayrCmdRetVal {
-    fn to_string(&self) -> String {
-        match self {
-            SwayrCmdRetVal::Unit => String::new(),
-            SwayrCmdRetVal::Message(msg) => msg.to_string(),
-        }
-    }
-}
-
-pub type SwayrCommandResult = Result<SwayrCmdRetVal, String>;
-
 fn exec_swayr_cmd_1(
     args: ExecSwayrCmdArgs,
     switch_to_matching_data: &mut MutexGuard<SwitchToMatchingData>,
-) -> SwayrCommandResult {
+) -> Result<String, String> {
     let fdata = args.focus_data;
 
     match args.cmd {
-        SwayrCommand::Nop => Ok(SwayrCmdRetVal::Unit),
+        SwayrCommand::Nop => Ok("done".to_owned()),
         SwayrCommand::SwitchToUrgentOrLRUWindow {
             skip_urgent,
             skip_lru,
@@ -493,70 +471,32 @@ fn exec_swayr_cmd_1(
             )
         }
         SwayrCommand::SwitchWindow => switch_window(fdata),
-        SwayrCommand::StealWindow => {
-            steal_window(fdata);
-            // TODO: Return real result!
-            Ok(SwayrCmdRetVal::Unit)
-        }
+        SwayrCommand::StealWindow => steal_window(fdata),
         SwayrCommand::StealWindowOrContainer => {
-            steal_window_or_container(fdata);
-            // TODO: Return real result!
-            Ok(SwayrCmdRetVal::Unit)
+            steal_window_or_container(fdata)
         }
-        SwayrCommand::SwitchWorkspace => {
-            switch_workspace(fdata);
-            // TODO: Return real result!
-            Ok(SwayrCmdRetVal::Unit)
-        }
-        SwayrCommand::SwitchOutput => {
-            switch_output();
-            // TODO: Return real result!
-            Ok(SwayrCmdRetVal::Unit)
-        }
+        SwayrCommand::SwitchWorkspace => switch_workspace(fdata),
+        SwayrCommand::SwitchOutput => switch_output(),
         SwayrCommand::SwitchWorkspaceOrWindow => {
-            switch_workspace_or_window(fdata);
-            // TODO: Return real result!
-            Ok(SwayrCmdRetVal::Unit)
+            switch_workspace_or_window(fdata)
         }
         SwayrCommand::SwitchWorkspaceContainerOrWindow => {
-            switch_workspace_container_or_window(fdata);
-            // TODO: Return real result!
-            Ok(SwayrCmdRetVal::Unit)
+            switch_workspace_container_or_window(fdata)
         }
-        SwayrCommand::SwitchTo => {
-            switch_to(fdata);
-            // TODO: Return real result!
-            Ok(SwayrCmdRetVal::Unit)
-        }
-        SwayrCommand::QuitWindow { kill } => {
-            quit_window(fdata, *kill);
-            // TODO: Return real result!
-            Ok(SwayrCmdRetVal::Unit)
-        }
-        SwayrCommand::QuitWorkspaceOrWindow => {
-            quit_workspace_or_window(fdata);
-            // TODO: Return real result!
-            Ok(SwayrCmdRetVal::Unit)
-        }
+        SwayrCommand::SwitchTo => switch_to(fdata),
+        SwayrCommand::QuitWindow { kill } => quit_window(fdata, *kill),
+        SwayrCommand::QuitWorkspaceOrWindow => quit_workspace_or_window(fdata),
         SwayrCommand::QuitWorkspaceContainerOrWindow => {
-            quit_workspace_container_or_window(fdata);
-            // TODO: Return real result!
-            Ok(SwayrCmdRetVal::Unit)
+            quit_workspace_container_or_window(fdata)
         }
         SwayrCommand::MoveFocusedToWorkspace => {
-            move_focused_to_workspace(fdata);
-            // TODO: Return real result!
-            Ok(SwayrCmdRetVal::Unit)
+            move_focused_to_workspace(fdata)
         }
-        SwayrCommand::MoveFocusedTo => {
-            move_focused_to(fdata);
-            // TODO: Return real result!
-            Ok(SwayrCmdRetVal::Unit)
-        }
+        SwayrCommand::MoveFocusedTo => move_focused_to(fdata),
         SwayrCommand::SwapFocusedWith => {
             swap_focused_with(fdata);
             // TODO: Return real result!
-            Ok(SwayrCmdRetVal::Unit)
+            Ok("done".to_owned())
         }
         SwayrCommand::NextWindow { windows } => {
             focus_window_in_direction(
@@ -566,7 +506,7 @@ fn exec_swayr_cmd_1(
                 always_true,
             );
             // TODO: Return real result!
-            Ok(SwayrCmdRetVal::Unit)
+            Ok("done".to_owned())
         }
         SwayrCommand::PrevWindow { windows } => {
             focus_window_in_direction(
@@ -576,7 +516,7 @@ fn exec_swayr_cmd_1(
                 always_true,
             );
             // TODO: Return real result!
-            Ok(SwayrCmdRetVal::Unit)
+            Ok("done".to_owned())
         }
         SwayrCommand::NextTiledWindow { windows } => {
             focus_window_in_direction(
@@ -589,7 +529,7 @@ fn exec_swayr_cmd_1(
                 },
             );
             // TODO: Return real result!
-            Ok(SwayrCmdRetVal::Unit)
+            Ok("done".to_owned())
         }
         SwayrCommand::PrevTiledWindow { windows } => {
             focus_window_in_direction(
@@ -602,7 +542,7 @@ fn exec_swayr_cmd_1(
                 },
             );
             // TODO: Return real result!
-            Ok(SwayrCmdRetVal::Unit)
+            Ok("done".to_owned())
         }
         SwayrCommand::NextTabbedOrStackedWindow { windows } => {
             focus_window_in_direction(
@@ -617,7 +557,7 @@ fn exec_swayr_cmd_1(
                 },
             );
             // TODO: Return real result!
-            Ok(SwayrCmdRetVal::Unit)
+            Ok("done".to_owned())
         }
         SwayrCommand::PrevTabbedOrStackedWindow { windows } => {
             focus_window_in_direction(
@@ -632,7 +572,7 @@ fn exec_swayr_cmd_1(
                 },
             );
             // TODO: Return real result!
-            Ok(SwayrCmdRetVal::Unit)
+            Ok("done".to_owned())
         }
         SwayrCommand::NextFloatingWindow { windows } => {
             focus_window_in_direction(
@@ -642,7 +582,7 @@ fn exec_swayr_cmd_1(
                 |dn: &t::DisplayNode| dn.node.is_floating(),
             );
             // TODO: Return real result!
-            Ok(SwayrCmdRetVal::Unit)
+            Ok("done".to_owned())
         }
         SwayrCommand::PrevFloatingWindow { windows } => {
             focus_window_in_direction(
@@ -652,7 +592,7 @@ fn exec_swayr_cmd_1(
                 |dn: &t::DisplayNode| dn.node.is_floating(),
             );
             // TODO: Return real result!
-            Ok(SwayrCmdRetVal::Unit)
+            Ok("done".to_owned())
         }
         SwayrCommand::NextWindowOfSameLayout { windows } => {
             focus_window_of_same_layout_in_direction(
@@ -661,7 +601,7 @@ fn exec_swayr_cmd_1(
                 fdata,
             );
             // TODO: Return real result!
-            Ok(SwayrCmdRetVal::Unit)
+            Ok("done".to_owned())
         }
         SwayrCommand::PrevWindowOfSameLayout { windows } => {
             focus_window_of_same_layout_in_direction(
@@ -670,7 +610,7 @@ fn exec_swayr_cmd_1(
                 fdata,
             );
             // TODO: Return real result!
-            Ok(SwayrCmdRetVal::Unit)
+            Ok("done".to_owned())
         }
         SwayrCommand::NextMatchingWindow { criteria } => {
             focus_matching_window_in_direction(
@@ -679,7 +619,7 @@ fn exec_swayr_cmd_1(
                 fdata,
             );
             // TODO: Return real result!
-            Ok(SwayrCmdRetVal::Unit)
+            Ok("done".to_owned())
         }
         SwayrCommand::PrevMatchingWindow { criteria } => {
             focus_matching_window_in_direction(
@@ -688,32 +628,32 @@ fn exec_swayr_cmd_1(
                 fdata,
             );
             // TODO: Return real result!
-            Ok(SwayrCmdRetVal::Unit)
+            Ok("done".to_owned())
         }
         SwayrCommand::TileWorkspace { floating } => {
             tile_current_workspace(floating, false);
             // TODO: Return real result!
-            Ok(SwayrCmdRetVal::Unit)
+            Ok("done".to_owned())
         }
         SwayrCommand::TabWorkspace { floating } => {
             tab_current_workspace(floating);
             // TODO: Return real result!
-            Ok(SwayrCmdRetVal::Unit)
+            Ok("done".to_owned())
         }
         SwayrCommand::ShuffleTileWorkspace { floating } => {
             tile_current_workspace(floating, true);
             // TODO: Return real result!
-            Ok(SwayrCmdRetVal::Unit)
+            Ok("done".to_owned())
         }
         SwayrCommand::ToggleTabShuffleTileWorkspace { floating } => {
             toggle_tab_tile_current_workspace(floating);
             // TODO: Return real result!
-            Ok(SwayrCmdRetVal::Unit)
+            Ok("done".to_owned())
         }
         SwayrCommand::ConfigureOutputs => {
             configure_outputs();
             // TODO: Return real result!
-            Ok(SwayrCmdRetVal::Unit)
+            Ok("done".to_owned())
         }
         SwayrCommand::GetWindowsAsJson { include_scratchpad } => {
             get_windows_as_json(fdata, *include_scratchpad)
@@ -721,7 +661,7 @@ fn exec_swayr_cmd_1(
         SwayrCommand::ExecuteSwaymsgCommand => {
             exec_swaymsg_command();
             // TODO: Return real result!
-            Ok(SwayrCmdRetVal::Unit)
+            Ok("done".to_owned())
         }
         SwayrCommand::ExecuteSwayrCommand => {
             let mut cmds = vec![
@@ -804,29 +744,26 @@ fn exec_swayr_cmd_1(
 fn get_windows_as_json(
     fdata: &FocusData,
     include_scratchpad: bool,
-) -> Result<SwayrCmdRetVal, String> {
+) -> Result<String, String> {
     let root = ipc::get_root_node(include_scratchpad);
     let tree = t::get_tree(&root);
     let wins = tree.get_windows(fdata);
-    serde_json::to_string_pretty(&wins).map_or_else(
-        |e| Err(e.to_string()),
-        |json| Ok(SwayrCmdRetVal::Message(json)),
-    )
+    serde_json::to_string_pretty(&wins).map_or_else(|e| Err(e.to_string()), Ok)
 }
 
-fn steal_window_by_id(id: i64) {
+fn steal_window_by_id(id: i64) -> Result<String, String> {
     run_sway_command(&[
         format!("[con_id={}]", id).as_str(),
         "move to workspace current",
-    ]);
+    ])
 }
 
-fn focus_window_by_id(id: i64) -> Result<SwayrCmdRetVal, String> {
+fn focus_window_by_id(id: i64) -> Result<String, String> {
     run_sway_command(&[format!("[con_id={}]", id).as_str(), "focus"])
 }
 
-fn quit_window_by_id(id: i64) {
-    run_sway_command(&[format!("[con_id={}]", id).as_str(), "kill"]);
+fn quit_window_by_id(id: i64) -> Result<String, String> {
+    run_sway_command(&[format!("[con_id={}]", id).as_str(), "kill"])
 }
 
 pub fn get_outputs() -> Vec<s::Output> {
@@ -839,7 +776,7 @@ pub fn get_outputs() -> Vec<s::Output> {
 pub fn switch_to_urgent_or_lru_window(
     stm_data: &mut MutexGuard<SwitchToMatchingData>,
     fdata: &FocusData,
-) -> Result<SwayrCmdRetVal, String> {
+) -> Result<String, String> {
     let root = ipc::get_root_node(false);
     let tree = t::get_tree(&root);
     let wins = tree.get_windows(fdata);
@@ -851,7 +788,7 @@ pub fn focus_urgent_or_matching_or_lru_window<P>(
     fdata: &FocusData,
     stm_data: &mut MutexGuard<SwitchToMatchingData>,
     pred: P,
-) -> Result<SwayrCmdRetVal, String>
+) -> Result<String, String>
 where
     P: Fn(&t::DisplayNode) -> bool,
 {
@@ -901,10 +838,10 @@ where
         log::debug!("Switching to by urgency or matching predicate");
         stm_data.visited.push(win.node.id);
         focus_window_by_id(win.node.id)?;
-        Ok(SwayrCmdRetVal::Message(format!(
+        Ok(format!(
             "Focused node with id {} by urgency or matching predicate.",
             win.node.id
-        )))
+        ))
     } else if !skip_lru
         && stm_data.lru.is_some()
         && stm_data.lru != Some(focused_id)
@@ -915,20 +852,20 @@ where
         let id = stm_data.lru.unwrap();
         stm_data.visited.push(id);
         focus_window_by_id(id)?;
-        Ok(SwayrCmdRetVal::Message(format!(
+        Ok(format!(
             "Focused node with id {} because it's the LRU window.",
             id
-        )))
+        ))
     } else if !skip_origin {
         log::debug!("Switching back to origin");
         if let Some(id) = stm_data.origin {
             if id != focused_id && wins.iter().any(|w| w.node.id == id) {
                 stm_data.reset(false);
                 focus_window_by_id(id)?;
-                Ok(SwayrCmdRetVal::Message(format!(
+                Ok(format!(
                     "Focused node with id {} because it's the origin window.",
                     id
-                )))
+                ))
             } else {
                 log::debug!("Origin is already focused or is gone; resetting.");
                 stm_data.reset(false);
@@ -966,7 +903,7 @@ pub fn switch_to_app_or_urgent_or_lru_window(
     name: &str,
     stm_data: &mut MutexGuard<SwitchToMatchingData>,
     fdata: &FocusData,
-) -> Result<SwayrCmdRetVal, String> {
+) -> Result<String, String> {
     let root = ipc::get_root_node(false);
     let tree = t::get_tree(&root);
     let wins = tree.get_windows(fdata);
@@ -979,7 +916,7 @@ pub fn switch_to_mark_or_urgent_or_lru_window(
     con_mark: &str,
     stm_data: &mut MutexGuard<SwitchToMatchingData>,
     fdata: &FocusData,
-) -> Result<SwayrCmdRetVal, String> {
+) -> Result<String, String> {
     let root = ipc::get_root_node(false);
     let tree = t::get_tree(&root);
     let wins = tree.get_windows(fdata);
@@ -993,7 +930,7 @@ fn switch_to_matching_or_urgent_or_lru_window(
     criteria: &str,
     switch_to_matching_data: &mut MutexGuard<SwitchToMatchingData>,
     fdata: &FocusData,
-) -> Result<SwayrCmdRetVal, String> {
+) -> Result<String, String> {
     let root = ipc::get_root_node(false);
     let tree = t::get_tree(&root);
     let wins = tree.get_windows(fdata);
@@ -1011,11 +948,11 @@ fn switch_to_matching_or_urgent_or_lru_window(
 static DIGIT_AND_NAME: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"^(\d):(.*)").unwrap());
 
-fn create_workspace(ws_name: &str) {
+fn create_workspace(ws_name: &str) -> Result<String, String> {
     if DIGIT_AND_NAME.is_match(ws_name) {
-        run_sway_command(&["workspace", "number", ws_name]);
+        run_sway_command(&["workspace", "number", ws_name])
     } else {
-        run_sway_command(&["workspace", ws_name]);
+        run_sway_command(&["workspace", ws_name])
     }
 }
 
@@ -1038,34 +975,22 @@ fn chop_sway_shortcut(input: &str) -> &str {
     }
 }
 
-fn handle_non_matching_input(input: &str) -> Result<SwayrCmdRetVal, String> {
+fn handle_non_matching_input(input: &str) -> Result<String, String> {
     if input.is_empty() {
-        return Err(
-            "Cannot handle empty string as non-matching input.".to_owned()
-        );
-    }
-
-    if let Some(c) = SPECIAL_SWAY.captures(input) {
+        Err("Cannot handle empty string as non-matching input.".to_owned())
+    } else if let Some(c) = SPECIAL_SWAY.captures(input) {
         let cmd = c[1].split_ascii_whitespace().collect::<Vec<&str>>();
-        run_sway_command(&cmd);
-        Ok(SwayrCmdRetVal::Message(format!(
-            "Executed '{}' as sway command for non-matching input.",
-            cmd.join(" ")
-        )))
+        run_sway_command(&cmd).map(|msg| msg + " (for non-matching input)")
     } else {
         let ws = chop_workspace_shortcut(input);
-        create_workspace(ws);
-        Ok(SwayrCmdRetVal::Message(format!(
-            "Created workspace {} for non-matching input.",
-            ws
-        )))
+        create_workspace(ws).map(|msg| msg + " (for non-matching input)")
     }
 }
 
 fn select_and_focus(
     prompt: &str,
     choices: &[t::DisplayNode],
-) -> Result<SwayrCmdRetVal, String> {
+) -> Result<String, String> {
     match util::select_from_menu(prompt, choices) {
         Ok(tn) => match tn.node.get_type() {
             ipc::Type::Output => {
@@ -1096,29 +1021,35 @@ fn select_and_focus(
     }
 }
 
-fn select_and_steal(prompt: &str, choices: &[t::DisplayNode]) {
+fn select_and_steal(
+    prompt: &str,
+    choices: &[t::DisplayNode],
+) -> Result<String, String> {
     match util::select_from_menu(prompt, choices) {
         Ok(tn) => match tn.node.get_type() {
             ipc::Type::Window | ipc::Type::Container => {
-                steal_window_by_id(tn.node.id);
+                steal_window_by_id(tn.node.id)
             }
             ipc::Type::Workspace => {
-                log::info!("Can't steal whole workspace")
+                log::info!("Can't steal whole workspace");
+                Err("Can't steal whole workspace".to_owned())
             }
             t => {
-                log::error!("Cannot handle {:?} in select_and_steal", t)
+                log::error!("Cannot handle {:?} in select_and_steal", t);
+                Err(format!("Cannot handle {:?}.", t))
             }
         },
         Err(non_matching_input) => {
             log::warn!(
                 "Cannot handle non-matching input {:?} in select and steal",
                 non_matching_input
-            )
+            );
+            Err("Cannot handle non-matching input.".to_owned())
         }
     }
 }
 
-pub fn switch_window(fdata: &FocusData) -> Result<SwayrCmdRetVal, String> {
+pub fn switch_window(fdata: &FocusData) -> Result<String, String> {
     let root = ipc::get_root_node(true);
     let tree = t::get_tree(&root);
     select_and_focus("Select window", &tree.get_windows(fdata))
@@ -1137,84 +1068,103 @@ fn retain_nodes_of_non_current_workspaces(
     });
 }
 
-pub fn steal_window(fdata: &FocusData) {
+pub fn steal_window(fdata: &FocusData) -> Result<String, String> {
     let root = ipc::get_root_node(true);
     let tree = t::get_tree(&root);
     let wins = &mut tree.get_windows(fdata);
     retain_nodes_of_non_current_workspaces(&tree, wins);
-    select_and_steal("Select window", wins);
+    select_and_steal("Select window", wins)
 }
 
-pub fn steal_window_or_container(fdata: &FocusData) {
+pub fn steal_window_or_container(fdata: &FocusData) -> Result<String, String> {
     let root = ipc::get_root_node(true);
     let tree = t::get_tree(&root);
     let wins_and_ws = &mut tree.get_workspaces_containers_and_windows(fdata);
     retain_nodes_of_non_current_workspaces(&tree, wins_and_ws);
-    select_and_steal("Select window or container", wins_and_ws);
+    select_and_steal("Select window or container", wins_and_ws)
 }
 
-pub fn switch_workspace(fdata: &FocusData) {
+pub fn switch_workspace(fdata: &FocusData) -> Result<String, String> {
     let root = ipc::get_root_node(false);
     let tree = t::get_tree(&root);
-    select_and_focus("Select workspace", &tree.get_workspaces(fdata));
+    select_and_focus("Select workspace", &tree.get_workspaces(fdata))
 }
 
-pub fn switch_output() {
+pub fn switch_output() -> Result<String, String> {
     let root = ipc::get_root_node(false);
     let tree = t::get_tree(&root);
-    select_and_focus("Select output", &tree.get_outputs());
+    select_and_focus("Select output", &tree.get_outputs())
 }
 
-pub fn switch_workspace_or_window(fdata: &FocusData) {
+pub fn switch_workspace_or_window(fdata: &FocusData) -> Result<String, String> {
     let root = ipc::get_root_node(true);
     let tree = t::get_tree(&root);
     select_and_focus(
         "Select workspace or window",
         &tree.get_workspaces_and_windows(fdata),
-    );
+    )
 }
 
-pub fn switch_workspace_container_or_window(fdata: &FocusData) {
+pub fn switch_workspace_container_or_window(
+    fdata: &FocusData,
+) -> Result<String, String> {
     let root = ipc::get_root_node(true);
     let tree = t::get_tree(&root);
     select_and_focus(
         "Select workspace, container or window",
         &tree.get_workspaces_containers_and_windows(fdata),
-    );
+    )
 }
 
-pub fn switch_to(fdata: &FocusData) {
+pub fn switch_to(fdata: &FocusData) -> Result<String, String> {
     let root = ipc::get_root_node(true);
     let tree = t::get_tree(&root);
     select_and_focus(
         "Select output, workspace, container or window",
         &tree.get_outputs_workspaces_containers_and_windows(fdata),
-    );
+    )
 }
 
-fn kill_process_by_pid(pid: Option<i32>) {
+fn kill_process_by_pid(pid: Option<i32>) -> Result<String, String> {
     if let Some(pid) = pid {
-        if let Err(err) = std::process::Command::new("kill")
+        match std::process::Command::new("kill")
             .arg("-9")
             .arg(format!("{}", pid))
             .output()
         {
-            log::error!("Error killing process {}: {}", pid, err)
+            Err(err) => {
+                log::error!("Error killing process {}: {}", pid, err);
+                Err(err.to_string())
+            }
+            _ => Ok(format!("Killed process with pid {}.", pid)),
         }
     } else {
         log::error!("Cannot kill window with no pid.");
+        Err("No pid to kill given.".to_owned())
     }
 }
 
-fn select_and_quit(prompt: &str, choices: &[t::DisplayNode], kill: bool) {
-    if let Ok(tn) = util::select_from_menu(prompt, choices) {
-        match tn.node.get_type() {
+fn select_and_quit(
+    prompt: &str,
+    choices: &[t::DisplayNode],
+    kill: bool,
+) -> Result<String, String> {
+    match util::select_from_menu(prompt, choices) {
+        Ok(tn) => match tn.node.get_type() {
             ipc::Type::Workspace | ipc::Type::Container => {
                 for win in
                     tn.node.iter().filter(|n| n.get_type() == ipc::Type::Window)
                 {
-                    quit_window_by_id(win.id)
+                    match quit_window_by_id(win.id) {
+                        Ok(_) => (),
+                        e @ Err(_) => return e,
+                    }
                 }
+                Ok(format!(
+                    "Quit all windows on {:?} {}.",
+                    tn.swayr_type,
+                    tn.node.get_name()
+                ))
             }
             ipc::Type::Window => {
                 if kill {
@@ -1224,39 +1174,43 @@ fn select_and_quit(prompt: &str, choices: &[t::DisplayNode], kill: bool) {
                 }
             }
             t => {
-                log::error!("Cannot handle {:?} in quit_workspace_or_window", t)
+                log::error!("Cannot handle {:?} in select_and_quit", t);
+                Err(format!("Cannot handle container of type {:?}.", t))
             }
-        }
+        },
+        Err(err) => Err(err),
     }
 }
 
-pub fn quit_window(fdata: &FocusData, kill: bool) {
+pub fn quit_window(fdata: &FocusData, kill: bool) -> Result<String, String> {
     let root = ipc::get_root_node(true);
     let tree = t::get_tree(&root);
-    select_and_quit("Quit window", &tree.get_windows(fdata), kill);
+    select_and_quit("Quit window", &tree.get_windows(fdata), kill)
 }
 
-pub fn quit_workspace_or_window(fdata: &FocusData) {
+pub fn quit_workspace_or_window(fdata: &FocusData) -> Result<String, String> {
     let root = ipc::get_root_node(true);
     let tree = t::get_tree(&root);
     select_and_quit(
         "Quit workspace or window",
         &tree.get_workspaces_and_windows(fdata),
         false,
-    );
+    )
 }
 
-pub fn quit_workspace_container_or_window(fdata: &FocusData) {
+pub fn quit_workspace_container_or_window(
+    fdata: &FocusData,
+) -> Result<String, String> {
     let root = ipc::get_root_node(true);
     let tree = t::get_tree(&root);
     select_and_quit(
         "Quit workspace, container or window",
         &tree.get_workspaces_containers_and_windows(fdata),
         false,
-    );
+    )
 }
 
-fn move_focused_to_workspace_1(ws_name: &str) {
+fn move_focused_to_workspace_1(ws_name: &str) -> Result<String, String> {
     if DIGIT_AND_NAME.is_match(ws_name) {
         run_sway_command(&[
             "move",
@@ -1265,39 +1219,42 @@ fn move_focused_to_workspace_1(ws_name: &str) {
             "workspace",
             "number",
             ws_name,
-        ]);
+        ])
     } else {
-        run_sway_command(&["move", "container", "to", "workspace", ws_name]);
+        run_sway_command(&["move", "container", "to", "workspace", ws_name])
     }
 }
 
-fn move_focused_to_container_or_window(id: i64) {
+fn move_focused_to_container_or_window(id: i64) -> Result<String, String> {
     run_sway_command(&[
         &format!("[con_id=\"{}\"]", id),
         "mark",
         "--add",
         "__SWAYR_MOVE_TARGET__",
-    ]);
-    run_sway_command(&["move", "to", "mark", "__SWAYR_MOVE_TARGET__"]);
-    run_sway_command(&["unmark", "__SWAYR_MOVE_TARGET__"]);
+    ])?;
+    run_sway_command(&["move", "to", "mark", "__SWAYR_MOVE_TARGET__"])?;
+    run_sway_command(&["unmark", "__SWAYR_MOVE_TARGET__"])
 }
 
-fn select_and_move_focused_to(prompt: &str, choices: &[t::DisplayNode]) {
+fn select_and_move_focused_to(
+    prompt: &str,
+    choices: &[t::DisplayNode],
+) -> Result<String, String> {
     match util::select_from_menu(prompt, choices) {
         Ok(tn) => match tn.node.get_type() {
             ipc::Type::Output => {
                 if tn.node.is_scratchpad() {
-                    run_sway_command_1("move container to scratchpad");
+                    run_sway_command_1("move container to scratchpad")
                 } else {
                     run_sway_command(&[
                         "move container to output",
                         tn.node.get_name(),
-                    ]);
+                    ])
                 }
             }
             ipc::Type::Workspace => {
                 if tn.node.is_scratchpad() {
-                    run_sway_command_1("move container to scratchpad");
+                    run_sway_command_1("move container to scratchpad")
                 } else {
                     move_focused_to_workspace_1(tn.node.get_name())
                 }
@@ -1305,31 +1262,34 @@ fn select_and_move_focused_to(prompt: &str, choices: &[t::DisplayNode]) {
             ipc::Type::Container | ipc::Type::Window => {
                 move_focused_to_container_or_window(tn.node.id)
             }
-            t => log::error!("Cannot move focused to {:?}", t),
+            t => {
+                log::error!("Cannot move focused to {:?}", t);
+                Err(format!("Cannot move focused to node of type {:?}.", t))
+            }
         },
         Err(input) => {
             let ws_name = chop_workspace_shortcut(&input);
-            move_focused_to_workspace_1(ws_name);
+            move_focused_to_workspace_1(ws_name)
         }
     }
 }
 
-pub fn move_focused_to_workspace(fdata: &FocusData) {
+pub fn move_focused_to_workspace(fdata: &FocusData) -> Result<String, String> {
     let root = ipc::get_root_node(true);
     let tree = t::get_tree(&root);
     select_and_move_focused_to(
         "Move focused container to workspace",
         &tree.get_workspaces(fdata),
-    );
+    )
 }
 
-pub fn move_focused_to(fdata: &FocusData) {
+pub fn move_focused_to(fdata: &FocusData) -> Result<String, String> {
     let root = ipc::get_root_node(true);
     let tree = t::get_tree(&root);
     select_and_move_focused_to(
         "Move focused container to workspace or container",
         &tree.get_outputs_workspaces_containers_and_windows(fdata),
-    );
+    )
 }
 
 pub fn swap_focused_with(fdata: &FocusData) {

@@ -14,19 +14,16 @@
 // this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use crate::cmds;
-use crate::cmds::SwayrCmdRetVal;
 use crate::util;
 use std::os::unix::net::UnixStream;
 
-pub fn send_swayr_cmd(
-    cmd: cmds::SwayrCommand,
-) -> Result<SwayrCmdRetVal, String> {
+pub fn send_swayr_cmd(cmd: cmds::SwayrCommand) -> Result<String, String> {
     let stream = UnixStream::connect(util::get_swayr_socket_path())
         .map_err(|e| e.to_string())?;
     serde_json::to_writer(&stream, &cmd).map_err(|e| e.to_string())?;
     stream
         .shutdown(std::net::Shutdown::Write)
         .map_err(|e| e.to_string())?;
-    serde_json::from_reader::<_, Result<SwayrCmdRetVal, String>>(&stream)
+    serde_json::from_reader::<_, Result<String, String>>(&stream)
         .expect("Could not read response from swayrd")
 }
