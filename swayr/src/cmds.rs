@@ -488,9 +488,7 @@ fn exec_swayr_cmd_1(
                 criteria,
                 switch_to_matching_data,
                 fdata,
-            );
-            // TODO: Return real result!
-            Ok(SwayrCmdRetVal::Unit)
+            )
         }
         SwayrCommand::SwitchWindow => {
             switch_window(fdata);
@@ -855,7 +853,8 @@ pub fn focus_urgent_or_matching_or_lru_window<P>(
     fdata: &FocusData,
     stm_data: &mut MutexGuard<SwitchToMatchingData>,
     pred: P,
-) where
+) -> Result<SwayrCmdRetVal, String>
+where
     P: Fn(&t::DisplayNode) -> bool,
 {
     let focused = wins.iter().find(|w| w.node.focused);
@@ -904,6 +903,10 @@ pub fn focus_urgent_or_matching_or_lru_window<P>(
         log::debug!("Switching to by urgency or matching predicate");
         stm_data.visited.push(win.node.id);
         focus_window_by_id(win.node.id);
+        Ok(SwayrCmdRetVal::Message(format!(
+            "Focused node with id {} by urgency or matching predicate.",
+            win.node.id
+        )))
     } else if !skip_lru
         && stm_data.lru.is_some()
         && stm_data.lru != Some(focused_id)
@@ -914,19 +917,29 @@ pub fn focus_urgent_or_matching_or_lru_window<P>(
         let id = stm_data.lru.unwrap();
         stm_data.visited.push(id);
         focus_window_by_id(id);
+        Ok(SwayrCmdRetVal::Message(format!(
+            "Focused node with id {} because it's the LRU window.",
+            id
+        )))
     } else if !skip_origin {
         log::debug!("Switching back to origin");
         if let Some(id) = stm_data.origin {
             if id != focused_id && wins.iter().any(|w| w.node.id == id) {
                 stm_data.reset(false);
                 focus_window_by_id(id);
+                Ok(SwayrCmdRetVal::Message(format!(
+                    "Focused node with id {} because it's the origin window.",
+                    id
+                )))
             } else {
                 log::debug!("Origin is already focused or is gone; resetting.");
                 stm_data.reset(false);
                 if !initialized_now {
                     focus_urgent_or_matching_or_lru_window(
                         wins, fdata, stm_data, pred,
-                    );
+                    )
+                } else {
+                    Err("Nothing to be switched to.".to_owned())
                 }
             }
         } else {
@@ -935,14 +948,18 @@ pub fn focus_urgent_or_matching_or_lru_window<P>(
             if !initialized_now {
                 focus_urgent_or_matching_or_lru_window(
                     wins, fdata, stm_data, pred,
-                );
+                )
+            } else {
+                Err("Nothing to be switched to.".to_owned())
             }
         }
     } else {
         log::debug!("Cycle exhausted; resetting.");
         stm_data.reset(false);
         if !initialized_now {
-            focus_urgent_or_matching_or_lru_window(wins, fdata, stm_data, pred);
+            focus_urgent_or_matching_or_lru_window(wins, fdata, stm_data, pred)
+        } else {
+            Err("Nothing to be switched to.".to_owned())
         }
     }
 }
@@ -978,20 +995,19 @@ fn switch_to_matching_or_urgent_or_lru_window(
     criteria: &str,
     switch_to_matching_data: &mut MutexGuard<SwitchToMatchingData>,
     fdata: &FocusData,
-) {
+) -> Result<SwayrCmdRetVal, String> {
     let root = ipc::get_root_node(false);
     let tree = t::get_tree(&root);
     let wins = tree.get_windows(fdata);
 
-    if let Some(crit) = criteria::parse_criteria(criteria) {
-        let pred = criteria::criterion_to_predicate(&crit, &wins);
-        focus_urgent_or_matching_or_lru_window(
-            &wins,
-            fdata,
-            switch_to_matching_data,
-            pred,
-        )
-    }
+    let crit = criteria::parse_criteria(criteria)?;
+    let pred = criteria::criterion_to_predicate(&crit, &wins);
+    focus_urgent_or_matching_or_lru_window(
+        &wins,
+        fdata,
+        switch_to_matching_data,
+        pred,
+    )
 }
 
 static DIGIT_AND_NAME: Lazy<Regex> =
@@ -1381,7 +1397,7 @@ fn focus_matching_window_in_direction(
     let tree = t::get_tree(&root);
     let wins = tree.get_windows(fdata);
 
-    if let Some(crits) = criteria::parse_criteria(criteria) {
+    if let Ok(crits) = criteria::parse_criteria(criteria) {
         let pred = criteria::criterion_to_predicate(&crits, &wins);
         focus_window_in_direction_1(&wins, dir, fdata, pred);
     }

@@ -31,9 +31,6 @@ fn main() -> Result<(), String> {
             println!("{}", val.to_string());
             Ok(())
         }
-        Err(err) => {
-            eprintln!("ERROR: {}", err);
-            Err(err)
-        }
+        Err(err) => Err(err),
     }
 }

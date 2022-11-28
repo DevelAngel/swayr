@@ -146,14 +146,8 @@ peg::parser! {
   }
 }
 
-pub fn parse_criteria(criteria: &str) -> Option<Criterion> {
-    match criteria_parser::parse(criteria) {
-        Ok(c) => Some(c),
-        Err(err) => {
-            log::error!("Could not parse criteria query {}: {}", criteria, err);
-            None
-        }
-    }
+pub fn parse_criteria(criteria: &str) -> Result<Criterion, String> {
+    criteria_parser::parse(criteria).map_err(|e| e.to_string())
 }
 
 fn is_some_and_rx_matches(s: Option<&String>, rx: &Regex) -> bool {
