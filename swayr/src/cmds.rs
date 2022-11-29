@@ -650,11 +650,7 @@ fn exec_swayr_cmd_1(
             // TODO: Return real result!
             Ok("done".to_owned())
         }
-        SwayrCommand::ConfigureOutputs => {
-            configure_outputs();
-            // TODO: Return real result!
-            Ok("done".to_owned())
-        }
+        SwayrCommand::ConfigureOutputs => configure_outputs(),
         SwayrCommand::GetWindowsAsJson { include_scratchpad } => {
             get_windows_as_json(fdata, *include_scratchpad)
         }
@@ -1648,7 +1644,7 @@ pub fn exec_swaymsg_command() {
     }
 }
 
-pub fn configure_outputs() {
+pub fn configure_outputs() -> Result<String, String> {
     let outputs = get_outputs();
 
     let mut cmds = vec![];
@@ -1672,7 +1668,6 @@ pub fn configure_outputs() {
             "90",
             "180",
             "270",
-            "360",
             "flipped",
             "flipped-90",
             "flipped-180",
@@ -1698,7 +1693,21 @@ pub fn configure_outputs() {
     let cmds: Vec<SwaymsgCmd> =
         cmds.into_iter().map(|c| SwaymsgCmd { cmd: c }).collect();
 
-    while let Ok(cmd) = util::select_from_menu("Output command", &cmds) {
-        run_sway_command_1(&cmd.cmd);
+    let mut last_cmd_result: Result<String, String> =
+        Err("No output command selected.".to_owned());
+    loop {
+        match util::select_from_menu("Output command", &cmds) {
+            Ok(cmd) => match run_sway_command_1(&cmd.cmd) {
+                Ok(msg) => {
+                    last_cmd_result = if last_cmd_result.is_ok() {
+                        last_cmd_result.map(|s| s + "\n" + msg.as_str())
+                    } else {
+                        Ok(msg)
+                    };
+                }
+                Err(_) => return last_cmd_result,
+            },
+            Err(_) => return last_cmd_result,
+        }
     }
 }
