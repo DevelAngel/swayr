@@ -890,7 +890,13 @@ where
         if !initialized_now {
             focus_urgent_or_matching_or_lru_window(wins, fdata, stm_data, pred)
         } else {
-            Err("Nothing to be switched to.".to_owned())
+            match focused {
+                Some(win) if pred(win) => Ok(format!(
+                    "The single matching window {} is already focused.",
+                    focused_id
+                )),
+                _ => Err("Nothing to be switched to.".to_owned()),
+            }
         }
     }
 }
