@@ -824,20 +824,27 @@ where
     let skip_origin = stm_data.skip_origin;
 
     let visited = &stm_data.visited;
+
     if let Some(win) = wins.iter().find(|w| {
         w.node.id != focused_id
-            && (skip_lru || stm_data.lru != Some(w.node.id))
+            && !skip_urgent
+            && w.node.urgent
+            && !visited.contains(&w.node.id)
+    }) {
+        log::debug!("Switching to by urgency");
+        stm_data.visited.push(win.node.id);
+        focus_window_by_id(win.node.id)
+            .map(|msg| msg + " (It's a window with urgency hint.)")
+    } else if let Some(win) = wins.iter().find(|w| {
+        w.node.id != focused_id
             && (skip_origin || stm_data.origin != Some(w.node.id))
             && !visited.contains(&w.node.id)
-            && (!skip_urgent && w.node.urgent || pred(w))
+            && pred(w)
     }) {
-        log::debug!("Switching to by urgency or matching predicate");
+        log::debug!("Switching to by matching predicate");
         stm_data.visited.push(win.node.id);
-        focus_window_by_id(win.node.id)?;
-        Ok(format!(
-            "Focused node with id {} by urgency or matching predicate.",
-            win.node.id
-        ))
+        focus_window_by_id(win.node.id)
+            .map(|msg| msg + " (It's a matching window.)")
     } else if !skip_lru
         && stm_data.lru.is_some()
         && stm_data.lru != Some(focused_id)
@@ -847,21 +854,14 @@ where
         log::debug!("Switching to LRU");
         let id = stm_data.lru.unwrap();
         stm_data.visited.push(id);
-        focus_window_by_id(id)?;
-        Ok(format!(
-            "Focused node with id {} because it's the LRU window.",
-            id
-        ))
+        focus_window_by_id(id).map(|msg| msg + " (It's the LRU window.)")
     } else if !skip_origin {
         log::debug!("Switching back to origin");
         if let Some(id) = stm_data.origin {
             if id != focused_id && wins.iter().any(|w| w.node.id == id) {
                 stm_data.reset(false);
-                focus_window_by_id(id)?;
-                Ok(format!(
-                    "Focused node with id {} because it's the origin window.",
-                    id
-                ))
+                focus_window_by_id(id)
+                    .map(|msg| msg + " (It's the origin window.)")
             } else {
                 log::debug!("Origin is already focused or is gone; resetting.");
                 stm_data.reset(false);
