@@ -595,24 +595,16 @@ fn exec_swayr_cmd_1(
             )
         }
         SwayrCommand::TileWorkspace { floating } => {
-            tile_current_workspace(floating, false);
-            // TODO: Return real result!
-            Ok("done".to_owned())
+            tile_current_workspace(floating, false)
         }
         SwayrCommand::TabWorkspace { floating } => {
-            tab_current_workspace(floating);
-            // TODO: Return real result!
-            Ok("done".to_owned())
+            tab_current_workspace(floating)
         }
         SwayrCommand::ShuffleTileWorkspace { floating } => {
-            tile_current_workspace(floating, true);
-            // TODO: Return real result!
-            Ok("done".to_owned())
+            tile_current_workspace(floating, true)
         }
         SwayrCommand::ToggleTabShuffleTileWorkspace { floating } => {
-            toggle_tab_tile_current_workspace(floating);
-            // TODO: Return real result!
-            Ok("done".to_owned())
+            toggle_tab_tile_current_workspace(floating)
         }
         SwayrCommand::ConfigureOutputs => configure_outputs(),
         SwayrCommand::GetWindowsAsJson { include_scratchpad } => {
@@ -1402,8 +1394,11 @@ pub fn focus_window_of_same_layout_in_direction(
     }
 }
 
-fn tile_current_workspace(floating: &ConsiderFloating, shuffle: bool) {
-    match layout::relayout_current_workspace(
+fn tile_current_workspace(
+    floating: &ConsiderFloating,
+    shuffle: bool,
+) -> Result<String, String> {
+    layout::relayout_current_workspace(
         floating == &ConsiderFloating::IncludeFloating,
         move |wins, con: &mut s::Connection| {
             con.run_command("focus parent")?;
@@ -1438,14 +1433,13 @@ fn tile_current_workspace(floating: &ConsiderFloating, shuffle: bool) {
             }
             Ok(())
         },
-    ) {
-        Ok(_) => (),
-        Err(err) => log::error!("Error retiling workspace: {:?}", err),
-    }
+    )
 }
 
-fn tab_current_workspace(floating: &ConsiderFloating) {
-    match layout::relayout_current_workspace(
+fn tab_current_workspace(
+    floating: &ConsiderFloating,
+) -> Result<String, String> {
+    layout::relayout_current_workspace(
         floating == &ConsiderFloating::IncludeFloating,
         move |wins, con: &mut s::Connection| {
             con.run_command("focus parent")?;
@@ -1470,20 +1464,19 @@ fn tab_current_workspace(floating: &ConsiderFloating) {
             }
             Ok(())
         },
-    ) {
-        Ok(_) => (),
-        Err(err) => log::error!("Error retiling workspace: {:?}", err),
-    }
+    )
 }
 
-fn toggle_tab_tile_current_workspace(floating: &ConsiderFloating) {
+fn toggle_tab_tile_current_workspace(
+    floating: &ConsiderFloating,
+) -> Result<String, String> {
     let tree = ipc::get_root_node(false);
     let workspaces = tree.nodes_of_type(ipc::Type::Workspace);
     let cur_ws = workspaces.iter().find(|w| w.is_current()).unwrap();
     if cur_ws.layout == s::NodeLayout::Tabbed {
-        tile_current_workspace(floating, true);
+        tile_current_workspace(floating, true)
     } else {
-        tab_current_workspace(floating);
+        tab_current_workspace(floating)
     }
 }
 

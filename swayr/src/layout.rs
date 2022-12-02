@@ -135,7 +135,7 @@ const SWAYR_TMP_WORKSPACE: &str = "✨";
 pub fn relayout_current_workspace<F>(
     include_floating: bool,
     insert_win_fn: F,
-) -> s::Fallible<()>
+) -> Result<String, String>
 where
     F: Fn(&mut [&s::Node], &mut s::Connection) -> s::Fallible<()>,
 {
@@ -144,41 +144,43 @@ where
         .iter()
         .filter(|n| n.get_type() == ipc::Type::Workspace)
         .collect();
-    if let Some(cur_ws) = workspaces.iter().find(|ws| ws.is_current()) {
-        if let Ok(mut con) = s::Connection::new() {
-            let mut moved_wins: Vec<&s::Node> = vec![];
-            let mut focused_win = None;
-            for win in
-                cur_ws.iter().filter(|n| n.get_type() == ipc::Type::Window)
-            {
-                if win.focused {
-                    focused_win = Some(win);
+    match workspaces.iter().find(|ws| ws.is_current()) {
+        Some(cur_ws) => match s::Connection::new() {
+            Ok(mut con) => {
+                let mut moved_wins: Vec<&s::Node> = vec![];
+                let mut focused_win = None;
+                for win in
+                    cur_ws.iter().filter(|n| n.get_type() == ipc::Type::Window)
+                {
+                    if win.focused {
+                        focused_win = Some(win);
+                    }
+                    if !include_floating && win.is_floating() {
+                        continue;
+                    }
+                    moved_wins.push(win);
+                    con.run_command(format!(
+                        "[con_id={}] move to workspace {}",
+                        win.id, SWAYR_TMP_WORKSPACE
+                    ))
+                    .map_err(|err| err.to_string())?;
                 }
-                if !include_floating && win.is_floating() {
-                    continue;
+
+                insert_win_fn(moved_wins.as_mut_slice(), &mut con)
+                    .map_err(|err| err.to_string())?;
+                std::thread::sleep(std::time::Duration::from_millis(25));
+
+                if let Some(win) = focused_win {
+                    con.run_command(format!("[con_id={}] focus", win.id))
+                        .map_err(|err| err.to_string())?;
                 }
-                moved_wins.push(win);
-                con.run_command(format!(
-                    "[con_id={}] move to workspace {}",
-                    win.id, SWAYR_TMP_WORKSPACE
-                ))?;
+                Ok(format!(
+                    "Re-layouted current workspace {}.",
+                    cur_ws.get_name()
+                ))
             }
-
-            insert_win_fn(moved_wins.as_mut_slice(), &mut con)?;
-            std::thread::sleep(std::time::Duration::from_millis(25));
-
-            if let Some(win) = focused_win {
-                con.run_command(format!("[con_id={}] focus", win.id))?;
-            }
-            Ok(())
-        } else {
-            Err(s::Error::CommandFailed(
-                "Cannot create connection.".to_string(),
-            ))
-        }
-    } else {
-        Err(s::Error::CommandFailed(
-            "No workspace is focused.".to_string(),
-        ))
+            Err(err) => Err(err.to_string()),
+        },
+        None => Err("No workspace is focused.".to_string()),
     }
 }
