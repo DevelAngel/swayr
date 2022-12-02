@@ -1673,9 +1673,9 @@ pub fn configure_outputs() -> Result<String, String> {
         }
     }
     cmds.sort();
+
     let cmds: Vec<SwaymsgCmd> =
         cmds.into_iter().map(|c| SwaymsgCmd { cmd: c }).collect();
-
     let mut last_cmd_result: Result<String, String> =
         Err("No output command selected.".to_owned());
     loop {

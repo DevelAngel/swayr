@@ -1,11 +1,10 @@
 swayr v0.24.0
 =============
 
-- All commands make the `swayr` binary now exit non-zero which is great for
-  scripting, e.g., now you can do something like `swayr
-  switch-to-app-or-urgent-or-lru-window firefox --skip-lru --skip-origin
-  --skip-urgent || firefox` to have a "focus firefox or start it, if there's no
-  firefox window already" command.
+- All commands make the `swayr` binary now exit non-zero if they cannot do
+  anything which is great for scripting, e.g., now you can do something like
+  `swayr switch-to-app-or-urgent-or-lru-window firefox || firefox` to have a
+  "focus firefox or start it, if there's no firefox window already" command.
 - New command `get-windows-as-json` returning a JSON array of all windows in
   sway's IPC representation extended by the attributes `swayr_icon` and
   `swayr_type`.
