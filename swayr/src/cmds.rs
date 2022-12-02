@@ -728,7 +728,13 @@ pub fn switch_to_urgent_or_lru_window(
     let root = ipc::get_root_node(false);
     let tree = t::get_tree(&root);
     let wins = tree.get_windows(fdata);
-    focus_urgent_or_matching_or_lru_window(&wins, fdata, stm_data, |_| false)
+    focus_urgent_or_matching_or_lru_window(
+        &wins,
+        fdata,
+        stm_data,
+        |_| false,
+        true,
+    )
 }
 
 pub fn focus_urgent_or_matching_or_lru_window<P>(
@@ -736,6 +742,7 @@ pub fn focus_urgent_or_matching_or_lru_window<P>(
     fdata: &FocusData,
     stm_data: &mut MutexGuard<SwitchToMatchingData>,
     pred: P,
+    ignore_pred: bool,
 ) -> Result<String, String>
 where
     P: Fn(&t::DisplayNode) -> bool,
@@ -745,6 +752,12 @@ where
 
     // Initialize the fallback on first invocation.
     let initialized_now = if stm_data.visited.is_empty() {
+        // If we should not ignore the predicate is given, then we want at
+        // least one matching window.
+        if !ignore_pred && !wins.iter().any(&pred) {
+            return Err("No window matches.".to_owned());
+        }
+
         // The currently focused window is already visited, obviously.
         if let Some(f) = focused {
             // The focused window is the fallback we want to return to.
@@ -813,7 +826,11 @@ where
                 stm_data.reset(false);
                 if !initialized_now {
                     focus_urgent_or_matching_or_lru_window(
-                        wins, fdata, stm_data, pred,
+                        wins,
+                        fdata,
+                        stm_data,
+                        pred,
+                        ignore_pred,
                     )
                 } else {
                     Err("Nothing to be switched to.".to_owned())
@@ -824,7 +841,11 @@ where
             stm_data.reset(false);
             if !initialized_now {
                 focus_urgent_or_matching_or_lru_window(
-                    wins, fdata, stm_data, pred,
+                    wins,
+                    fdata,
+                    stm_data,
+                    pred,
+                    ignore_pred,
                 )
             } else {
                 Err("Nothing to be switched to.".to_owned())
@@ -834,7 +855,13 @@ where
         log::debug!("Cycle exhausted; resetting.");
         stm_data.reset(false);
         if !initialized_now {
-            focus_urgent_or_matching_or_lru_window(wins, fdata, stm_data, pred)
+            focus_urgent_or_matching_or_lru_window(
+                wins,
+                fdata,
+                stm_data,
+                pred,
+                ignore_pred,
+            )
         } else {
             match focused {
                 Some(win) if pred(win) => Ok(format!(
@@ -857,7 +884,7 @@ pub fn switch_to_app_or_urgent_or_lru_window(
     let wins = tree.get_windows(fdata);
     let pred = |w: &t::DisplayNode| w.node.get_app_name() == name;
 
-    focus_urgent_or_matching_or_lru_window(&wins, fdata, stm_data, pred)
+    focus_urgent_or_matching_or_lru_window(&wins, fdata, stm_data, pred, false)
 }
 
 pub fn switch_to_mark_or_urgent_or_lru_window(
@@ -871,7 +898,7 @@ pub fn switch_to_mark_or_urgent_or_lru_window(
     let con_mark = &con_mark.to_owned();
     let pred = |w: &t::DisplayNode| w.node.marks.contains(con_mark);
 
-    focus_urgent_or_matching_or_lru_window(&wins, fdata, stm_data, pred)
+    focus_urgent_or_matching_or_lru_window(&wins, fdata, stm_data, pred, false)
 }
 
 fn switch_to_matching_or_urgent_or_lru_window(
@@ -890,6 +917,7 @@ fn switch_to_matching_or_urgent_or_lru_window(
         fdata,
         switch_to_matching_data,
         pred,
+        false,
     )
 }
 
