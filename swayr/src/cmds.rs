@@ -494,52 +494,36 @@ fn exec_swayr_cmd_1(
         }
         SwayrCommand::MoveFocusedTo => move_focused_to(fdata),
         SwayrCommand::SwapFocusedWith => swap_focused_with(fdata),
-        SwayrCommand::NextWindow { windows } => {
-            focus_window_in_direction(
-                Direction::Forward,
-                windows,
-                fdata,
-                always_true,
-            );
-            // TODO: Return real result!
-            Ok("done".to_owned())
-        }
-        SwayrCommand::PrevWindow { windows } => {
-            focus_window_in_direction(
-                Direction::Backward,
-                windows,
-                fdata,
-                always_true,
-            );
-            // TODO: Return real result!
-            Ok("done".to_owned())
-        }
-        SwayrCommand::NextTiledWindow { windows } => {
-            focus_window_in_direction(
-                Direction::Forward,
-                windows,
-                fdata,
-                |dn: &t::DisplayNode| {
-                    !dn.node.is_floating()
-                        && dn.tree.is_child_of_tiled_container(dn.node.id)
-                },
-            );
-            // TODO: Return real result!
-            Ok("done".to_owned())
-        }
-        SwayrCommand::PrevTiledWindow { windows } => {
-            focus_window_in_direction(
-                Direction::Backward,
-                windows,
-                fdata,
-                |dn: &t::DisplayNode| {
-                    !dn.node.is_floating()
-                        && dn.tree.is_child_of_tiled_container(dn.node.id)
-                },
-            );
-            // TODO: Return real result!
-            Ok("done".to_owned())
-        }
+        SwayrCommand::NextWindow { windows } => focus_window_in_direction(
+            Direction::Forward,
+            windows,
+            fdata,
+            always_true,
+        ),
+        SwayrCommand::PrevWindow { windows } => focus_window_in_direction(
+            Direction::Backward,
+            windows,
+            fdata,
+            always_true,
+        ),
+        SwayrCommand::NextTiledWindow { windows } => focus_window_in_direction(
+            Direction::Forward,
+            windows,
+            fdata,
+            |dn: &t::DisplayNode| {
+                !dn.node.is_floating()
+                    && dn.tree.is_child_of_tiled_container(dn.node.id)
+            },
+        ),
+        SwayrCommand::PrevTiledWindow { windows } => focus_window_in_direction(
+            Direction::Backward,
+            windows,
+            fdata,
+            |dn: &t::DisplayNode| {
+                !dn.node.is_floating()
+                    && dn.tree.is_child_of_tiled_container(dn.node.id)
+            },
+        ),
         SwayrCommand::NextTabbedOrStackedWindow { windows } => {
             focus_window_in_direction(
                 Direction::Forward,
@@ -551,9 +535,7 @@ fn exec_swayr_cmd_1(
                             .tree
                             .is_child_of_tabbed_or_stacked_container(dn.node.id)
                 },
-            );
-            // TODO: Return real result!
-            Ok("done".to_owned())
+            )
         }
         SwayrCommand::PrevTabbedOrStackedWindow { windows } => {
             focus_window_in_direction(
@@ -566,9 +548,7 @@ fn exec_swayr_cmd_1(
                             .tree
                             .is_child_of_tabbed_or_stacked_container(dn.node.id)
                 },
-            );
-            // TODO: Return real result!
-            Ok("done".to_owned())
+            )
         }
         SwayrCommand::NextFloatingWindow { windows } => {
             focus_window_in_direction(
@@ -576,9 +556,7 @@ fn exec_swayr_cmd_1(
                 windows,
                 fdata,
                 |dn: &t::DisplayNode| dn.node.is_floating(),
-            );
-            // TODO: Return real result!
-            Ok("done".to_owned())
+            )
         }
         SwayrCommand::PrevFloatingWindow { windows } => {
             focus_window_in_direction(
@@ -586,45 +564,35 @@ fn exec_swayr_cmd_1(
                 windows,
                 fdata,
                 |dn: &t::DisplayNode| dn.node.is_floating(),
-            );
-            // TODO: Return real result!
-            Ok("done".to_owned())
+            )
         }
         SwayrCommand::NextWindowOfSameLayout { windows } => {
             focus_window_of_same_layout_in_direction(
                 Direction::Forward,
                 windows,
                 fdata,
-            );
-            // TODO: Return real result!
-            Ok("done".to_owned())
+            )
         }
         SwayrCommand::PrevWindowOfSameLayout { windows } => {
             focus_window_of_same_layout_in_direction(
                 Direction::Backward,
                 windows,
                 fdata,
-            );
-            // TODO: Return real result!
-            Ok("done".to_owned())
+            )
         }
         SwayrCommand::NextMatchingWindow { criteria } => {
             focus_matching_window_in_direction(
                 Direction::Forward,
                 criteria,
                 fdata,
-            );
-            // TODO: Return real result!
-            Ok("done".to_owned())
+            )
         }
         SwayrCommand::PrevMatchingWindow { criteria } => {
             focus_matching_window_in_direction(
                 Direction::Backward,
                 criteria,
                 fdata,
-            );
-            // TODO: Return real result!
-            Ok("done".to_owned())
+            )
         }
         SwayrCommand::TileWorkspace { floating } => {
             tile_current_workspace(floating, false);
@@ -650,11 +618,7 @@ fn exec_swayr_cmd_1(
         SwayrCommand::GetWindowsAsJson { include_scratchpad } => {
             get_windows_as_json(fdata, *include_scratchpad)
         }
-        SwayrCommand::ExecuteSwaymsgCommand => {
-            exec_swaymsg_command();
-            // TODO: Return real result!
-            Ok("done".to_owned())
-        }
+        SwayrCommand::ExecuteSwaymsgCommand => exec_swaymsg_command(),
         SwayrCommand::ExecuteSwayrCommand => {
             let mut cmds = vec![
                 SwayrCommand::MoveFocusedToWorkspace,
@@ -1322,12 +1286,12 @@ fn focus_window_in_direction_1(
     dir: Direction,
     fdata: &FocusData,
     pred: impl Fn(&t::DisplayNode) -> bool,
-) {
+) -> Result<String, String> {
     let mut wins: Vec<&t::DisplayNode> =
         wins.iter().filter(|w| pred(w)).collect();
 
     if wins.is_empty() {
-        return;
+        return Err("No matching windows.".to_owned());
     }
 
     wins.sort_by(|a, b| {
@@ -1353,8 +1317,7 @@ fn focus_window_in_direction_1(
         let win = iter.next().unwrap();
         if is_focused_window(win) {
             let win = iter.next().unwrap();
-            focus_window_by_id(win.node.id);
-            return;
+            return focus_window_by_id(win.node.id);
         }
     }
 }
@@ -1363,15 +1326,14 @@ fn focus_matching_window_in_direction(
     dir: Direction,
     criteria: &str,
     fdata: &FocusData,
-) {
+) -> Result<String, String> {
     let root = ipc::get_root_node(false);
     let tree = t::get_tree(&root);
     let wins = tree.get_windows(fdata);
 
-    if let Ok(crits) = criteria::parse_criteria(criteria) {
-        let pred = criteria::criterion_to_predicate(&crits, &wins);
-        focus_window_in_direction_1(&wins, dir, fdata, pred);
-    }
+    let crits = criteria::parse_criteria(criteria)?;
+    let pred = criteria::criterion_to_predicate(&crits, &wins);
+    focus_window_in_direction_1(&wins, dir, fdata, pred)
 }
 
 pub fn focus_window_in_direction(
@@ -1379,7 +1341,7 @@ pub fn focus_window_in_direction(
     consider_wins: &ConsiderWindows,
     fdata: &FocusData,
     pred: impl Fn(&t::DisplayNode) -> bool,
-) {
+) -> Result<String, String> {
     let root = ipc::get_root_node(false);
     let tree = t::get_tree(&root);
     let mut wins = tree.get_windows(fdata);
@@ -1394,21 +1356,21 @@ pub fn focus_window_in_direction(
         });
     }
 
-    focus_window_in_direction_1(&wins, dir, fdata, pred);
+    focus_window_in_direction_1(&wins, dir, fdata, pred)
 }
 
 pub fn focus_window_of_same_layout_in_direction(
     dir: Direction,
     consider_wins: &ConsiderWindows,
     fdata: &FocusData,
-) {
+) -> Result<String, String> {
     let root = ipc::get_root_node(false);
     let tree = t::get_tree(&root);
     let wins = tree.get_windows(fdata);
     let cur_win = wins.iter().find(|w| w.node.focused);
 
-    if let Some(cur_win) = cur_win {
-        focus_window_in_direction(
+    match cur_win {
+        Some(cur_win) => focus_window_in_direction(
             dir,
             consider_wins,
             fdata,
@@ -1435,7 +1397,8 @@ pub fn focus_window_of_same_layout_in_direction(
             } else {
                 always_true
             },
-        )
+        ),
+        None => Err("There's no focused window.".to_owned()),
     }
 }
 
@@ -1627,18 +1590,19 @@ impl DisplayFormat for SwaymsgCmd {
     }
 }
 
-pub fn exec_swaymsg_command() {
+pub fn exec_swaymsg_command() -> Result<String, String> {
     let cmds = get_swaymsg_commands();
     let cmd = util::select_from_menu("Execute swaymsg command", &cmds);
     match cmd {
-        Ok(cmd) => {
-            run_sway_command_1(&cmd.cmd);
-        }
+        Ok(cmd) => run_sway_command_1(&cmd.cmd),
         Err(cmd) if !cmd.is_empty() => {
             let cmd = chop_sway_shortcut(&cmd);
-            run_sway_command_1(cmd);
+            run_sway_command_1(cmd)
         }
-        Err(_) => (),
+        Err(_) => {
+            Err("No command selected nor manually typed command given."
+                .to_owned())
+        }
     }
 }
 
