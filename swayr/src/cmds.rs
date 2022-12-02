@@ -493,11 +493,7 @@ fn exec_swayr_cmd_1(
             move_focused_to_workspace(fdata)
         }
         SwayrCommand::MoveFocusedTo => move_focused_to(fdata),
-        SwayrCommand::SwapFocusedWith => {
-            swap_focused_with(fdata);
-            // TODO: Return real result!
-            Ok("done".to_owned())
-        }
+        SwayrCommand::SwapFocusedWith => swap_focused_with(fdata),
         SwayrCommand::NextWindow { windows } => {
             focus_window_in_direction(
                 Direction::Forward,
@@ -1288,7 +1284,7 @@ pub fn move_focused_to(fdata: &FocusData) -> Result<String, String> {
     )
 }
 
-pub fn swap_focused_with(fdata: &FocusData) {
+pub fn swap_focused_with(fdata: &FocusData) -> Result<String, String> {
     let root = ipc::get_root_node(true);
     let tree = t::get_tree(&root);
     match util::select_from_menu(
@@ -1303,14 +1299,16 @@ pub fn swap_focused_with(fdata: &FocusData) {
                     "with",
                     "con_id",
                     &format!("{}", tn.node.id),
-                ]);
+                ])
             }
-            t => log::error!("Cannot move focused to {:?}", t),
+            t => {
+                let msg =
+                    format!("Cannot swap with container of type {:?}.", t);
+                log::error!("{}", msg);
+                Err(msg)
+            }
         },
-        Err(input) => {
-            let ws_name = chop_workspace_shortcut(&input);
-            move_focused_to_workspace_1(ws_name);
-        }
+        Err(_) => Err("No swap target selected from menu.".to_owned()),
     }
 }
 
