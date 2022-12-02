@@ -819,17 +819,11 @@ where
     // so just add the current window to visited unconditionally.
     stm_data.visited.push(focused_id);
 
-    let skip_urgent = stm_data.skip_urgent;
-    let skip_lru = stm_data.skip_lru;
-    let skip_origin = stm_data.skip_origin;
-
-    let visited = &stm_data.visited;
-
     if let Some(win) = wins.iter().find(|w| {
         w.node.id != focused_id
-            && !skip_urgent
+            && !stm_data.skip_urgent
             && w.node.urgent
-            && !visited.contains(&w.node.id)
+            && !stm_data.visited.contains(&w.node.id)
     }) {
         log::debug!("Switching to by urgency");
         stm_data.visited.push(win.node.id);
@@ -837,25 +831,25 @@ where
             .map(|msg| msg + " (It's a window with urgency hint.)")
     } else if let Some(win) = wins.iter().find(|w| {
         w.node.id != focused_id
-            && (skip_origin || stm_data.origin != Some(w.node.id))
-            && !visited.contains(&w.node.id)
+            && (stm_data.skip_origin || stm_data.origin != Some(w.node.id))
+            && !stm_data.visited.contains(&w.node.id)
             && pred(w)
     }) {
         log::debug!("Switching to by matching predicate");
         stm_data.visited.push(win.node.id);
         focus_window_by_id(win.node.id)
             .map(|msg| msg + " (It's a matching window.)")
-    } else if !skip_lru
+    } else if !stm_data.skip_lru
         && stm_data.lru.is_some()
         && stm_data.lru != Some(focused_id)
-        && !visited.contains(&stm_data.lru.unwrap())
+        && !stm_data.visited.contains(&stm_data.lru.unwrap())
         && wins.iter().any(|w| w.node.id == stm_data.lru.unwrap())
     {
         log::debug!("Switching to LRU");
         let id = stm_data.lru.unwrap();
         stm_data.visited.push(id);
         focus_window_by_id(id).map(|msg| msg + " (It's the LRU window.)")
-    } else if !skip_origin {
+    } else if !stm_data.skip_origin {
         log::debug!("Switching back to origin");
         if let Some(id) = stm_data.origin {
             if id != focused_id && wins.iter().any(|w| w.node.id == id) {
