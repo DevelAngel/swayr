@@ -817,14 +817,12 @@ where
     } else if !stm_data.skip_origin {
         log::debug!("Switching back to origin");
         if let Some(id) = stm_data.origin {
-            if id != focused_id && wins.iter().any(|w| w.node.id == id) {
+            if id == focused_id {
+                log::debug!("Origin is already focused; resetting.");
                 stm_data.reset(false);
-                focus_window_by_id(id)
-                    .map(|msg| msg + " (It's the origin window.)")
-            } else {
-                log::debug!("Origin is already focused or is gone; resetting.");
-                stm_data.reset(false);
-                if !initialized_now {
+                if initialized_now {
+                    Ok("Origin is already focused.".to_owned())
+                } else {
                     focus_urgent_or_matching_or_lru_window(
                         wins,
                         fdata,
@@ -832,8 +830,24 @@ where
                         pred,
                         ignore_pred,
                     )
-                } else {
+                }
+            } else if id != focused_id && wins.iter().any(|w| w.node.id == id) {
+                stm_data.reset(false);
+                focus_window_by_id(id)
+                    .map(|msg| msg + " (It's the origin window.)")
+            } else {
+                log::debug!("Origin is gone; resetting.");
+                stm_data.reset(false);
+                if initialized_now {
                     Err("Nothing to be switched to.".to_owned())
+                } else {
+                    focus_urgent_or_matching_or_lru_window(
+                        wins,
+                        fdata,
+                        stm_data,
+                        pred,
+                        ignore_pred,
+                    )
                 }
             }
         } else {
