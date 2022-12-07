@@ -23,6 +23,7 @@ use serde_json;
 use std::io;
 use std::path::Path;
 use std::process as p;
+use std::process::Stdio;
 use std::sync::mpsc::sync_channel;
 use std::sync::mpsc::Receiver;
 use std::sync::mpsc::SyncSender;
@@ -193,7 +194,12 @@ fn handle_click(
 
 fn execute_command(cmd: &[String]) {
     log::debug!("Executing command: {:?}", cmd);
-    let child = p::Command::new(&cmd[0]).args(&cmd[1..]).spawn();
+    let child = p::Command::new(&cmd[0])
+        .args(&cmd[1..])
+        // We must not write to stdout because swaybar interprets that!
+        // Redirect command output to /dev/null.
+        .stdout(Stdio::null())
+        .spawn();
     match child {
         Ok(_child) => {
             // For now, if we could at least start the process, that's good
