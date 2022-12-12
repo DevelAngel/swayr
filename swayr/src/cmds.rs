@@ -104,6 +104,12 @@ pub enum SwayrCommand {
         #[clap(short = 'l', long, help = "Skip the last recently used window")]
         skip_lru: bool,
         #[clap(
+            short = 'L',
+            long,
+            help = "Skip the last recently used window iff the current doesn't match"
+        )]
+        skip_lru_if_current_doesnt_match: bool,
+        #[clap(
             short = 'o',
             long,
             help = "Don't switch back to the origin window"
@@ -127,6 +133,12 @@ pub enum SwayrCommand {
         #[clap(short = 'l', long, help = "Skip the last recently used window")]
         skip_lru: bool,
         #[clap(
+            short = 'L',
+            long,
+            help = "Skip the last recently used window iff the current doesn't match"
+        )]
+        skip_lru_if_current_doesnt_match: bool,
+        #[clap(
             short = 'o',
             long,
             help = "Don't switch back to the origin window"
@@ -145,6 +157,12 @@ pub enum SwayrCommand {
         skip_urgent: bool,
         #[clap(short = 'l', long, help = "Skip the last recently used window")]
         skip_lru: bool,
+        #[clap(
+            short = 'L',
+            long,
+            help = "Skip the last recently used window iff the current doesn't match"
+        )]
+        skip_lru_if_current_doesnt_match: bool,
         #[clap(
             short = 'o',
             long,
@@ -348,6 +366,7 @@ pub struct SwitchToMatchingData {
     origin: Option<i64>,
     skip_urgent: bool,
     skip_lru: bool,
+    skip_lru_if_current_doesnt_match: bool,
     skip_origin: bool,
 }
 
@@ -359,6 +378,7 @@ impl SwitchToMatchingData {
         if reset_skip_flags {
             self.skip_urgent = false;
             self.skip_lru = false;
+            self.skip_lru_if_current_doesnt_match = false;
             self.skip_origin = false;
         }
     }
@@ -370,6 +390,7 @@ impl SwitchToMatchingData {
             origin: None,
             skip_urgent: false,
             skip_lru: false,
+            skip_lru_if_current_doesnt_match: false,
             skip_origin: false,
         }
     }
@@ -426,10 +447,13 @@ fn exec_swayr_cmd_1(
             name,
             skip_urgent,
             skip_lru,
+            skip_lru_if_current_doesnt_match,
             skip_origin,
         } => {
             switch_to_matching_data.skip_urgent = *skip_urgent;
             switch_to_matching_data.skip_lru = *skip_lru;
+            switch_to_matching_data.skip_lru_if_current_doesnt_match =
+                *skip_lru_if_current_doesnt_match;
             switch_to_matching_data.skip_origin = *skip_origin;
 
             switch_to_app_or_urgent_or_lru_window(
@@ -442,10 +466,13 @@ fn exec_swayr_cmd_1(
             con_mark,
             skip_urgent,
             skip_lru,
+            skip_lru_if_current_doesnt_match,
             skip_origin,
         } => {
             switch_to_matching_data.skip_urgent = *skip_urgent;
             switch_to_matching_data.skip_lru = *skip_lru;
+            switch_to_matching_data.skip_lru_if_current_doesnt_match =
+                *skip_lru_if_current_doesnt_match;
             switch_to_matching_data.skip_origin = *skip_origin;
 
             switch_to_mark_or_urgent_or_lru_window(
@@ -458,10 +485,13 @@ fn exec_swayr_cmd_1(
             criteria,
             skip_urgent,
             skip_lru,
+            skip_lru_if_current_doesnt_match,
             skip_origin,
         } => {
             switch_to_matching_data.skip_urgent = *skip_urgent;
             switch_to_matching_data.skip_lru = *skip_lru;
+            switch_to_matching_data.skip_lru_if_current_doesnt_match =
+                *skip_lru_if_current_doesnt_match;
             switch_to_matching_data.skip_origin = *skip_origin;
 
             switch_to_matching_or_urgent_or_lru_window(
@@ -762,6 +792,14 @@ where
         if let Some(f) = focused {
             // The focused window is the fallback we want to return to.
             stm_data.origin = Some(f.node.id);
+        }
+
+        if !ignore_pred
+            && stm_data.skip_lru_if_current_doesnt_match
+            && (focused.is_none()
+                || focused.is_some() && !pred(focused.unwrap()))
+        {
+            stm_data.skip_lru = true;
         }
 
         stm_data.lru = wins
