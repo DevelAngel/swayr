@@ -254,10 +254,12 @@ pub enum SwayrCommand {
         #[clap(subcommand)]
         windows: ConsiderWindows,
     },
+    /// Focus the next window matching the given criteria query.
     NextMatchingWindow {
         /// The criteria query defining which windows to switch to.
         criteria: String,
     },
+    /// Focus the previous window matching the given criteria query.
     PrevMatchingWindow {
         /// The criteria query defining which windows to switch to.
         criteria: String,
@@ -802,15 +804,17 @@ where
             stm_data.skip_lru = true;
         }
 
-        stm_data.lru = wins
-            .iter()
-            .filter(|w| !w.node.focused)
-            .max_by(|a, b| {
-                fdata
-                    .last_focus_tick(a.node.id)
-                    .cmp(&fdata.last_focus_tick(b.node.id))
-            })
-            .map(|w| w.node.id);
+        if !stm_data.skip_lru {
+            stm_data.lru = wins
+                .iter()
+                .filter(|w| !w.node.focused)
+                .max_by(|a, b| {
+                    fdata
+                        .last_focus_tick(a.node.id)
+                        .cmp(&fdata.last_focus_tick(b.node.id))
+                })
+                .map(|w| w.node.id);
+        }
 
         log::debug!("Initialized SwitchToMatchingData: {:?}", stm_data);
         true
