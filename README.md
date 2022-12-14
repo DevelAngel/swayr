@@ -70,16 +70,23 @@ As said, which windows match is specific to each command:
 * `switch-to-matching-or-urgent-or-lru-window <criteria>` matches windows
   according to the the given [criteria query](#swayr-commands-criteria).  The
   command immediately exits non-zero if there is no matching window at all.
-  
+
+All above commands except for `switch-to-urgent-or-lru-window` also have a flag
+`--skip-lru-if-current-doesnt-match` which is like `--skip-lru` but skips the
+LRU window only if the currently focused window is no matching window (by app
+name, mark, or criteria).
+
 The `switch-to-app-or-urgent-or-lru-window` can be conveniently used to define
 switch-to-or-start commands for your favorite applications, e.g., I have those:
 
 ```sh
 bindsym $mod+e exec \
-        swayr switch-to-app-or-urgent-or-lru-window emacs \
+        swayr switch-to-app-or-urgent-or-lru-window \
+              --skip-lru-if-current-doesnt-match emacs \
         || emacs
 bindsym $mod+b exec \
-        swayr switch-to-app-or-urgent-or-lru-window firefoxdeveloperedition \
+        swayr switch-to-app-or-urgent-or-lru-window \
+              --skip-lru-if-current-doesnt-match firefoxdeveloperedition \
         || firefox-developer-edition
 ```
 
