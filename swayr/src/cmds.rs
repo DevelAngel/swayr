@@ -101,11 +101,17 @@ pub enum SwayrCommand {
 
         #[clap(short = 'u', long, help = "Skip urgent windows")]
         skip_urgent: bool,
-        #[clap(short = 'l', long, help = "Skip the last recently used window")]
+        #[clap(
+            short = 'l',
+            long,
+            conflicts_with("skip_lru_if_current_doesnt_match"),
+            help = "Skip the last recently used window"
+        )]
         skip_lru: bool,
         #[clap(
             short = 'L',
             long,
+            conflicts_with("skip_lru"),
             help = "Skip the last recently used window iff the current doesn't match"
         )]
         skip_lru_if_current_doesnt_match: bool,
@@ -130,11 +136,17 @@ pub enum SwayrCommand {
 
         #[clap(short = 'u', long, help = "Skip urgent windows")]
         skip_urgent: bool,
-        #[clap(short = 'l', long, help = "Skip the last recently used window")]
+        #[clap(
+            short = 'l',
+            long,
+            conflicts_with("skip_lru_if_current_doesnt_match"),
+            help = "Skip the last recently used window"
+        )]
         skip_lru: bool,
         #[clap(
             short = 'L',
             long,
+            conflicts_with("skip_lru"),
             help = "Skip the last recently used window iff the current doesn't match"
         )]
         skip_lru_if_current_doesnt_match: bool,
@@ -155,11 +167,17 @@ pub enum SwayrCommand {
 
         #[clap(short = 'u', long, help = "Skip urgent windows")]
         skip_urgent: bool,
-        #[clap(short = 'l', long, help = "Skip the last recently used window")]
+        #[clap(
+            short = 'l',
+            long,
+            conflicts_with("skip_lru_if_current_doesnt_match"),
+            help = "Skip the last recently used window"
+        )]
         skip_lru: bool,
         #[clap(
             short = 'L',
             long,
+            conflicts_with("skip_lru"),
             help = "Skip the last recently used window iff the current doesn't match"
         )]
         skip_lru_if_current_doesnt_match: bool,
