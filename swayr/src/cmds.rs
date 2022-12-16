@@ -71,22 +71,36 @@ pub enum ConsiderWindows {
 }
 
 #[derive(clap::Parser, PartialEq, Eq, Debug, Clone, Deserialize, Serialize)]
+pub struct SkipFlags {
+    #[clap(short = 'u', long, help = "Skip urgent windows")]
+    skip_urgent: bool,
+    #[clap(
+        short = 'l',
+        long,
+        conflicts_with("skip_lru_if_current_doesnt_match"),
+        help = "Skip the last recently used window"
+    )]
+    skip_lru: bool,
+    #[clap(
+        short = 'L',
+        long,
+        conflicts_with("skip_lru"),
+        help = "Skip the last recently used window iff the current doesn't match"
+    )]
+    skip_lru_if_current_doesnt_match: bool,
+    #[clap(short = 'o', long, help = "Don't switch back to the origin window")]
+    skip_origin: bool,
+}
+
+#[derive(clap::Parser, PartialEq, Eq, Debug, Clone, Deserialize, Serialize)]
 pub enum SwayrCommand {
     /// No-operation. Interrupts any in-progress prev/next sequence but has
     /// no other effect
     Nop,
     /// Switch to next urgent window (if any) or to last recently used window.
     SwitchToUrgentOrLRUWindow {
-        #[clap(short = 'u', long, help = "Skip urgent windows")]
-        skip_urgent: bool,
-        #[clap(short = 'l', long, help = "Skip the last recently used window")]
-        skip_lru: bool,
-        #[clap(
-            short = 'o',
-            long,
-            help = "Don't switch back to the origin window"
-        )]
-        skip_origin: bool,
+        #[clap(flatten)]
+        skip_flags: SkipFlags,
     },
     /// Switch to the given app (given by app_id or window class) if that's not
     /// focused already.  If it is, switch to the next urgent window (if any)
@@ -99,28 +113,8 @@ pub enum SwayrCommand {
         /// literally, i.e., not a regex.
         name: String,
 
-        #[clap(short = 'u', long, help = "Skip urgent windows")]
-        skip_urgent: bool,
-        #[clap(
-            short = 'l',
-            long,
-            conflicts_with("skip_lru_if_current_doesnt_match"),
-            help = "Skip the last recently used window"
-        )]
-        skip_lru: bool,
-        #[clap(
-            short = 'L',
-            long,
-            conflicts_with("skip_lru"),
-            help = "Skip the last recently used window iff the current doesn't match"
-        )]
-        skip_lru_if_current_doesnt_match: bool,
-        #[clap(
-            short = 'o',
-            long,
-            help = "Don't switch back to the origin window"
-        )]
-        skip_origin: bool,
+        #[clap(flatten)]
+        skip_flags: SkipFlags,
     },
     /// Switch to the window with the given mark if that's not focused already.
     /// If it is, switch to the next urgent window (if any) or to last recently
@@ -134,28 +128,8 @@ pub enum SwayrCommand {
         /// The con_mark to switch to.
         con_mark: String,
 
-        #[clap(short = 'u', long, help = "Skip urgent windows")]
-        skip_urgent: bool,
-        #[clap(
-            short = 'l',
-            long,
-            conflicts_with("skip_lru_if_current_doesnt_match"),
-            help = "Skip the last recently used window"
-        )]
-        skip_lru: bool,
-        #[clap(
-            short = 'L',
-            long,
-            conflicts_with("skip_lru"),
-            help = "Skip the last recently used window iff the current doesn't match"
-        )]
-        skip_lru_if_current_doesnt_match: bool,
-        #[clap(
-            short = 'o',
-            long,
-            help = "Don't switch back to the origin window"
-        )]
-        skip_origin: bool,
+        #[clap(flatten)]
+        skip_flags: SkipFlags,
     },
     /// Switch to the (first) window matching the given criteria (see section
     /// `CRITERIA` in `sway(5)`) if it exists and is not already focused.
@@ -165,28 +139,8 @@ pub enum SwayrCommand {
         /// The criteria query defining which windows to switch to.
         criteria: String,
 
-        #[clap(short = 'u', long, help = "Skip urgent windows")]
-        skip_urgent: bool,
-        #[clap(
-            short = 'l',
-            long,
-            conflicts_with("skip_lru_if_current_doesnt_match"),
-            help = "Skip the last recently used window"
-        )]
-        skip_lru: bool,
-        #[clap(
-            short = 'L',
-            long,
-            conflicts_with("skip_lru"),
-            help = "Skip the last recently used window iff the current doesn't match"
-        )]
-        skip_lru_if_current_doesnt_match: bool,
-        #[clap(
-            short = 'o',
-            long,
-            help = "Don't switch back to the origin window"
-        )]
-        skip_origin: bool,
+        #[clap(flatten)]
+        skip_flags: SkipFlags,
     },
     /// Focus the selected window.
     SwitchWindow,
@@ -452,30 +406,12 @@ fn exec_swayr_cmd_1(
 
     match args.cmd {
         SwayrCommand::Nop => Ok("done".to_owned()),
-        SwayrCommand::SwitchToUrgentOrLRUWindow {
-            skip_urgent,
-            skip_lru,
-            skip_origin,
-        } => {
-            switch_to_matching_data.skip_urgent = *skip_urgent;
-            switch_to_matching_data.skip_lru = *skip_lru;
-            switch_to_matching_data.skip_origin = *skip_origin;
-
+        SwayrCommand::SwitchToUrgentOrLRUWindow { skip_flags } => {
+            init_switch_to_matching_data(switch_to_matching_data, skip_flags);
             switch_to_urgent_or_lru_window(switch_to_matching_data, fdata)
         }
-        SwayrCommand::SwitchToAppOrUrgentOrLRUWindow {
-            name,
-            skip_urgent,
-            skip_lru,
-            skip_lru_if_current_doesnt_match,
-            skip_origin,
-        } => {
-            switch_to_matching_data.skip_urgent = *skip_urgent;
-            switch_to_matching_data.skip_lru = *skip_lru;
-            switch_to_matching_data.skip_lru_if_current_doesnt_match =
-                *skip_lru_if_current_doesnt_match;
-            switch_to_matching_data.skip_origin = *skip_origin;
-
+        SwayrCommand::SwitchToAppOrUrgentOrLRUWindow { name, skip_flags } => {
+            init_switch_to_matching_data(switch_to_matching_data, skip_flags);
             switch_to_app_or_urgent_or_lru_window(
                 name,
                 switch_to_matching_data,
@@ -484,17 +420,9 @@ fn exec_swayr_cmd_1(
         }
         SwayrCommand::SwitchToMarkOrUrgentOrLRUWindow {
             con_mark,
-            skip_urgent,
-            skip_lru,
-            skip_lru_if_current_doesnt_match,
-            skip_origin,
+            skip_flags,
         } => {
-            switch_to_matching_data.skip_urgent = *skip_urgent;
-            switch_to_matching_data.skip_lru = *skip_lru;
-            switch_to_matching_data.skip_lru_if_current_doesnt_match =
-                *skip_lru_if_current_doesnt_match;
-            switch_to_matching_data.skip_origin = *skip_origin;
-
+            init_switch_to_matching_data(switch_to_matching_data, skip_flags);
             switch_to_mark_or_urgent_or_lru_window(
                 con_mark,
                 switch_to_matching_data,
@@ -503,17 +431,9 @@ fn exec_swayr_cmd_1(
         }
         SwayrCommand::SwitchToMatchingOrUrgentOrLRUWindow {
             criteria,
-            skip_urgent,
-            skip_lru,
-            skip_lru_if_current_doesnt_match,
-            skip_origin,
+            skip_flags,
         } => {
-            switch_to_matching_data.skip_urgent = *skip_urgent;
-            switch_to_matching_data.skip_lru = *skip_lru;
-            switch_to_matching_data.skip_lru_if_current_doesnt_match =
-                *skip_lru_if_current_doesnt_match;
-            switch_to_matching_data.skip_origin = *skip_origin;
-
+            init_switch_to_matching_data(switch_to_matching_data, skip_flags);
             switch_to_matching_or_urgent_or_lru_window(
                 criteria,
                 switch_to_matching_data,
@@ -674,9 +594,12 @@ fn exec_swayr_cmd_1(
                 SwayrCommand::SwitchOutput,
                 SwayrCommand::SwitchWorkspaceOrWindow,
                 SwayrCommand::SwitchToUrgentOrLRUWindow {
-                    skip_urgent: false,
-                    skip_lru: false,
-                    skip_origin: false,
+                    skip_flags: SkipFlags {
+                        skip_urgent: false,
+                        skip_lru: false,
+                        skip_lru_if_current_doesnt_match: false,
+                        skip_origin: false,
+                    },
                 },
                 SwayrCommand::ConfigureOutputs,
                 SwayrCommand::ExecuteSwaymsgCommand,
@@ -737,6 +660,17 @@ fn exec_swayr_cmd_1(
             }
         }
     }
+}
+
+fn init_switch_to_matching_data(
+    switch_to_matching_data: &mut MutexGuard<SwitchToMatchingData>,
+    skip_flags: &SkipFlags,
+) {
+    switch_to_matching_data.skip_urgent = skip_flags.skip_urgent;
+    switch_to_matching_data.skip_lru = skip_flags.skip_lru;
+    switch_to_matching_data.skip_lru_if_current_doesnt_match =
+        skip_flags.skip_lru_if_current_doesnt_match;
+    switch_to_matching_data.skip_origin = skip_flags.skip_origin;
 }
 
 fn get_windows_as_json(
