@@ -410,7 +410,7 @@ impl DisplayFormat for DisplayNode<'_> {
 
     fn get_indent_level(&self) -> usize {
         match self.indent_level {
-            IndentLevel::Fixed(level) => level as usize,
+            IndentLevel::Fixed(level) => level,
             IndentLevel::WorkspacesZeroWindowsOne => {
                 match self.node.get_type(){
                     ipc::Type::Workspace => 0,
@@ -428,7 +428,7 @@ impl DisplayFormat for DisplayNode<'_> {
                 if offset > depth {
                     0
                 } else {
-                    depth - offset as usize
+                    depth - offset
                 }
             }
         }
