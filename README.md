@@ -779,6 +779,14 @@ The `window` module supports the following placeholders:
 * `{app_name}` is the application name.
 * `{pid}` is the process id.
 
+Note that the `window` module also reacts to title change events of windows
+which are not current and that's a feature!  For examle, consider your Emacs on
+workspace 1 is focused.  Now you click a link in there which causes your
+Firefox on (the invisible) workspace 2 to open a new tab.  This will cause
+`swayrbar` to display the Firefox title so you can see that your click had an
+effect.  After at most 3 seconds, the title of the focused application will be
+displayed again.
+
 By default, it has the following click bindings:
 * `Left` executes `swayr switch-to-urgent-or-lru-window`.
 * `Right` kills the process of the window.
