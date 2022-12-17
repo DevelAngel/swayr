@@ -17,6 +17,7 @@
 
 use std::collections::HashMap;
 use std::sync::Mutex;
+use std::time::{Duration, Instant};
 
 use crate::config;
 use crate::module::{BarModuleFn, RefreshReason};
@@ -37,6 +38,7 @@ struct State {
     app_name: String,
     pid: i32,
     cached_text: String,
+    showing_title_of_non_focused_window_since: Option<Instant>,
 }
 
 pub struct BarModuleWindow {
@@ -48,14 +50,25 @@ fn refresh_state_1(
     state: &mut State,
     fmt_str: &str,
     html_escape: bool,
-    focused_win: Option<&swayipc::Node>,
+    win: Option<&swayipc::Node>,
 ) {
-    match focused_win {
+    match win {
         Some(win) => {
             state.name = win.get_name().to_owned();
             state.app_name = win.get_app_name().to_owned();
             state.pid = win.pid.unwrap_or(UNKNOWN_PID);
             state.cached_text = subst_placeholders(fmt_str, html_escape, state);
+
+            // We sometimes also receive Title events from non-focused windows.
+            // That's actually nice, e.g., when clicking a link in Emacs on
+            // workspace 1, I can see that firefox on workspace 2 reacts.  We
+            // display that "wrong" title for up to 3 seconds, see the build()
+            // method.
+            state.showing_title_of_non_focused_window_since = if !win.focused {
+                Some(Instant::now())
+            } else {
+                None
+            };
         }
         None => {
             state.name.clear();
@@ -90,6 +103,7 @@ pub fn create(config: config::ModuleConfig) -> Box<dyn BarModuleFn> {
             app_name: String::new(),
             pid: INITIAL_PID,
             cached_text: String::new(),
+            showing_title_of_non_focused_window_since: None,
         }),
     })
 }
@@ -155,11 +169,22 @@ impl BarModuleFn for BarModuleWindow {
                     None,
                 )
             }
-            _ if state.pid == INITIAL_PID => refresh_state(
-                &mut state,
-                &self.config.format,
-                self.config.is_html_escape(),
-            ),
+            // Query and show the current window's title initially and...
+            _ if state.pid == INITIAL_PID
+                // ... when we are showing a different window's title we got
+                // informed about due to a window event with Title change.
+                || state
+                    .showing_title_of_non_focused_window_since
+                    .map_or(false, |ts| {
+                        ts.elapsed() > Duration::from_secs(3)
+                    }) =>
+            {
+                refresh_state(
+                    &mut state,
+                    &self.config.format,
+                    self.config.is_html_escape(),
+                )
+            }
             _ => (),
         }
 
