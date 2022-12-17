@@ -154,7 +154,16 @@ fn send_refresh_event(
     sender: &SyncSender<RefreshReason>,
     event: RefreshReason,
 ) {
-    log::debug!("Sending refresh event {:?}", event);
+    log::log!(
+        if matches!(event, RefreshReason::TimerEvent) {
+            log::Level::Trace
+        } else {
+            log::Level::Debug
+        },
+        "Sending refresh event {:?}",
+        event
+    );
+
     if let Err(err) = sender.send(event) {
         log::error!("Error at send: {}", err);
     }
