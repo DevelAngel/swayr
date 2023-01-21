@@ -9,7 +9,7 @@ license = "GPL-3.0+"
 edition = "2021"
 
 [dependencies]
-clap = { version = "4.0", features = ["derive"] }
+clap = { version = "4.1", features = ["derive"] }
 directories = "4.0"
 env_logger = { version = "0.10", default-features = false, features = ["color", "auto-color", "humantime"] }  # without regex
 log = "0.4"
