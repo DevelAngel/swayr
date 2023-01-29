@@ -303,7 +303,7 @@ fn generate_status_1(mods: &[Box<dyn BarModuleFn>], reason: RefreshReason) {
     }
     let json = serde_json::to_string_pretty(&blocks)
         .unwrap_or_else(|_| "".to_string());
-    println!("{},", json);
+    println!("{json},");
 }
 
 fn generate_status(

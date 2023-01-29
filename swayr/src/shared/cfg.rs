@@ -25,7 +25,7 @@ pub fn get_config_file_path(project: &str) -> Box<Path> {
     let proj_dirs = ProjectDirs::from("", "", project).expect("");
     let user_config_dir = proj_dirs.config_dir();
     if !user_config_dir.exists() {
-        let sys_path = format!("/etc/xdg/{}/config.toml", project);
+        let sys_path = format!("/etc/xdg/{project}/config.toml");
         let sys_config_file = Path::new(sys_path.as_str());
         if sys_config_file.exists() {
             return sys_config_file.into();

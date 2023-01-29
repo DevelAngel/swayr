@@ -28,7 +28,7 @@ fn main() -> Result<(), String> {
     let opts: Opts = Opts::parse();
     match swayr::client::send_swayr_cmd(opts.command) {
         Ok(val) => {
-            println!("{}", val);
+            println!("{val}");
             Ok(())
         }
         Err(err) => Err(err),

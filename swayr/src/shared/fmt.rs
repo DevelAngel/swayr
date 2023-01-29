@@ -133,7 +133,7 @@ pub fn rt_format(fmt: &str, arg: FmtArg, clipped_str: &str) -> String {
     let arg_string = arg.to_string();
 
     if let Ok(pf) = ParsedFormat::parse(fmt, &[arg], &NoNamedArguments) {
-        let mut s = format!("{}", pf);
+        let mut s = format!("{pf}");
 
         if !clipped_str.is_empty() && !s.contains(arg_string.as_str()) {
             remove_last_n_chars(&mut s, clipped_str.chars().count());
@@ -141,7 +141,7 @@ pub fn rt_format(fmt: &str, arg: FmtArg, clipped_str: &str) -> String {
         }
         s
     } else {
-        format!("Invalid format string: {}", fmt)
+        format!("Invalid format string: {fmt}")
     }
 }
 

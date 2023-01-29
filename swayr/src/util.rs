@@ -206,8 +206,8 @@ pub trait DisplayFormat {
     fn get_indent_level(&self) -> usize;
 }
 
-pub fn select_from_menu<'a, 'b, TS>(
-    prompt: &'a str,
+pub fn select_from_menu<'b, TS>(
+    prompt: &str,
     choices: &'b [TS],
 ) -> Result<&'b TS, String>
 where

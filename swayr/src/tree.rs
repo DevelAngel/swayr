@@ -65,7 +65,7 @@ impl<'a> Tree<'a> {
     fn get_node_by_id(&self, id: i64) -> &&s::Node {
         self.id_node
             .get(&id)
-            .unwrap_or_else(|| panic!("No node with id {}", id))
+            .unwrap_or_else(|| panic!("No node with id {id}"))
     }
 
     fn get_parent_node(&self, id: i64) -> Option<&&s::Node> {

@@ -40,7 +40,7 @@ pub fn run_sway_command_1(cmd: &str) -> Result<String, String> {
                 log::error!("Could not run sway command: {}", err);
                 Err(err.to_string())
             }
-            _ => Ok(format!("Executed sway command '{}'", cmd)),
+            _ => Ok(format!("Executed sway command '{cmd}'")),
         },
         Err(err) => {
             log::error!("Couldn't create sway ipc connection: {}", err);
@@ -318,7 +318,7 @@ impl DisplayFormat for SwayrCommand {
         // TODO: It would be very nice if the display format was exactly like
         // the swayr invocation in the shell.  Can that somehow be retrieved
         // from clap?
-        format!("{:?}", self)
+        format!("{self:?}")
     }
 
     fn get_indent_level(&self) -> usize {
@@ -685,17 +685,17 @@ fn get_windows_as_json(
 
 fn steal_window_by_id(id: i64) -> Result<String, String> {
     run_sway_command(&[
-        format!("[con_id={}]", id).as_str(),
+        format!("[con_id={id}]").as_str(),
         "move to workspace current",
     ])
 }
 
 fn focus_window_by_id(id: i64) -> Result<String, String> {
-    run_sway_command(&[format!("[con_id={}]", id).as_str(), "focus"])
+    run_sway_command(&[format!("[con_id={id}]").as_str(), "focus"])
 }
 
 fn quit_window_by_id(id: i64) -> Result<String, String> {
-    run_sway_command(&[format!("[con_id={}]", id).as_str(), "kill"])
+    run_sway_command(&[format!("[con_id={id}]").as_str(), "kill"])
 }
 
 pub fn get_outputs() -> Vec<s::Output> {
@@ -873,8 +873,7 @@ where
         } else {
             match focused {
                 Some(win) if pred(win) => Ok(format!(
-                    "The single matching window {} is already focused.",
-                    focused_id
+                    "The single matching window {focused_id} is already focused."
                 )),
                 _ => Err("Nothing to be switched to.".to_owned()),
             }
@@ -996,7 +995,7 @@ fn select_and_focus(
             }
             t => {
                 log::error!("Cannot handle {:?} in select_and_focus", t);
-                Err(format!("Cannot handle node type {:?}.", t))
+                Err(format!("Cannot handle node type {t:?}."))
             }
         },
         Err(non_matching_input) => {
@@ -1020,13 +1019,12 @@ fn select_and_steal(
             }
             t => {
                 log::error!("Cannot handle {:?} in select_and_steal", t);
-                Err(format!("Cannot handle {:?}.", t))
+                Err(format!("Cannot handle {t:?}."))
             }
         },
         Err(non_matching_input) => {
             log::warn!(
-                "Cannot handle non-matching input {:?} in select and steal",
-                non_matching_input
+                "Cannot handle non-matching input {non_matching_input:?} in select and steal"
             );
             Err("Cannot handle non-matching input.".to_owned())
         }
@@ -1113,14 +1111,14 @@ fn kill_process_by_pid(pid: Option<i32>) -> Result<String, String> {
     if let Some(pid) = pid {
         match std::process::Command::new("kill")
             .arg("-9")
-            .arg(format!("{}", pid))
+            .arg(format!("{pid}"))
             .output()
         {
             Err(err) => {
                 log::error!("Error killing process {}: {}", pid, err);
                 Err(err.to_string())
             }
-            _ => Ok(format!("Killed process with pid {}.", pid)),
+            _ => Ok(format!("Killed process with pid {pid}.")),
         }
     } else {
         log::error!("Cannot kill window with no pid.");
@@ -1159,7 +1157,7 @@ fn select_and_quit(
             }
             t => {
                 log::error!("Cannot handle {:?} in select_and_quit", t);
-                Err(format!("Cannot handle container of type {:?}.", t))
+                Err(format!("Cannot handle container of type {t:?}."))
             }
         },
         Err(err) => Err(err),
@@ -1211,7 +1209,7 @@ fn move_focused_to_workspace_1(ws_name: &str) -> Result<String, String> {
 
 fn move_focused_to_container_or_window(id: i64) -> Result<String, String> {
     run_sway_command(&[
-        &format!("[con_id=\"{}\"]", id),
+        &format!("[con_id={id}"),
         "mark",
         "--add",
         "__SWAYR_MOVE_TARGET__",
@@ -1248,7 +1246,7 @@ fn select_and_move_focused_to(
             }
             t => {
                 log::error!("Cannot move focused to {:?}", t);
-                Err(format!("Cannot move focused to node of type {:?}.", t))
+                Err(format!("Cannot move focused to node of type {t:?}."))
             }
         },
         Err(input) => {
@@ -1294,8 +1292,7 @@ pub fn swap_focused_with(fdata: &FocusData) -> Result<String, String> {
                 ])
             }
             t => {
-                let msg =
-                    format!("Cannot swap with container of type {:?}.", t);
+                let msg = format!("Cannot swap with container of type {t:?}.");
                 log::error!("{}", msg);
                 Err(msg)
             }
@@ -1520,7 +1517,7 @@ fn get_swaymsg_commands() -> Vec<SwaymsgCmd> {
     let mut cmds: Vec<String> = vec![];
 
     for b in &["none", "normal", "csd", "pixel"] {
-        cmds.push(format!["border {}", b]);
+        cmds.push(format!["border {b}"]);
     }
 
     cmds.push("exit".to_string());
@@ -1537,27 +1534,27 @@ fn get_swaymsg_commands() -> Vec<SwaymsgCmd> {
     cmds.push("tiling_drag toggle".to_string());
 
     for x in &["focus", "fullscreen", "open", "none", "visible"] {
-        cmds.push(format!["inhibit_idle {}", x])
+        cmds.push(format!["inhibit_idle {x}"])
     }
 
     for l in &["default", "splith", "splitv", "stacking", "tiling"] {
-        cmds.push(format!["layout {}", l])
+        cmds.push(format!["layout {l}"])
     }
 
     for e in &["enable", "disable"] {
-        cmds.push(format!["shortcuts_inhibitor {}", e])
+        cmds.push(format!["shortcuts_inhibitor {e}"])
     }
 
     for x in &["yes", "no", "always"] {
-        cmds.push(format!["focus_follows_mouse {}", x])
+        cmds.push(format!["focus_follows_mouse {x}"])
     }
 
     for x in &["smart", "urgent", "focus", "none"] {
-        cmds.push(format!["focus_on_window_activation {}", x])
+        cmds.push(format!["focus_on_window_activation {x}"])
     }
 
     for x in &["yes", "no", "force", "workspace"] {
-        cmds.push(format!["focus_wrapping {}", x])
+        cmds.push(format!["focus_wrapping {x}"])
     }
 
     for x in &[
@@ -1568,36 +1565,36 @@ fn get_swaymsg_commands() -> Vec<SwaymsgCmd> {
         "smart",
         "smart_no_gaps",
     ] {
-        cmds.push(format!["hide_edge_borders {}", x])
+        cmds.push(format!["hide_edge_borders {x}"])
     }
 
     for x in &["on", "no_gaps", "off"] {
-        cmds.push(format!["smart_borders {}", x])
+        cmds.push(format!["smart_borders {x}"])
     }
 
     for x in &["on", "off"] {
-        cmds.push(format!["smart_gaps {}", x])
+        cmds.push(format!["smart_gaps {x}"])
     }
 
     for x in &["output", "container", "none"] {
-        cmds.push(format!["mouse_warping {}", x])
+        cmds.push(format!["mouse_warping {x}"])
     }
 
     for x in &["smart", "ignore", "leave_fullscreen"] {
-        cmds.push(format!["popup_during_fullscreen {}", x])
+        cmds.push(format!["popup_during_fullscreen {x}"])
     }
 
     for x in &["yes", "no"] {
-        cmds.push(format!["show_marks {}", x]);
-        cmds.push(format!["workspace_auto_back_and_forth {}", x]);
+        cmds.push(format!["show_marks {x}"]);
+        cmds.push(format!["workspace_auto_back_and_forth {x}"]);
     }
 
     for x in &["left", "center", "right"] {
-        cmds.push(format!["title_align {}", x]);
+        cmds.push(format!["title_align {x}"]);
     }
 
     for x in &["enable", "disable", "allow", "deny"] {
-        cmds.push(format!["urgent {}", x])
+        cmds.push(format!["urgent {x}"])
     }
 
     cmds.sort();
