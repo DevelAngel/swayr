@@ -104,7 +104,7 @@ fn desktop_entries() -> Vec<Box<p::Path>> {
 fn find_icon(icon_name: &str, icon_dirs: &[String]) -> Option<p::PathBuf> {
     let p = p::Path::new(icon_name);
     if p.is_file() {
-        log::debug!("(1) Icon name '{}' -> {}", icon_name, p.display());
+        log::debug!("(1) Icon name '{icon_name}' -> {}", p.display());
         return Some(p.to_path_buf());
     }
 
@@ -124,7 +124,7 @@ fn find_icon(icon_name: &str, icon_dirs: &[String]) -> Option<p::PathBuf> {
         }
     }
 
-    log::debug!("(3) No icon for name {}", icon_name);
+    log::debug!("(3) No icon for name {icon_name}");
     None
 }
 
@@ -251,7 +251,7 @@ where
             .as_mut()
             .expect("Failed to open the menu program's stdin");
         let input = strs.join("\n");
-        //log::debug!("Menu program {} input:\n{}", menu_exec, input);
+        //log::debug!("Menu program {menu_exec} input:\n{input}");
         stdin
             .write_all(input.as_bytes())
             .expect("Failed to write to the menu program's stdin");

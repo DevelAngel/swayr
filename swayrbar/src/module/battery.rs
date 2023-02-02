@@ -91,7 +91,7 @@ fn refresh_state(state: &mut State, fmt_str: &str, html_escape: bool) {
             state.cached_text = subst_placeholders(fmt_str, html_escape, state);
         }
         Err(err) => {
-            log::error!("Could not update battery state: {}", err);
+            log::error!("Could not update battery state: {err}");
         }
     }
 }

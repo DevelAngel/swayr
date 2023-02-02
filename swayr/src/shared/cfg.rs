@@ -116,7 +116,7 @@ where
     match toml::from_str::<T>(&buf) {
         Ok(cfg) => cfg,
         Err(err) => {
-            log::error!("Invalid config: {}", err);
+            log::error!("Invalid config: {err}");
             log::error!("Using default configuration.");
             T::default()
         }

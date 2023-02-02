@@ -33,17 +33,17 @@ use std::sync::MutexGuard;
 use swayipc as s;
 
 pub fn run_sway_command_1(cmd: &str) -> Result<String, String> {
-    log::debug!("Running sway command: {}", cmd);
+    log::debug!("Running sway command: {cmd}");
     match s::Connection::new() {
         Ok(mut con) => match con.run_command(cmd) {
             Err(err) => {
-                log::error!("Could not run sway command: {}", err);
+                log::error!("Could not run sway command: {err}");
                 Err(err.to_string())
             }
             _ => Ok(format!("Executed sway command '{cmd}'")),
         },
         Err(err) => {
-            log::error!("Couldn't create sway ipc connection: {}", err);
+            log::error!("Couldn't create sway ipc connection: {err}");
             Err(err.to_string())
         }
     }
@@ -768,7 +768,7 @@ where
                 .map(|w| w.node.id);
         }
 
-        log::debug!("Initialized SwitchToMatchingData: {:?}", stm_data);
+        log::debug!("Initialized SwitchToMatchingData: {stm_data:?}");
         true
     } else {
         false
@@ -994,7 +994,7 @@ fn select_and_focus(
                 focus_window_by_id(tn.node.id)
             }
             t => {
-                log::error!("Cannot handle {:?} in select_and_focus", t);
+                log::error!("Cannot handle {t:?} in select_and_focus");
                 Err(format!("Cannot handle node type {t:?}."))
             }
         },
@@ -1018,7 +1018,7 @@ fn select_and_steal(
                 Err("Can't steal whole workspace".to_owned())
             }
             t => {
-                log::error!("Cannot handle {:?} in select_and_steal", t);
+                log::error!("Cannot handle {t:?} in select_and_steal");
                 Err(format!("Cannot handle {t:?}."))
             }
         },
@@ -1115,7 +1115,7 @@ fn kill_process_by_pid(pid: Option<i32>) -> Result<String, String> {
             .output()
         {
             Err(err) => {
-                log::error!("Error killing process {}: {}", pid, err);
+                log::error!("Error killing process {pid}: {err}");
                 Err(err.to_string())
             }
             _ => Ok(format!("Killed process with pid {pid}.")),
@@ -1156,7 +1156,7 @@ fn select_and_quit(
                 }
             }
             t => {
-                log::error!("Cannot handle {:?} in select_and_quit", t);
+                log::error!("Cannot handle {t:?} in select_and_quit");
                 Err(format!("Cannot handle container of type {t:?}."))
             }
         },
@@ -1245,7 +1245,7 @@ fn select_and_move_focused_to(
                 move_focused_to_container_or_window(tn.node.id)
             }
             t => {
-                log::error!("Cannot move focused to {:?}", t);
+                log::error!("Cannot move focused to {t:?}");
                 Err(format!("Cannot move focused to node of type {t:?}."))
             }
         },
@@ -1293,7 +1293,7 @@ pub fn swap_focused_with(fdata: &FocusData) -> Result<String, String> {
             }
             t => {
                 let msg = format!("Cannot swap with container of type {t:?}.");
-                log::error!("{}", msg);
+                log::error!("{msg}");
                 Err(msg)
             }
         },

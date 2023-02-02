@@ -64,7 +64,7 @@ fn regex_from_str(s: &str) -> Regex {
     match Regex::new(s) {
         Ok(rx) => rx,
         Err(err) => {
-            log::error!("Invalid regex {:?}: {}", s, err);
+            log::error!("Invalid regex {s:?}: {err}");
             Regex::new("^__I_WONT_MATCH_A_💩__$").unwrap()
         }
     }

@@ -100,7 +100,7 @@ fn create_modules(config: config::Config) -> Vec<Box<dyn BarModuleFn>> {
             "nmcli" => module::wifi::create(module::wifi::WifiTool::Nmcli, mc),
             "iwctl" => module::wifi::create(module::wifi::WifiTool::Iwctl, mc),
             unknown => {
-                log::warn!("Unknown module name '{}'.  Ignoring...", unknown);
+                log::warn!("Unknown module name '{unknown}'.  Ignoring...");
                 continue;
             }
         };
@@ -119,7 +119,7 @@ fn handle_input(
         .expect("Could not read from stdin");
 
     if "[\n" != sb {
-        log::error!("Expected [\\n but got {}", sb);
+        log::error!("Expected [\\n but got {sb}");
         log::error!("Sorry, input events won't work is this session.");
         return;
     }
@@ -127,7 +127,7 @@ fn handle_input(
     loop {
         let mut buf = String::new();
         if let Err(err) = io::stdin().read_line(&mut buf) {
-            log::error!("Error while reading from stdin: {}", err);
+            log::error!("Error while reading from stdin: {err}");
             log::error!("Skipping this input line...");
             continue;
         }
@@ -137,13 +137,13 @@ fn handle_input(
         ) {
             Ok(click) => click,
             Err(err) => {
-                log::error!("Error while parsing str to Click: {}", err);
-                log::error!("The string was '{}'.", buf);
+                log::error!("Error while parsing str to Click: {err}");
+                log::error!("The string was '{buf}'.");
                 log::error!("Skipping this input line...");
                 continue;
             }
         };
-        log::debug!("Received click: {:?}", click);
+        log::debug!("Received click: {click:?}");
         if let Some(event) = handle_click(click, mods.clone()) {
             send_refresh_event(&sender, event);
         }
@@ -160,12 +160,11 @@ fn send_refresh_event(
         } else {
             log::Level::Debug
         },
-        "Sending refresh event {:?}",
-        event
+        "Sending refresh event {event:?}"
     );
 
     if let Err(err) = sender.send(event) {
-        log::error!("Error at send: {}", err);
+        log::error!("Error at send: {err}");
     }
 }
 
@@ -202,7 +201,7 @@ fn handle_click(
 }
 
 fn execute_command(cmd: &[String]) {
-    log::debug!("Executing command: {:?}", cmd);
+    log::debug!("Executing command: {cmd:?}");
     let child = p::Command::new(&cmd[0])
         .args(&cmd[1..])
         // We must not write to stdout because swaybar interprets that!
@@ -217,8 +216,7 @@ fn execute_command(cmd: &[String]) {
             // log output.  But that's not implemented yet.
         }
         Err(err) => {
-            log::error!("Error running shell command '{}':", cmd.join(" "));
-            log::error!("{}", err);
+            log::error!("Error running shell command '{}': {err}", cmd.join(" "));
         }
     }
 }
@@ -245,7 +243,7 @@ fn handle_sway_events(sender: SyncSender<RefreshReason>) {
 
         match sway_subscribe() {
             Err(err) => {
-                log::warn!("Could not connect and subscribe: {}", err);
+                log::warn!("Could not connect and subscribe: {err}");
                 std::thread::sleep(std::time::Duration::from_secs(3));
             }
             Ok(iter) => {
@@ -255,8 +253,7 @@ fn handle_sway_events(sender: SyncSender<RefreshReason>) {
                         Ok(ev) => match ev {
                             si::Event::Window(ev) => {
                                 log::debug!(
-                                    "Window or Workspace event: {:?}",
-                                    ev
+                                    "Window or Workspace event: {ev:?}"
                                 );
                                 send_refresh_event(
                                     &sender,
@@ -265,8 +262,7 @@ fn handle_sway_events(sender: SyncSender<RefreshReason>) {
                             }
                             si::Event::Workspace(ev) => {
                                 log::debug!(
-                                    "Window or Workspace event: {:?}",
-                                    ev
+                                    "Window or Workspace event: {ev:?}"
                                 );
                                 send_refresh_event(
                                     &sender,
@@ -283,7 +279,7 @@ fn handle_sway_events(sender: SyncSender<RefreshReason>) {
                             _ => (),
                         },
                         Err(e) => {
-                            log::warn!("Error while receiving events: {}", e);
+                            log::warn!("Error while receiving events: {e}");
                             std::thread::sleep(std::time::Duration::from_secs(
                                 3,
                             ));

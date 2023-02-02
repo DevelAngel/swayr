@@ -85,7 +85,7 @@ pub fn monitor_sway_events(fdata: FocusData) {
         log::debug!("Connecting to sway for subscribing to events...");
         match connect_and_subscribe() {
             Err(err) => {
-                log::warn!("Could not connect and subscribe: {}", err);
+                log::warn!("Could not connect and subscribe: {err}");
                 std::thread::sleep(std::time::Duration::from_secs(3));
             }
             Ok(iter) => {
@@ -120,7 +120,7 @@ pub fn monitor_sway_events(fdata: FocusData) {
                             _ => show_extra_props_state = false,
                         },
                         Err(e) => {
-                            log::warn!("Error while receiving events: {}", e);
+                            log::warn!("Error while receiving events: {e}");
                             std::thread::sleep(std::time::Duration::from_secs(
                                 3,
                             ));
@@ -249,7 +249,7 @@ pub fn serve_client_requests(
                                     focus_data: &fdata,
                                 })
                             {
-                                log::error!("Error in auto-nop: {}", err);
+                                log::error!("Error in auto-nop: {err}");
                             }
                             inhibit = true;
                         }
@@ -262,7 +262,7 @@ pub fn serve_client_requests(
     }
 
     let sock = util::get_swayr_socket_path();
-    log::debug!("swayrd starts listening on {}.", sock);
+    log::debug!("swayrd starts listening on {sock}.");
     match UnixListener::bind(sock) {
         Ok(listener) => {
             for stream in listener.incoming() {
@@ -276,14 +276,14 @@ pub fn serve_client_requests(
                         }
                     }
                     Err(err) => {
-                        log::error!("Error handling client request: {}", err);
+                        log::error!("Error handling client request: {err}");
                         break;
                     }
                 }
             }
         }
         Err(err) => {
-            log::error!("Could not bind socket: {}", err)
+            log::error!("Could not bind socket: {err}")
         }
     }
 }
@@ -293,22 +293,22 @@ fn handle_client_request(stream: UnixStream, fdata: &FocusData) {
         Ok(cmd) => {
             log::debug!("Received command: {:?}", cmd);
             if let Err(err) = stream.shutdown(std::net::Shutdown::Read) {
-                log::error!("Could not shutdown stream for read: {}", err)
+                log::error!("Could not shutdown stream for read: {err}")
             }
             let result = cmds::exec_swayr_cmd(cmds::ExecSwayrCmdArgs {
                 cmd: &cmd,
                 focus_data: fdata,
             });
-            log::debug!("Executed command, returning result {:?}", result);
+            log::debug!("Executed command, returning result {result:?}");
             if let Err(err) = serde_json::to_writer(&stream, &result) {
-                log::error!("Couldn't send result back to client: {}", err);
+                log::error!("Couldn't send result back to client: {err}");
             }
             if let Err(err) = stream.shutdown(std::net::Shutdown::Write) {
-                log::error!("Could not shutdown stream for read: {}", err)
+                log::error!("Could not shutdown stream for read: {err}");
             }
         }
         Err(err) => {
-            log::error!("Could not read command from client: {}", err);
+            log::error!("Could not read command from client: {err}");
         }
     }
 }

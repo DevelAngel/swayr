@@ -40,7 +40,7 @@ fn run_pactl(args: &[&str]) -> String {
     match Command::new("pactl").args(args).output() {
         Ok(output) => String::from_utf8_lossy(&output.stdout).to_string(),
         Err(err) => {
-            log::error!("Could not run pactl: {}", err);
+            log::error!("Could not run pactl: {err}");
             String::new()
         }
     }
