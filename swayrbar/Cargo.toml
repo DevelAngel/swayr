@@ -11,7 +11,8 @@ license = "GPL-3.0+"
 [dependencies]
 clap = { version = "4.1", features = ["derive"] }
 battery = "0.7"
-chrono = "0.4"
+# chrono without oldtime & wasmbind.  oldtime pulls in an old time crate with security vulnerability.
+chrono = {version = "0.4", default-features = false, features = ["clock", "std"] }
 directories = "4.0"
 env_logger = { version = "0.10", default-features = false, features = ["color", "auto-color", "humantime"] }  # without regex
 log = "0.4"
