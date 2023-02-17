@@ -216,7 +216,10 @@ fn execute_command(cmd: &[String]) {
             // log output.  But that's not implemented yet.
         }
         Err(err) => {
-            log::error!("Error running shell command '{}': {err}", cmd.join(" "));
+            log::error!(
+                "Error running shell command '{}': {err}",
+                cmd.join(" ")
+            );
         }
     }
 }

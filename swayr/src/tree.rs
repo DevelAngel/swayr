@@ -284,15 +284,21 @@ impl<'a> Tree<'a> {
 
 fn get_icon(node: &s::Node) -> Option<std::path::PathBuf> {
     if node.get_type() == ipc::Type::Window {
-        let app_name_no_version =
-            APP_NAME_AND_VERSION_RX.replace(node.get_app_name(), "$1");
-        let icon = APP_ID_TO_ICON_MAP
-            .get(node.get_app_name())
-            .or_else(|| APP_ID_TO_ICON_MAP.get(app_name_no_version.as_ref()))
-            .or_else(|| {
-                APP_ID_TO_ICON_MAP.get(&app_name_no_version.to_lowercase())
-            });
-        icon.map(|i| i.to_owned())
+        let icon = APP_ID_TO_ICON_MAP.get(node.get_app_name()).or_else(|| {
+            let app_name_no_version =
+                APP_NAME_AND_VERSION_RX.replace(node.get_app_name(), "$1");
+            APP_ID_TO_ICON_MAP
+                .get(app_name_no_version.as_ref())
+                .or_else(|| {
+                    APP_ID_TO_ICON_MAP.get(&app_name_no_version.to_lowercase())
+                })
+        });
+        if let Some(i) = icon {
+            Some(i.to_owned())
+        } else {
+            log::warn!("No icon for app {}", node.get_app_name());
+            None
+        }
     } else {
         None
     }

@@ -121,10 +121,38 @@ fn find_icon(icon_name: &str, icon_dirs: &[String]) -> Option<p::PathBuf> {
                 );
                 return Some(icon_file.to_path_buf());
             }
+
+            // Apparently, some apps declare things like
+            // Icon=multimedia-volume-control but the icon is actually named
+            // multimedia-volume-control-symbolic.png or
+            // multimedia-volume-control-symbolic.symbolic.png.
+            pb.clear();
+            pb.push(icon_name.to_owned() + "-symbolic.symbolic." + ext);
+            let icon_file = pb.as_path();
+            if icon_file.is_file() {
+                log::debug!(
+                    "(3) Icon name '{}' -> {}",
+                    icon_name,
+                    icon_file.display()
+                );
+                return Some(icon_file.to_path_buf());
+            }
+
+            pb.clear();
+            pb.push(icon_name.to_owned() + "-symbolic." + ext);
+            let icon_file = pb.as_path();
+            if icon_file.is_file() {
+                log::debug!(
+                    "(4) Icon name '{}' -> {}",
+                    icon_name,
+                    icon_file.display()
+                );
+                return Some(icon_file.to_path_buf());
+            }
         }
     }
 
-    log::debug!("(3) No icon for name {icon_name}");
+    log::warn!("(5) No icon for name {icon_name}");
     None
 }
 
@@ -151,18 +179,20 @@ pub fn get_app_id_to_icon_map(
                 }
                 if let Ok(line) = line {
                     if let Some(cap) = WM_CLASS_OR_ICON_RX.captures(&line) {
-                        if "StartupWMClass" == cap.get(1).unwrap().as_str() {
-                            wm_class.replace(
-                                cap.get(2).unwrap().as_str().to_string(),
-                            );
+                        let key = cap.get(1).unwrap().as_str();
+                        let value = cap.get(2).unwrap().as_str();
+                        if "StartupWMClass" == key {
+                            wm_class.replace(value.to_string());
                         } else if let Some(icon_file) =
-                            find_icon(cap.get(2).unwrap().as_str(), icon_dirs)
+                            find_icon(value, icon_dirs)
                         {
                             icon.replace(icon_file);
                         }
                     }
                 }
             }
+
+            log::debug!("ICON: {e:?} -> {icon:?}");
 
             if let Some(icon) = icon {
                 // Sometimes the StartupWMClass is the app_id, e.g. FF Dev
