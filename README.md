@@ -372,7 +372,8 @@ first invocation for use with the [wofi](https://todo.sr.ht/~scoopta/wofi)
 menu program.
 
 It should be easy to adapt that default config for usage with other menu
-programs such as [dmenu](https://tools.suckless.org/dmenu/),
+programs such as [fuzzel](https://codeberg.org/dnkl/fuzzel),
+[dmenu](https://tools.suckless.org/dmenu/),
 [bemenu](https://github.com/Cloudef/bemenu),
 [rofi](https://github.com/davatorium/rofi), a script spawning a terminal with
 [fzf](https://github.com/junegunn/fzf), or whatever.  The only requirement is
