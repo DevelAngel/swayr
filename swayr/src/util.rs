@@ -101,53 +101,52 @@ fn desktop_entries() -> Vec<Box<p::Path>> {
     entries
 }
 
+fn check_icon(dir: &str, icon_name: String, test_no: u8) -> Option<p::PathBuf> {
+    let mut pb = p::PathBuf::from(dir);
+    pb.push(&icon_name);
+    let icon_file = pb.as_path();
+    if icon_file.is_file() {
+        log::debug!(
+            "({test_no}) Icon name '{icon_name}' -> {}",
+            icon_file.display()
+        );
+        Some(pb)
+    } else {
+        None
+    }
+}
+
 fn find_icon(icon_name: &str, icon_dirs: &[String]) -> Option<p::PathBuf> {
     let p = p::Path::new(icon_name);
-    if p.is_file() {
+    if p.is_absolute() && p.is_file() {
         log::debug!("(1) Icon name '{icon_name}' -> {}", p.display());
         return Some(p.to_path_buf());
     }
 
     for dir in icon_dirs {
-        for ext in &["png", "svg"] {
-            let mut pb = p::PathBuf::from(dir);
-            pb.push(icon_name.to_owned() + "." + ext);
-            let icon_file = pb.as_path();
-            if icon_file.is_file() {
-                log::debug!(
-                    "(2) Icon name '{}' -> {}",
-                    icon_name,
-                    icon_file.display()
-                );
-                return Some(icon_file.to_path_buf());
+        for ext in &["svg", "png"] {
+            if let f @ Some(_) =
+                check_icon(dir, icon_name.to_owned() + "." + ext, 2)
+            {
+                return f;
             }
 
             // Apparently, some apps declare things like
             // Icon=multimedia-volume-control but the icon is actually named
             // multimedia-volume-control-symbolic.png or
             // multimedia-volume-control-symbolic.symbolic.png.
-            pb.clear();
-            pb.push(icon_name.to_owned() + "-symbolic.symbolic." + ext);
-            let icon_file = pb.as_path();
-            if icon_file.is_file() {
-                log::debug!(
-                    "(3) Icon name '{}' -> {}",
-                    icon_name,
-                    icon_file.display()
-                );
-                return Some(icon_file.to_path_buf());
+            if let f @ Some(_) =
+                check_icon(dir, icon_name.to_owned() + "-symbolic." + ext, 3)
+            {
+                return f;
             }
 
-            pb.clear();
-            pb.push(icon_name.to_owned() + "-symbolic." + ext);
-            let icon_file = pb.as_path();
-            if icon_file.is_file() {
-                log::debug!(
-                    "(4) Icon name '{}' -> {}",
-                    icon_name,
-                    icon_file.display()
-                );
-                return Some(icon_file.to_path_buf());
+            if let f @ Some(_) = check_icon(
+                dir,
+                icon_name.to_owned() + "-symbolic.symbolic." + ext,
+                4,
+            ) {
+                return f;
             }
         }
     }
@@ -191,8 +190,6 @@ pub fn get_app_id_to_icon_map(
                     }
                 }
             }
-
-            log::debug!("ICON: {e:?} -> {icon:?}");
 
             if let Some(icon) = icon {
                 // Sometimes the StartupWMClass is the app_id, e.g. FF Dev
