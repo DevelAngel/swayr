@@ -823,7 +823,7 @@ dependencies = [
 
 [[package]]
 name = "swayr"
-version = "0.24.0"
+version = "0.24.1"
 dependencies = [
  "clap",
  "directories",
