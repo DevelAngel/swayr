@@ -1,3 +1,8 @@
+swayr v0.25.0
+=============
+
+- New criteria `true` and `false`.
+
 swayr v0.24.0
 =============
 

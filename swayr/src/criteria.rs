@@ -43,6 +43,7 @@ pub enum Criterion {
     And(Vec<Criterion>),
     Or(Vec<Criterion>),
     Not(Box<Criterion>),
+    BoolLiteral(bool),
     AppId(RegexOrFocused),
     Class(RegexOrFocused),
     Instance(RegexOrFocused),
@@ -81,67 +82,73 @@ peg::parser! {
             "\"" s:[^'"']* "\"" { s.into_iter().collect() }
 
         rule regex_or_focused() -> RegexOrFocused =
-            "__focused__" {RegexOrFocused::Focused}
-        / s:string_literal() {RegexOrFocused::Regex(regex_from_str(&s))}
+            "__focused__" { RegexOrFocused::Focused }
+          / s:string_literal() { RegexOrFocused::Regex(regex_from_str(&s)) }
 
-        rule i64_focused() -> I64OrFocused = "__focused__" {I64OrFocused::Focused}
+        rule i64_focused() -> I64OrFocused =
+            "__focused__" { I64OrFocused::Focused }
         rule i64_or_focused() -> I64OrFocused =
-            i64_focused() / n:i64_literal() {I64OrFocused::I64(n)}
+            i64_focused() / n:i64_literal() { I64OrFocused::I64(n) }
 
-        rule tiling() -> Criterion = "tiling" {Criterion::Tiling}
-        rule floating() -> Criterion = "floating" {Criterion::Floating}
+        rule tiling() -> Criterion = "tiling" { Criterion::Tiling }
+        rule floating() -> Criterion = "floating" { Criterion::Floating }
         rule app_id() -> Criterion = "app_id" space() "=" space()
-            rof:regex_or_focused() {Criterion::AppId(rof)}
+            rof:regex_or_focused() { Criterion::AppId(rof) }
         rule app_name() -> Criterion = "app_name" space() "=" space()
-            rof:regex_or_focused() {Criterion::AppName(rof)}
+            rof:regex_or_focused() { Criterion::AppName(rof) }
         rule class() -> Criterion = "class" space() "=" space()
-            rof:regex_or_focused() {Criterion::Class(rof)}
+            rof:regex_or_focused() { Criterion::Class(rof) }
         rule instance() -> Criterion = "instance" space() "=" space()
-            rof:regex_or_focused() {Criterion::Instance(rof)}
+            rof:regex_or_focused() { Criterion::Instance(rof) }
         rule title() -> Criterion = "title" space() "=" space()
-            rof:regex_or_focused() {Criterion::Title(rof)}
+            rof:regex_or_focused() { Criterion::Title(rof) }
         rule con_mark() -> Criterion = "con_mark" space() "=" space()
-            s:string_literal() {Criterion::ConMark(regex_from_str(&s))}
+            s:string_literal() { Criterion::ConMark(regex_from_str(&s)) }
         rule con_id() -> Criterion = "con_id" space() "=" space()
-            i:i64_or_focused() {Criterion::ConId(i)}
+            i:i64_or_focused() { Criterion::ConId(i) }
         rule pid() -> Criterion = "pid" space() "=" space()
-            n:i32_literal() {Criterion::Pid(n)}
+            n:i32_literal() { Criterion::Pid(n) }
         rule workspace() -> Criterion = "workspace" space() "=" space()
-            rof:regex_or_focused() {Criterion::Workspace(rof)}
+            rof:regex_or_focused() { Criterion::Workspace(rof) }
         rule shell_type_or_focused() -> ShellTypeOrFocused =
             "\"xdg_shell\"" {ShellTypeOrFocused::ShellType(s::ShellType::XdgShell)}
-        / "\"xwayland\"" {ShellTypeOrFocused::ShellType(s::ShellType::Xwayland)}
-        / "__focused__" {ShellTypeOrFocused::Focused}
+          / "\"xwayland\""  {ShellTypeOrFocused::ShellType(s::ShellType::Xwayland)}
+          / "__focused__"   {ShellTypeOrFocused::Focused}
         rule shell() -> Criterion = "shell" space() "=" space()
-            stof:shell_type_or_focused() {Criterion::Shell(stof)}
+            stof:shell_type_or_focused() { Criterion::Shell(stof) }
 
         rule and() -> Criterion =
             "[" space() ("AND" / "and" / "&&")? space()
                 l:(criterion() ** space())
                 space() "]" space()
-        { Criterion::And(l) }
+            { Criterion::And(l) }
 
         rule or() -> Criterion =
             "[" space() ("OR" / "or" / "||") space()
                 l:(criterion() ** space())
                 space() "]" space()
-        { Criterion::Or(l) }
+            { Criterion::Or(l) }
 
         rule not() -> Criterion =
             ("NOT" / "not" / "!") space() c:criterion() space()
-        { Criterion::Not(Box::new(c)) }
+            { Criterion::Not(Box::new(c)) }
+
+        rule bool_literal() -> Criterion =
+            ("TRUE" / "true") { Criterion::BoolLiteral(true) }
+          / ("FALSE" / "false") { Criterion::BoolLiteral(false) }
 
         rule criterion() -> Criterion =
             and() / or() / not()
-            / tiling() / floating()
-            / app_id() / class() / instance() / app_name() / title() / shell()
-            / workspace()
-            / con_mark()
-            / con_id()
-            / pid()
+          / bool_literal()
+          / tiling() / floating()
+          / app_id() / class() / instance() / app_name() / title() / shell()
+          / workspace()
+          / con_mark()
+          / con_id()
+          / pid()
 
         pub rule parse() -> Criterion =
-            space() c:criterion()
+            space() c:criterion() space()
         { c }
   }
 }
@@ -174,6 +181,7 @@ fn eval_criterion<'a>(
             criteria.iter().any(|crit| eval_criterion(crit, w, focused))
         }
         Criterion::Not(crit) => !eval_criterion(crit, w, focused),
+        Criterion::BoolLiteral(val) => *val,
         Criterion::AppId(val) => match val {
             RegexOrFocused::Regex(rx) => {
                 is_some_and_rx_matches(w.node.app_id.as_ref(), rx)
@@ -306,7 +314,7 @@ pub fn criterion_to_predicate<'a>(
 #[test]
 fn test_criteria_parser() {
     match criteria_parser::parse(
-        "[tiling floating app_id=__focused__ app_id=\"foot\" class=\"emacs\" instance = \"the.instance\" title=\"something with :;&$\" con_mark=\"^.*foo$\"\tapp_name=\"Hugo\" con_id = __focused__ con_id=17 pid=23223 shell=\"xdg_shell\" shell=\"xwayland\" shell=__focused__ workspace=\"test\" workspace=__focused__]",
+        "[tiling floating app_id=__focused__ app_id=\"foot\" class=\"emacs\" instance = \"the.instance\" title=\"something with :;&$\" con_mark=\"^.*foo$\"\tapp_name=\"Hugo\" con_id = __focused__ con_id=17 pid=23223 shell=\"xdg_shell\" shell=\"xwayland\" shell=__focused__ workspace=\"test\" workspace=__focused__ true false TRUE FALSE]",
     ) {
         Ok(c) => assert!(matches!(c, Criterion::And(..))),
         Err(err) => {

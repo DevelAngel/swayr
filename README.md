@@ -265,6 +265,9 @@ Obviously, criteria may be nested, so this is a valid one:
     [&& !app_id="firefox" floating workspace=__focused__]]
 ```
 
+There are also the boolean literals `true` and `false` available which may also
+be written in all-caps.
+
 
 ### <a id="swayr-screenshots">Screenshots</a>
 
