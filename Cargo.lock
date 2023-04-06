@@ -854,7 +854,7 @@ dependencies = [
 
 [[package]]
 name = "swayr"
-version = "0.24.1"
+version = "0.25.0"
 dependencies = [
  "clap",
  "directories",
