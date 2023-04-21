@@ -318,7 +318,7 @@ fn test_criteria_parser() {
     ) {
         Ok(c) => assert!(matches!(c, Criterion::And(..))),
         Err(err) => {
-            assert!(false, "Could not parse: {}", err);
+            unreachable!("Could not parse: {}", err);
         },
     }
 }
@@ -335,7 +335,7 @@ fn test_criteria_parser_and() {
                 })
             }
             Err(err) => {
-                assert!(false, "Could not parse: {}", err);
+                unreachable!("Could not parse: {}", err);
             }
         }
     }
@@ -353,7 +353,7 @@ fn test_criteria_parser_or() {
                 })
             }
             Err(err) => {
-                assert!(false, "Could not parse: {}", err);
+                unreachable!("Could not parse: {}", err);
             }
         }
     }
@@ -372,7 +372,7 @@ fn test_criteria_parser_not() {
                 })
             }
             Err(err) => {
-                assert!(false, "Could not parse: {}", err);
+                unreachable!("Could not parse: {}", err);
             }
         }
     }

@@ -242,9 +242,9 @@ pub(crate) use subst_placeholders;
 
 #[test]
 fn test_subst_placeholders() {
-    let foo = "{a}, {b} = {d}";
+    let fmt_str = "{a}, {b} = {d}";
     let html_escape = true;
-    let x: String = subst_placeholders!(foo, html_escape, {
+    let x: String = subst_placeholders!(fmt_str, html_escape, {
         "a" => "1".to_string(),
         "b" | "d" =>  "2".to_string(),
         "c" => "3".to_owned(),
