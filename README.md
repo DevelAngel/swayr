@@ -222,7 +222,17 @@ These commands change the layout of the current workspace.
   frozen when the first cycling command is processed and remains so until a
   non-cycling command is received.  The `nop` command can conveniently serve to
   interrupt a sequence without having any other side effects.
-  
+* `get-windows-as-json` returns a JSON containing all windows, possibly with
+  scratchpad windows if `--include-scratchpad` is given.  Furthermore,
+  `--matching <CRITERIA>` can be used to restrict the windows to those matching
+  the given criteria query.  Lastly, if `--error-if-no-match` is given and no
+  windows exist or match the given criteria query, the command exits non-zero
+  instead of printing a JSON array.  This makes it suitable for shell
+  scripting.  Essentially, `swayr get-windows-as-json --matching <CRITERIA>
+  --error-if-no-match` is like `swaymsg <CRITERIA> nop` except that it returns
+  the windows as JSON and support's swayr's extended criteria queries instead
+  of the simple ones supported by sway.
+
 #### <a id="swayr-commands-criteria">Criteria</a>
 
 Swayr supports most of the criteria querys defined by Sway, see section

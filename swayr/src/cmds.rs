@@ -285,6 +285,18 @@ pub enum SwayrCommand {
             help = "Determines if windows on the scratchpad are to be included."
         )]
         include_scratchpad: bool,
+        #[clap(
+            short = 'm',
+            long = "matching",
+            help = "A criteria query defining which windows to return."
+        )]
+        criteria: Option<String>,
+        #[clap(
+            short,
+            long,
+            help = "Return non-zero if no (matching) windows are found instead of returning an empty JSON array."
+        )]
+        error_if_no_match: bool,
     },
 }
 
@@ -577,9 +589,16 @@ fn exec_swayr_cmd_1(
             toggle_tab_tile_current_workspace(floating)
         }
         SwayrCommand::ConfigureOutputs => configure_outputs(),
-        SwayrCommand::GetWindowsAsJson { include_scratchpad } => {
-            get_windows_as_json(fdata, *include_scratchpad)
-        }
+        SwayrCommand::GetWindowsAsJson {
+            include_scratchpad,
+            criteria,
+            error_if_no_match,
+        } => get_windows_as_json(
+            fdata,
+            *include_scratchpad,
+            criteria,
+            *error_if_no_match,
+        ),
         SwayrCommand::ExecuteSwaymsgCommand => exec_swaymsg_command(),
         SwayrCommand::ExecuteSwayrCommand => {
             let mut cmds = vec![
@@ -676,11 +695,31 @@ fn init_switch_to_matching_data(
 fn get_windows_as_json(
     fdata: &FocusData,
     include_scratchpad: bool,
+    criteria: &Option<String>,
+    error_if_no_match: bool,
 ) -> Result<String, String> {
     let root = ipc::get_root_node(include_scratchpad);
     let tree = t::get_tree(&root);
     let wins = tree.get_windows(fdata);
-    serde_json::to_string_pretty(&wins).map_or_else(|e| Err(e.to_string()), Ok)
+    let wins = if let Some(criteria) = criteria {
+        let c = criteria::parse_criteria(criteria)?;
+        let pred = criteria::criterion_to_predicate(&c, &wins);
+        wins.iter()
+            .filter(|w| pred(w))
+            .collect::<Vec<&t::DisplayNode>>()
+    } else {
+        wins.iter().collect()
+    };
+    if error_if_no_match && wins.is_empty() {
+        Err(String::from(if criteria.is_some() {
+            "No matching windows"
+        } else {
+            "No windows"
+        }))
+    } else {
+        serde_json::to_string_pretty(&wins)
+            .map_or_else(|e| Err(e.to_string()), Ok)
+    }
 }
 
 fn steal_window_by_id(id: i64) -> Result<String, String> {

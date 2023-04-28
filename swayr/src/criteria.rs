@@ -307,7 +307,6 @@ pub fn criterion_to_predicate<'a>(
     all_windows: &'a [t::DisplayNode],
 ) -> impl Fn(&t::DisplayNode) -> bool + 'a {
     let focused = all_windows.iter().find(|x| x.node.focused);
-
     move |w: &t::DisplayNode| eval_criterion(criterion, w, focused)
 }
 
