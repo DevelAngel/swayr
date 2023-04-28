@@ -28,6 +28,15 @@
 
 [![latest release](https://img.shields.io/crates/v/swayr.svg)](https://crates.io/crates/swayr)
 
+> **Note on terminology:** When starting this project, I somehow confused the
+> terms most-recently-used (MRU) and least-recently-used (LRU).  I've meant the
+> former but called it last-recently-used whose meaning is the same as
+> most-recently-used but whose abbreviation LRU is actually the opposite.  So
+> now there are many commands with `lru` in their name: it always means
+> most-recently-used (MRU), not least-recently-used (LRU).  It's too late to
+> rename the commands.  Maybe I'll add aliases at some point and deprecate the
+> old names...
+
 Swayr consists of a daemon, and a client.  The `swayrd` daemon records
 window/workspace creations, deletions, and focus changes using sway's JSON IPC
 interface.  The `swayr` client offers subcommands, see `swayr --help`, and
@@ -43,7 +52,7 @@ Those are commands which switch through a sequence of windows where the
 sequence is:
 1. All windows with urgency hints.
 2. All matching windows where which windows match is specific to the command.
-3. The last recently used window at the time of the sequence start.
+3. The most recently used window at the time of the sequence start.
 4. Back to the origin window, i.e., the window which had the focus at the time
    of the sequence start.
 
@@ -96,15 +105,14 @@ bindsym $mod+b exec \
 Those spawn a menu program where you can select a window (or workspace, or
 output, etc.) and act on that.
 
-* `switch-window` displays all windows in the order urgent first, then
-  last-recently-used, focused last and focuses the selected.
-* `steal-window` displays all windows in order urgent first, the
-   last-recently-used, focused last and moves the window into the current
-   workspace.
-* `steal-window-or-container` displays all windows and containers in order
-   urgent first, the last-recently-used, focused last and moves the window or
-   container into the current workspace.
-* `switch-workspace` displays all workspaces in LRU order and switches to the
+* `switch-window` displays all windows in the order of urgent windows first,
+  then windows in most-recently-used order, and the currently focused window
+  last.  The window selected in the menu program will be focused.
+* `steal-window` displays all windows in the order or `switch-window` and moves
+   the chosen window into the current workspace.
+* `steal-window-or-container` displays all windows and containers moves the
+   window or container into the current workspace.
+* `switch-workspace` displays all workspaces in MRU order and switches to the
   selected one.
 * `switch-output` shows all outputs in the menu and focuses the selected one.
 * `switch-workspace-or-window` displays all workspaces and their windows and
@@ -153,7 +161,7 @@ by the shortcut.  The following shortcuts are supported.
 
 #### <a id="swayr-cycling-commands">Cycling commands</a>
 
-Those commands cycle through (a subset of windows) in last-recently-used order.
+Those commands cycle through (a subset of windows) in most-recently-used order.
 
 * `next-window (all-workspaces|current-workspace)` & `prev-window
   (all-workspaces|current-workspace)` focus the next/previous window in
