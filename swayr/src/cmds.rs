@@ -318,6 +318,10 @@ impl SwayrCommand {
                 | SwayrCommand::PrevMatchingWindow { .. }
         )
     }
+
+    pub(crate) fn is_scripting_command(&self) -> bool {
+        matches!(self, SwayrCommand::GetWindowsAsJson { .. })
+    }
 }
 
 pub struct ExecSwayrCmdArgs<'a> {
@@ -393,18 +397,23 @@ pub fn exec_swayr_cmd(args: ExecSwayrCmdArgs) -> Result<String, String> {
         .lock()
         .expect("Could not lock mutex");
 
-    // If this command is not equal to the last command, nuke the
-    // switch_to_matching_data so that we start a new sequence.
-    if *args.cmd != *last_command {
-        switch_to_matching_data.reset(true);
-    }
-    *last_command = args.cmd.clone();
+    // Scripting commands are commands not intended for interactive use like
+    // get-windows-as-json.  They should not mess with switch_to_matching_data
+    // or focus ticks.
+    if !args.cmd.is_scripting_command() {
+        // If this command is not equal to the last command, nuke the
+        // switch_to_matching_data so that we start a new sequence.
+        if *args.cmd != *last_command {
+            switch_to_matching_data.reset(true);
+        }
+        *last_command = args.cmd.clone();
 
-    let fdata = args.focus_data;
-    if args.cmd.is_prev_next_window_variant() {
-        fdata.send(FocusMessage::TickUpdateInhibit);
-    } else {
-        fdata.send(FocusMessage::TickUpdateActivate);
+        let fdata = args.focus_data;
+        if args.cmd.is_prev_next_window_variant() {
+            fdata.send(FocusMessage::TickUpdateInhibit);
+        } else {
+            fdata.send(FocusMessage::TickUpdateActivate);
+        }
     }
 
     exec_swayr_cmd_1(args, &mut switch_to_matching_data)
