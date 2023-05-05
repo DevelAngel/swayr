@@ -31,6 +31,9 @@ fn main() -> Result<(), String> {
             println!("{val}");
             Ok(())
         }
-        Err(err) => Err(err),
+        Err(err) => {
+            eprintln!("{err}");
+            Err("Command failed".to_owned())
+        }
     }
 }

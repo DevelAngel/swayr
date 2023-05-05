@@ -61,6 +61,28 @@ pub struct DisplayNode<'a> {
     pub swayr_type: ipc::Type,
 }
 
+impl<'a> DisplayNode<'a> {
+    pub fn subst_node_placeholders(&self, fmt: &str, html_escape: bool) -> String {
+        subst_placeholders!(fmt, html_escape, {
+            "id" => self.node.id,
+            "pid" => self.node.pid
+            .map_or("<no pid>".to_owned(), |pid| pid.to_string()),
+            "app_name" => self.node.get_app_name(),
+            "layout" => format!("{:?}", self.node.layout),
+            "name" | "title" => self.node.get_name(),
+            "output_name" => self
+            .tree
+            .get_parent_node_of_type(self.node.id, ipc::Type::Output)
+            .map_or("<no_output>", |w| w.get_name()),
+            "workspace_name" => self
+            .tree
+            .get_parent_node_of_type(self.node.id, ipc::Type::Workspace)
+            .map_or("<no_workspace>", |w| w.get_name()),
+            "marks" => format_marks(&self.node.marks),
+        })
+    }
+}
+
 impl<'a> Tree<'a> {
     fn get_node_by_id(&self, id: i64) -> &&s::Node {
         self.id_node
@@ -396,22 +418,7 @@ impl DisplayFormat for DisplayNode<'_> {
                     .unwrap_or_else(String::new)
                     .as_str(),
             );
-
-        subst_placeholders!(&fmt, html_escape, {
-            "id" => self.node.id,
-            "app_name" => self.node.get_app_name(),
-            "layout" => format!("{:?}", self.node.layout),
-            "name" | "title" => self.node.get_name(),
-            "output_name" => self
-                .tree
-                .get_parent_node_of_type(self.node.id, ipc::Type::Output)
-                .map_or("<no_output>", |w| w.get_name()),
-            "workspace_name" => self
-                .tree
-                .get_parent_node_of_type(self.node.id, ipc::Type::Workspace)
-                .map_or("<no_workspace>", |w| w.get_name()),
-            "marks" => format_marks(&self.node.marks),
-        })
+        self.subst_node_placeholders(&fmt, html_escape)
     }
 
     fn get_indent_level(&self) -> usize {

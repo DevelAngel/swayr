@@ -28,6 +28,7 @@ use once_cell::sync::Lazy;
 use rand::prelude::SliceRandom;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
+use std::io::Read;
 use std::sync::Mutex;
 use std::sync::MutexGuard;
 use swayipc as s;
@@ -298,6 +299,22 @@ pub enum SwayrCommand {
         )]
         error_if_no_match: bool,
     },
+    ForEachWindow {
+        #[clap(
+            short,
+            long,
+            help = "Determines if windows on the scratchpad are to be included."
+        )]
+        include_scratchpad: bool,
+        #[clap(
+            short,
+            long,
+            help = "Return non-zero if no (matching) windows are found instead of just doing nothing."
+        )]
+        error_if_no_match: bool,
+        criteria: String,
+        shell_command: Vec<String>,
+    },
 }
 
 impl SwayrCommand {
@@ -320,7 +337,11 @@ impl SwayrCommand {
     }
 
     pub(crate) fn is_scripting_command(&self) -> bool {
-        matches!(self, SwayrCommand::GetWindowsAsJson { .. })
+        matches!(
+            self,
+            SwayrCommand::GetWindowsAsJson { .. }
+                | SwayrCommand::ForEachWindow { .. }
+        )
     }
 }
 
@@ -608,6 +629,18 @@ fn exec_swayr_cmd_1(
             criteria,
             *error_if_no_match,
         ),
+        SwayrCommand::ForEachWindow {
+            include_scratchpad,
+            error_if_no_match,
+            criteria,
+            shell_command,
+        } => for_each_window(
+            fdata,
+            *include_scratchpad,
+            *error_if_no_match,
+            criteria,
+            shell_command,
+        ),
         SwayrCommand::ExecuteSwaymsgCommand => exec_swaymsg_command(),
         SwayrCommand::ExecuteSwayrCommand => {
             let mut cmds = vec![
@@ -701,6 +734,19 @@ fn init_switch_to_matching_data(
     switch_to_matching_data.skip_origin = skip_flags.skip_origin;
 }
 
+fn get_matching_windows<'a>(
+    criteria: Option<&String>,
+    wins: &'a [t::DisplayNode<'a>],
+) -> Result<Vec<&'a t::DisplayNode<'a>>, String> {
+    if let Some(criteria) = criteria {
+        let c = criteria::parse_criteria(criteria)?;
+        let pred = criteria::criterion_to_predicate(&c, wins);
+        Ok(wins.iter().filter(|w| pred(w)).collect())
+    } else {
+        Ok(wins.iter().collect())
+    }
+}
+
 fn get_windows_as_json(
     fdata: &FocusData,
     include_scratchpad: bool,
@@ -710,15 +756,7 @@ fn get_windows_as_json(
     let root = ipc::get_root_node(include_scratchpad);
     let tree = t::get_tree(&root);
     let wins = tree.get_windows(fdata);
-    let wins = if let Some(criteria) = criteria {
-        let c = criteria::parse_criteria(criteria)?;
-        let pred = criteria::criterion_to_predicate(&c, &wins);
-        wins.iter()
-            .filter(|w| pred(w))
-            .collect::<Vec<&t::DisplayNode>>()
-    } else {
-        wins.iter().collect()
-    };
+    let wins = get_matching_windows(criteria.as_ref(), &wins)?;
     if error_if_no_match && wins.is_empty() {
         Err(String::from(if criteria.is_some() {
             "No matching windows"
@@ -728,6 +766,92 @@ fn get_windows_as_json(
     } else {
         serde_json::to_string_pretty(&wins)
             .map_or_else(|e| Err(e.to_string()), Ok)
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+struct ShellCommandResult {
+    exit_code: i32,
+    std_out: String,
+    std_err: String,
+    error: Option<String>,
+}
+
+fn for_each_window(
+    fdata: &FocusData,
+    include_scratchpad: bool,
+    error_if_no_match: bool,
+    criteria: &String,
+    shell_command: &Vec<String>,
+) -> Result<String, String> {
+    if shell_command.is_empty() {
+        return Err("No shell_command given".to_owned());
+    }
+    let root = ipc::get_root_node(include_scratchpad);
+    let tree = t::get_tree(&root);
+    let wins = tree.get_windows(fdata);
+    let wins = get_matching_windows(Some(criteria), &wins)?;
+
+    if error_if_no_match && wins.is_empty() {
+        return Err(String::from("No matching windows"));
+    }
+
+    let mut results = vec![];
+    for w in wins {
+        let cmd: Vec<String> = shell_command
+            .iter()
+            .map(|arg| w.subst_node_placeholders(arg, false))
+            .collect();
+        let r = match std::process::Command::new(&cmd[0])
+            .args(&cmd[1..])
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
+            .spawn()
+        {
+            Ok(mut child) => {
+                let mut out = String::new();
+                let mut err = String::new();
+                child
+                    .stdout
+                    .take()
+                    .map(|mut co| co.read_to_string(&mut out));
+                child
+                    .stderr
+                    .take()
+                    .map(|mut ce| ce.read_to_string(&mut err));
+
+                match child.wait() {
+                    Ok(status) => ShellCommandResult {
+                        exit_code: status.code().unwrap(),
+                        std_out: out,
+                        std_err: err,
+                        error: None,
+                    },
+                    Err(err) => ShellCommandResult {
+                        exit_code: err.raw_os_error().unwrap_or(998),
+                        std_out: String::new(),
+                        std_err: String::new(),
+                        error: Some(err.to_string()),
+                    },
+                }
+            }
+            Err(err) => ShellCommandResult {
+                exit_code: err.raw_os_error().unwrap_or(999),
+                std_out: String::new(),
+                std_err: String::new(),
+                error: Some(err.to_string()),
+            },
+        };
+
+        results.push(r);
+    }
+
+    let json =
+        serde_json::to_string_pretty(&results).expect("Error generating JSON");
+    if results.iter().all(|r| r.exit_code == 0) {
+        Ok(json)
+    } else {
+        Err(json)
     }
 }
 

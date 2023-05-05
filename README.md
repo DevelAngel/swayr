@@ -212,6 +212,30 @@ These commands change the layout of the current workspace.
   between a tabbed and tiled layout, i.e., it calls `shuffle-tile-workspace` if
   it is currently tabbed, and calls `shuffle-tile-workspace` if it is currently
   tiled.
+  
+#### Scripting commands
+
+* `get-windows-as-json` returns a JSON containing all windows, possibly with
+  scratchpad windows if `--include-scratchpad` is given.  Furthermore,
+  `--matching <CRITERIA>` can be used to restrict the windows to those matching
+  the given criteria query (see [the criteria
+  section](#swayr-commands-criteria)).  Lastly, if `--error-if-no-match` is
+  given and no windows exist or match the given criteria query, the command
+  exits non-zero instead of printing a JSON array.  This makes it suitable for
+  shell scripting.  Essentially, `swayr get-windows-as-json --matching
+  <CRITERIA> --error-if-no-match` is like `swaymsg <CRITERIA> nop` except that
+  it returns the windows as JSON and support's swayr's extended criteria
+  queries instead of the simple ones supported by sway.
+* `for-each-window <CRITERIA> <SHELL_COMMAND>` executes `<SHELL_COMMAND>` for
+  each window matched by `<CRITERIA>` (see [the criteria
+  section](#swayr-commands-criteria)).  In `<SHELL_COMMAND>` almost all
+  placeholders defined in [the section about window
+  formats](#swayr-window-placeholders) are replaced.  For example, `swayr
+  for-each-window true echo "The app {app_name} has the PID {pid}."` tells the
+  application name and the pid for each window.  The result of the command is a
+  JSON array with objects containing the exit code, stdout, stderr, and a
+  (system) error field.  If any command returns non-zero, so will
+  `for-each-window`.
 
 #### Miscellaneous commands
 
@@ -230,16 +254,6 @@ These commands change the layout of the current workspace.
   frozen when the first cycling command is processed and remains so until a
   non-cycling command is received.  The `nop` command can conveniently serve to
   interrupt a sequence without having any other side effects.
-* `get-windows-as-json` returns a JSON containing all windows, possibly with
-  scratchpad windows if `--include-scratchpad` is given.  Furthermore,
-  `--matching <CRITERIA>` can be used to restrict the windows to those matching
-  the given criteria query.  Lastly, if `--error-if-no-match` is given and no
-  windows exist or match the given criteria query, the command exits non-zero
-  instead of printing a JSON array.  This makes it suitable for shell
-  scripting.  Essentially, `swayr get-windows-as-json --matching <CRITERIA>
-  --error-if-no-match` is like `swaymsg <CRITERIA> nop` except that it returns
-  the windows as JSON and support's swayr's extended criteria queries instead
-  of the simple ones supported by sway.
 
 #### <a id="swayr-commands-criteria">Criteria</a>
 
@@ -466,7 +480,7 @@ In the `[menu]` section, you can specify the menu program using the
 passed.  If some argument contains the placeholder `{prompt}`, it is replaced
 with a prompt such as "Switch to window" depending on context.
 
-#### The format section
+#### <a id="swayr-window-placeholders">The format section</a>
 
 In the `[format]` section, format strings are specified defining how selection
 choices are to be layed out.  `wofi` supports [pango
@@ -483,6 +497,7 @@ right now.
     will be removed in a later version.
   * `{layout}` shows the workspace or container's layout.
   * `{id}` gets replaced by the sway-internal con id.
+  * `{pid}` gets replaced by the PID.
   * `{indent}` gets replaced with N times the new `format.indent` value where N
     is the depth in the shown menu input.
   * `{app_name}` gets replaced with a window's application name.

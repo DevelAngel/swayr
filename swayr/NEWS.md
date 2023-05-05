@@ -4,6 +4,8 @@ swayr v0.26.0
 - Improved `get-windows-as-json` with new option `--matching <CRITERIA>` and
   new flag `--error-if-no-match` making it suitable as powerful `swaymsg
   <CRITERIA> nop` replacement in shell scripts.
+* `for-each-window <CRITERIA> <SHELL_COMMAND>` executes `<SHELL_COMMAND>` for
+  each window matched by `<CRITERIA>`.
 
 swayr v0.25.0
 =============
