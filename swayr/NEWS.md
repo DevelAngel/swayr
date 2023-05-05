@@ -6,6 +6,10 @@ swayr v0.26.0
   <CRITERIA> nop` replacement in shell scripts.
 * `for-each-window <CRITERIA> <SHELL_COMMAND>` executes `<SHELL_COMMAND>` for
   each window matched by `<CRITERIA>`.
+* The window format may contain the placeholder `{pid}` which gets replaced by
+  the PID.  That's mostly useful for the new `for-each-window` command where
+  it's also substituted in the given `<SHELL_COMMAND>` like the other
+  placeholders.
 
 swayr v0.25.0
 =============
