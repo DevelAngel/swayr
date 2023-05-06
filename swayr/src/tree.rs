@@ -62,7 +62,11 @@ pub struct DisplayNode<'a> {
 }
 
 impl<'a> DisplayNode<'a> {
-    pub fn subst_node_placeholders(&self, fmt: &str, html_escape: bool) -> String {
+    pub fn subst_node_placeholders(
+        &self,
+        fmt: &str,
+        html_escape: bool,
+    ) -> String {
         subst_placeholders!(fmt, html_escape, {
             "id" => self.node.id,
             "pid" => self.node.pid
