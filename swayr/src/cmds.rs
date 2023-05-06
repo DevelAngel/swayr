@@ -777,6 +777,15 @@ struct ShellCommandResult {
     error: Option<String>,
 }
 
+fn read_from_child(
+    child: &mut std::process::Child,
+    out: &mut String,
+    err: &mut String,
+) {
+    child.stdout.take().map(|mut co| co.read_to_string(out));
+    child.stderr.take().map(|mut ce| ce.read_to_string(err));
+}
+
 fn for_each_window(
     fdata: &FocusData,
     include_scratchpad: bool,
@@ -809,30 +818,60 @@ fn for_each_window(
             .spawn()
         {
             Ok(mut child) => {
+                // Drop stdin, we don't use it anyway.
+                child.stdin.take().map(|i| drop(i));
                 let mut out = String::new();
                 let mut err = String::new();
-                child
-                    .stdout
-                    .take()
-                    .map(|mut co| co.read_to_string(&mut out));
-                child
-                    .stderr
-                    .take()
-                    .map(|mut ce| ce.read_to_string(&mut err));
-
-                match child.wait() {
-                    Ok(status) => ShellCommandResult {
-                        exit_code: status.code().unwrap(),
-                        std_out: out,
-                        std_err: err,
-                        error: None,
-                    },
-                    Err(err) => ShellCommandResult {
-                        exit_code: err.raw_os_error().unwrap_or(998),
-                        std_out: String::new(),
-                        std_err: String::new(),
-                        error: Some(err.to_string()),
-                    },
+                let mut waits = 0;
+                let mut sleep_time = 4;
+                loop {
+                    match child.try_wait() {
+                        Ok(Some(status)) => {
+                            read_from_child(&mut child, &mut out, &mut err);
+                            break ShellCommandResult {
+                                exit_code: status.code().unwrap(),
+                                std_out: out,
+                                std_err: err,
+                                error: None,
+                            };
+                        }
+                        Ok(None) => {
+                            if waits > 10 {
+                                let k = child.kill();
+                                read_from_child(&mut child, &mut out, &mut err);
+                                break ShellCommandResult {
+                                    exit_code: 997,
+                                    std_out: out,
+                                    std_err: err,
+                                    error: Some(format!(
+                                        "Didn't finish, I killed it.{}",
+                                        match k {
+                                            Ok(_) => String::new(),
+                                            Err(err) => format!(" And even killing failed with: {err}"),
+                                        }
+                                    )),
+                                };
+                            } else {
+                                std::thread::sleep(
+                                    std::time::Duration::from_millis(
+                                        sleep_time as u64,
+                                    ),
+                                );
+                                if sleep_time < 100 {
+                                    sleep_time *= 2;
+                                }
+                                waits += 1;
+                            }
+                        }
+                        Err(err) => {
+                            break ShellCommandResult {
+                                exit_code: err.raw_os_error().unwrap_or(998),
+                                std_out: String::new(),
+                                std_err: String::new(),
+                                error: Some(err.to_string()),
+                            }
+                        }
+                    }
                 }
             }
             Err(err) => ShellCommandResult {
