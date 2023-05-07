@@ -235,7 +235,10 @@ These commands change the layout of the current workspace.
   application name and the pid for each window.  The result of the command is a
   JSON array with objects containing the exit code, stdout, stderr, and a
   (system) error field.  If any command returns non-zero, so will
-  `for-each-window`.
+  `for-each-window`.  The shell commands will be executed in parallel they must
+  finish within 2 seconds, otherwise they'll be killed.  Otherwise, the command
+  execution would block `swayrd` for as long as the slowest thread requires,
+  e.g., `sleep 10` would block for slightly over 10 seconds.
 
 #### Miscellaneous commands
 

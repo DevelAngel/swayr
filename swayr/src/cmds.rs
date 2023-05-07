@@ -29,8 +29,10 @@ use rand::prelude::SliceRandom;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::io::Read;
+use std::sync::mpsc::channel;
 use std::sync::Mutex;
 use std::sync::MutexGuard;
+use std::thread;
 use swayipc as s;
 
 pub fn run_sway_command_1(cmd: &str) -> Result<String, String> {
@@ -794,6 +796,7 @@ fn run_shell_command_on_window(
         .iter()
         .map(|arg| win.subst_node_placeholders(arg, false))
         .collect();
+    log::debug!("Running shell command on {}", win.node.id);
     match std::process::Command::new(&cmd[0])
         .args(&cmd[1..])
         .stdout(std::process::Stdio::piped())
@@ -808,8 +811,8 @@ fn run_shell_command_on_window(
 
             let mut out = String::new();
             let mut err = String::new();
-            let mut waits = 0;
-            let mut sleep_time = 4;
+            let mut sleep_time: u16 = 4;
+            let mut slept_time: u16 = 0;
             loop {
                 match child.try_wait() {
                     Ok(Some(status)) => {
@@ -822,7 +825,7 @@ fn run_shell_command_on_window(
                         };
                     }
                     Ok(None) => {
-                        if waits > 10 {
+                        if slept_time >= 2000 {
                             let k = child.kill();
                             read_from_child(&mut child, &mut out, &mut err);
                             return ShellCommandResult {
@@ -843,10 +846,10 @@ fn run_shell_command_on_window(
                                     sleep_time as u64,
                                 ),
                             );
+                            slept_time += sleep_time;
                             if sleep_time < 100 {
                                 sleep_time *= 2;
                             }
-                            waits += 1;
                         }
                     }
                     Err(err) => {
@@ -888,12 +891,23 @@ fn for_each_window(
         return Err(String::from("No matching windows"));
     }
 
-    let mut results = vec![];
-    for w in wins {
-        let r = run_shell_command_on_window(w, shell_command);
-        results.push(r);
-    }
+    let (sender, receiver) = channel::<ShellCommandResult>();
 
+    thread::scope(|scope| {
+        for w in wins {
+            let s = sender.clone();
+            scope.spawn(move || {
+                s.send(run_shell_command_on_window(w, shell_command))
+                    .expect("Error on send!");
+            });
+        }
+    });
+
+    // Drop the last sender explicity, otherwise receiver.iter().collect()
+    // blocks indefinitely.
+    drop(sender);
+
+    let results: Vec<ShellCommandResult> = receiver.iter().collect();
     let json =
         serde_json::to_string_pretty(&results).expect("Error generating JSON");
     if results.iter().all(|r| r.exit_code == 0) {
