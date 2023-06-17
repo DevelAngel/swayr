@@ -9,14 +9,14 @@ authors = ["Tassilo Horn <tsdh@gnu.org>"]
 license = "GPL-3.0+"
 
 [dependencies]
-clap = { version = "4.2", features = ["derive"] }
+clap = { version = "4.3", features = ["derive"] }
 battery = "0.7"
 # chrono without oldtime & wasmbind.  oldtime pulls in an old time crate with security vulnerability.
 chrono = {version = "0.4", default-features = false, features = ["clock", "std"] }
 directories = "5.0"
 env_logger = { version = "0.10", default-features = false, features = ["color", "auto-color", "humantime"] }  # without regex
 log = "0.4"
-once_cell = "1.17"
+once_cell = "1.18"
 regex = "1.8"
 rt-format = "0.3.1"
 serde = { version = "1.0", features = ["derive"] }
