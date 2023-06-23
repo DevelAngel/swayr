@@ -248,7 +248,8 @@ These commands change the layout of the current workspace.
   additional input and executes the selected one.  That's handy especially for
   less often used commands not bound to a key.  Non-matching input will be
   executed executed as-is with `swaymsg`.  Also note that custom commands can
-  be defined in the configuration file's `[swaymsg_commands]` section.
+  be defined in the [configuration file](#swayr-configuration)'s
+  `[swaymsg_commands]` section.
 * `execute-swayr-command` displays all commands above and executes the selected
   one.  (This is useful for accessing swayr commands which are not bound to a
   key.)
