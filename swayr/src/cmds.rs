@@ -303,6 +303,7 @@ pub enum SwayrCommand {
         )]
         error_if_no_match: bool,
     },
+    /// Executes a shell command for each matching window.
     ForEachWindow {
         #[clap(
             short,
@@ -319,7 +320,10 @@ pub enum SwayrCommand {
         criteria: String,
         shell_command: Vec<String>,
     },
+    /// Print the current effective swayr configuration (without default
+    /// values).
     PrintConfig,
+    /// Prints the default swayr configuration.
     PrintDefaultConfig,
 }
 
@@ -732,16 +736,21 @@ fn exec_swayr_cmd_1(
 }
 
 fn print_config(default_config: bool) -> Result<String, String> {
-    todo!()
-    // let cfg = if default_config {
-    //     Some(cfg::Config::default())
-    // } else {
-    //     std::cell::OnceCell::into_inner(CONFIG)
-    // };
-    // match serde_json::to_string_pretty(cfg) {
-    //     Ok(json) => Ok(json),
-    //     Err(err) => Err(err.to_string()),
-    // }
+    let dc = cfg::Config::default();
+    let cfg = if default_config {
+        Some(&dc)
+    } else {
+        once_cell::sync::Lazy::get(&CONFIG)
+    };
+
+    if let Some(cfg) = cfg {
+        match toml::to_string_pretty(cfg) {
+            Ok(json) => Ok(json),
+            Err(err) => Err(err.to_string()),
+        }
+    } else {
+        Err("Config not yet initialized.".to_owned())
+    }
 }
 
 fn init_switch_to_matching_data(

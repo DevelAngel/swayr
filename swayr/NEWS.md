@@ -1,3 +1,11 @@
+swayr v0.27.0
+=============
+
+- New commands `print-config` and `print-default-config`.
+- The config can contain a new `[swayr_commands]` section which allows to
+  define custom `swaymsg` commands which can then be executed using `swayr
+  execute-swaymsg-command`.
+
 swayr v0.26.0
 =============
 
