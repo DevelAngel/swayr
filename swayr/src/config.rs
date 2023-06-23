@@ -27,6 +27,7 @@ pub struct Config {
     layout: Option<Layout>,
     focus: Option<Focus>,
     misc: Option<Misc>,
+    swaymsg_commands: Option<SwaymsgCommands>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -67,6 +68,21 @@ pub struct Misc {
 
     /// Inhibit LRU updates during sequences of window cycling commands
     seq_inhibit: Option<bool>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SwaymsgCommands {
+    commands: Option<HashMap<String, String>>,
+    include_predefined: bool,
+}
+
+impl SwaymsgCommands {
+    fn default() -> SwaymsgCommands {
+        SwaymsgCommands {
+            commands: None,
+            include_predefined: true,
+        }
+    }
 }
 
 fn tilde_expand_file_names(file_names: Vec<String>) -> Vec<String> {
@@ -223,6 +239,22 @@ impl Config {
             .or_else(|| Misc::default().seq_inhibit)
             .expect("No misc.seq_inhibit defined.")
     }
+
+    pub fn get_swaymsg_commands_commands(
+        &self,
+    ) -> Option<HashMap<String, String>> {
+        self.swaymsg_commands
+            .as_ref()
+            .and_then(|s| s.commands.clone())
+            .or_else(|| SwaymsgCommands::default().commands)
+    }
+
+    pub fn get_swaymsg_commands_include_predefined(&self) -> bool {
+        self.swaymsg_commands.as_ref().map_or_else(
+            || SwaymsgCommands::default().include_predefined,
+            |s| s.include_predefined,
+        )
+    }
 }
 
 impl Layout {
@@ -363,6 +395,7 @@ impl Default for Config {
             layout: Some(Layout::default()),
             focus: Some(Focus::default()),
             misc: Some(Misc::default()),
+            swaymsg_commands: Some(SwaymsgCommands::default()),
         }
     }
 }

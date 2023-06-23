@@ -15,7 +15,9 @@
 
 //! Functions and data structures of the swayr client.
 
+use crate::config as cfg;
 use crate::criteria;
+use crate::daemon::CONFIG;
 use crate::focus::FocusData;
 use crate::focus::FocusMessage;
 use crate::layout;
@@ -317,6 +319,8 @@ pub enum SwayrCommand {
         criteria: String,
         shell_command: Vec<String>,
     },
+    PrintConfig,
+    PrintDefaultConfig,
 }
 
 impl SwayrCommand {
@@ -722,7 +726,22 @@ fn exec_swayr_cmd_1(
                 _ => Err("No swayr command selected".to_owned()),
             }
         }
+        SwayrCommand::PrintConfig => print_config(false),
+        SwayrCommand::PrintDefaultConfig => print_config(true),
     }
+}
+
+fn print_config(default_config: bool) -> Result<String, String> {
+    todo!()
+    // let cfg = if default_config {
+    //     Some(cfg::Config::default())
+    // } else {
+    //     std::cell::OnceCell::into_inner(CONFIG)
+    // };
+    // match serde_json::to_string_pretty(cfg) {
+    //     Ok(json) => Ok(json),
+    //     Err(err) => Err(err.to_string()),
+    // }
 }
 
 fn init_switch_to_matching_data(
@@ -1748,101 +1767,125 @@ fn toggle_tab_tile_current_workspace(
 }
 
 fn get_swaymsg_commands() -> Vec<SwaymsgCmd> {
-    let mut cmds: Vec<String> = vec![];
+    let mut sm_cmds: Vec<SwaymsgCmd> = vec![];
 
-    for b in &["none", "normal", "csd", "pixel"] {
-        cmds.push(format!["border {b}"]);
+    if let Some(custom_commands) = CONFIG.get_swaymsg_commands_commands() {
+        for (label, cmd) in custom_commands {
+            sm_cmds.push(SwaymsgCmd {
+                label: Some(label),
+                cmd,
+            })
+        }
     }
 
-    cmds.push("exit".to_string());
-    cmds.push("floating toggle".to_string());
-    cmds.push("focus child".to_string());
-    cmds.push("focus parent".to_string());
-    cmds.push("focus tiling".to_string());
-    cmds.push("focus floating".to_string());
-    cmds.push("focus mode_toggle".to_string());
-    cmds.push("fullscreen toggle".to_string());
-    cmds.push("reload".to_string());
-    cmds.push("sticky toggle".to_string());
-    cmds.push("kill".to_string());
-    cmds.push("tiling_drag toggle".to_string());
+    if CONFIG.get_swaymsg_commands_include_predefined() {
+        let mut cmds: Vec<String> = vec![];
+        for b in &["none", "normal", "csd", "pixel"] {
+            cmds.push(format!["border {b}"]);
+        }
 
-    for x in &["focus", "fullscreen", "open", "none", "visible"] {
-        cmds.push(format!["inhibit_idle {x}"])
+        cmds.push("exit".to_string());
+        cmds.push("floating toggle".to_string());
+        cmds.push("focus child".to_string());
+        cmds.push("focus parent".to_string());
+        cmds.push("focus tiling".to_string());
+        cmds.push("focus floating".to_string());
+        cmds.push("focus mode_toggle".to_string());
+        cmds.push("fullscreen toggle".to_string());
+        cmds.push("reload".to_string());
+        cmds.push("sticky toggle".to_string());
+        cmds.push("kill".to_string());
+        cmds.push("tiling_drag toggle".to_string());
+
+        for x in &["focus", "fullscreen", "open", "none", "visible"] {
+            cmds.push(format!["inhibit_idle {x}"])
+        }
+
+        for l in &["default", "splith", "splitv", "stacking", "tiling"] {
+            cmds.push(format!["layout {l}"])
+        }
+
+        for e in &["enable", "disable"] {
+            cmds.push(format!["shortcuts_inhibitor {e}"])
+        }
+
+        for x in &["yes", "no", "always"] {
+            cmds.push(format!["focus_follows_mouse {x}"])
+        }
+
+        for x in &["smart", "urgent", "focus", "none"] {
+            cmds.push(format!["focus_on_window_activation {x}"])
+        }
+
+        for x in &["yes", "no", "force", "workspace"] {
+            cmds.push(format!["focus_wrapping {x}"])
+        }
+
+        for x in &[
+            "none",
+            "vertical",
+            "horizontal",
+            "both",
+            "smart",
+            "smart_no_gaps",
+        ] {
+            cmds.push(format!["hide_edge_borders {x}"])
+        }
+
+        for x in &["on", "no_gaps", "off"] {
+            cmds.push(format!["smart_borders {x}"])
+        }
+
+        for x in &["on", "off"] {
+            cmds.push(format!["smart_gaps {x}"])
+        }
+
+        for x in &["output", "container", "none"] {
+            cmds.push(format!["mouse_warping {x}"])
+        }
+
+        for x in &["smart", "ignore", "leave_fullscreen"] {
+            cmds.push(format!["popup_during_fullscreen {x}"])
+        }
+
+        for x in &["yes", "no"] {
+            cmds.push(format!["show_marks {x}"]);
+            cmds.push(format!["workspace_auto_back_and_forth {x}"]);
+        }
+
+        for x in &["left", "center", "right"] {
+            cmds.push(format!["title_align {x}"]);
+        }
+
+        for x in &["enable", "disable", "allow", "deny"] {
+            cmds.push(format!["urgent {x}"])
+        }
+
+        cmds.sort();
+
+        cmds.into_iter()
+            .map(|c| SwaymsgCmd {
+                label: None,
+                cmd: c,
+            })
+            .for_each(|smc| sm_cmds.push(smc));
     }
 
-    for l in &["default", "splith", "splitv", "stacking", "tiling"] {
-        cmds.push(format!["layout {l}"])
-    }
-
-    for e in &["enable", "disable"] {
-        cmds.push(format!["shortcuts_inhibitor {e}"])
-    }
-
-    for x in &["yes", "no", "always"] {
-        cmds.push(format!["focus_follows_mouse {x}"])
-    }
-
-    for x in &["smart", "urgent", "focus", "none"] {
-        cmds.push(format!["focus_on_window_activation {x}"])
-    }
-
-    for x in &["yes", "no", "force", "workspace"] {
-        cmds.push(format!["focus_wrapping {x}"])
-    }
-
-    for x in &[
-        "none",
-        "vertical",
-        "horizontal",
-        "both",
-        "smart",
-        "smart_no_gaps",
-    ] {
-        cmds.push(format!["hide_edge_borders {x}"])
-    }
-
-    for x in &["on", "no_gaps", "off"] {
-        cmds.push(format!["smart_borders {x}"])
-    }
-
-    for x in &["on", "off"] {
-        cmds.push(format!["smart_gaps {x}"])
-    }
-
-    for x in &["output", "container", "none"] {
-        cmds.push(format!["mouse_warping {x}"])
-    }
-
-    for x in &["smart", "ignore", "leave_fullscreen"] {
-        cmds.push(format!["popup_during_fullscreen {x}"])
-    }
-
-    for x in &["yes", "no"] {
-        cmds.push(format!["show_marks {x}"]);
-        cmds.push(format!["workspace_auto_back_and_forth {x}"]);
-    }
-
-    for x in &["left", "center", "right"] {
-        cmds.push(format!["title_align {x}"]);
-    }
-
-    for x in &["enable", "disable", "allow", "deny"] {
-        cmds.push(format!["urgent {x}"])
-    }
-
-    cmds.sort();
-
-    cmds.into_iter().map(|c| SwaymsgCmd { cmd: c }).collect()
+    sm_cmds
 }
 
 struct SwaymsgCmd {
+    label: Option<String>,
     cmd: String,
 }
 
 impl DisplayFormat for SwaymsgCmd {
     fn format_for_display(&self) -> String {
-        self.cmd.clone()
+        if let Some(label) = &self.label {
+            format!("{label}: {}", self.cmd)
+        } else {
+            self.cmd.clone()
+        }
     }
 
     fn get_indent_level(&self) -> usize {
@@ -1913,8 +1956,13 @@ pub fn configure_outputs() -> Result<String, String> {
     }
     cmds.sort();
 
-    let cmds: Vec<SwaymsgCmd> =
-        cmds.into_iter().map(|c| SwaymsgCmd { cmd: c }).collect();
+    let cmds: Vec<SwaymsgCmd> = cmds
+        .into_iter()
+        .map(|c| SwaymsgCmd {
+            label: None,
+            cmd: c,
+        })
+        .collect();
     let mut last_cmd_result: Result<String, String> =
         Err("No output command selected.".to_owned());
     loop {
