@@ -1,6 +1,6 @@
 [package]
 name = "swayrbar"
-version = "0.3.6"
+version = "0.3.7"
 edition = "2021"
 homepage = "https://sr.ht/~tsdh/swayr/#swayrbar"
 repository = "https://git.sr.ht/~tsdh/swayr"
