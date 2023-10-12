@@ -419,7 +419,7 @@ impl DisplayFormat for DisplayNode<'_> {
                     .as_ref()
                     .or(fallback_icon.as_ref())
                     .map(|i| i.to_string_lossy().into_owned())
-                    .unwrap_or_else(String::new)
+                    .unwrap_or_default()
                     .as_str(),
             );
         self.subst_node_placeholders(&fmt, html_escape)
