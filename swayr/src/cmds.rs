@@ -157,7 +157,7 @@ pub enum SwayrCommand {
     StealWindowOrContainer,
     /// Switch to the selected workspace.
     SwitchWorkspace,
-    /// Switch to the selected workspace.
+    /// Switch to the selected output.
     SwitchOutput,
     /// Switch to the selected workspace or focus the selected window.
     SwitchWorkspaceOrWindow,
