@@ -51,7 +51,7 @@ where
         .create(true)
         .open(path)
         .unwrap();
-    file.write_all(content.as_str().as_bytes()).unwrap();
+    file.write_all(content.as_bytes()).unwrap();
 }
 
 pub fn load_config<T>(project: &str) -> T
