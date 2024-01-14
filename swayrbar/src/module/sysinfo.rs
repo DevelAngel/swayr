@@ -23,8 +23,6 @@ use std::sync::Mutex;
 use std::sync::Once;
 use swaybar_types as s;
 use sysinfo as si;
-use sysinfo::CpuExt;
-use sysinfo::SystemExt;
 
 const NAME: &str = "sysinfo";
 
@@ -82,13 +80,8 @@ enum LoadAvg {
     Fifteen,
 }
 
-fn get_load_average(
-    sys: &mut si::System,
-    avg: LoadAvg,
-    upd: &OnceRefresher,
-) -> f64 {
-    upd.refresh_cpu(sys);
-    let load_avg = sys.load_average();
+fn get_load_average(avg: LoadAvg) -> f64 {
+    let load_avg = si::System::load_average();
     match avg {
         LoadAvg::One => load_avg.one,
         LoadAvg::Five => load_avg.five,
@@ -105,9 +98,9 @@ fn refresh_state(
     let updater = OnceRefresher::new();
     state.cpu_usage = get_cpu_usage(sys, &updater);
     state.mem_usage = get_memory_usage(sys, &updater);
-    state.load_avg_1 = get_load_average(sys, LoadAvg::One, &updater);
-    state.load_avg_5 = get_load_average(sys, LoadAvg::Five, &updater);
-    state.load_avg_15 = get_load_average(sys, LoadAvg::Fifteen, &updater);
+    state.load_avg_1 = get_load_average(LoadAvg::One);
+    state.load_avg_5 = get_load_average(LoadAvg::Five);
+    state.load_avg_15 = get_load_average(LoadAvg::Fifteen);
     state.cached_text = subst_placeholders(fmt_str, html_escape, state);
 }
 

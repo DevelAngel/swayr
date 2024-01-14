@@ -58,7 +58,6 @@ pub enum Criterion {
     Shell(ShellTypeOrFocused),
     Floating,
     Tiling,
-    // TODO: There are more...
 }
 
 fn regex_from_str(s: &str) -> Regex {

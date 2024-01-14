@@ -1589,7 +1589,7 @@ fn focus_window_in_direction_1(
 
     let is_focused_window: Box<dyn Fn(&t::DisplayNode) -> bool> =
         if !wins.iter().any(|w| w.node.focused) {
-            let last_focused_win_id = wins.get(0).unwrap().node.id;
+            let last_focused_win_id = wins.first().unwrap().node.id;
             Box::new(move |dn| dn.node.id == last_focused_win_id)
         } else {
             Box::new(|dn| dn.node.focused)
