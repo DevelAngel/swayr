@@ -155,11 +155,10 @@ impl<'a> Tree<'a> {
             .collect()
     }
 
-    pub fn get_current_workspace(&self) -> &s::Node {
+    pub fn get_current_workspace(&self) -> Option<&s::Node> {
         self.root
             .iter()
             .find(|n| n.get_type() == ipc::Type::Workspace && n.is_current())
-            .expect("No current Workspace")
     }
 
     pub fn get_outputs(&self) -> Vec<DisplayNode> {

@@ -1303,13 +1303,15 @@ fn retain_nodes_of_non_current_workspaces(
     tree: &t::Tree,
     nodes: &mut Vec<t::DisplayNode>,
 ) {
-    let current = tree.get_current_workspace();
-    nodes.retain(|w| {
-        match tree.get_parent_node_of_type(w.node.id, ipc::Type::Workspace) {
-            Some(ws) => &current != ws,
-            None => true,
-        }
-    });
+    if let Some(current) = tree.get_current_workspace() {
+        nodes.retain(|w| {
+            match tree.get_parent_node_of_type(w.node.id, ipc::Type::Workspace)
+            {
+                Some(ws) => &current != ws,
+                None => true,
+            }
+        })
+    };
 }
 
 pub fn steal_window(fdata: &FocusData) -> Result<String, String> {
@@ -1634,13 +1636,16 @@ pub fn focus_window_in_direction(
     let mut wins = tree.get_windows(fdata);
 
     if consider_wins == &ConsiderWindows::CurrentWorkspace {
-        let cur_ws = tree.get_current_workspace();
-        wins.retain(|w| {
-            tree.get_parent_node_of_type(w.node.id, ipc::Type::Workspace)
-                .unwrap()
-                .id
-                == cur_ws.id
-        });
+        if let Some(cur_ws) = tree.get_current_workspace() {
+            wins.retain(|w| {
+                tree.get_parent_node_of_type(w.node.id, ipc::Type::Workspace)
+                    .unwrap()
+                    .id
+                    == cur_ws.id
+            });
+        } else {
+            return Err("No current workspace!".to_owned());
+        };
     }
 
     focus_window_in_direction_1(&wins, dir, fdata, pred)
@@ -1767,11 +1772,14 @@ fn toggle_tab_tile_current_workspace(
 ) -> Result<String, String> {
     let tree = ipc::get_root_node(false);
     let workspaces = tree.nodes_of_type(ipc::Type::Workspace);
-    let cur_ws = workspaces.iter().find(|w| w.is_current()).unwrap();
-    if cur_ws.layout == s::NodeLayout::Tabbed {
-        tile_current_workspace(floating, true)
+    if let Some(cur_ws) = workspaces.iter().find(|w| w.is_current()) {
+        if cur_ws.layout == s::NodeLayout::Tabbed {
+            tile_current_workspace(floating, true)
+        } else {
+            tab_current_workspace(floating)
+        }
     } else {
-        tab_current_workspace(floating)
+        Err("No current workspace!".to_owned())
     }
 }
 
