@@ -905,7 +905,7 @@ fn for_each_window(
     include_scratchpad: bool,
     error_if_no_match: bool,
     criteria: &String,
-    shell_command: &Vec<String>,
+    shell_command: &[String],
 ) -> Result<String, String> {
     if shell_command.is_empty() {
         return Err("No shell_command given".to_owned());

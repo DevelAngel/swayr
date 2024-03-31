@@ -49,6 +49,7 @@ where
         .read(false)
         .write(true)
         .create(true)
+        .truncate(true)
         .open(path)
         .unwrap();
     file.write_all(content.as_bytes()).unwrap();
