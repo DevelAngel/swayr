@@ -54,8 +54,8 @@ fn refresh_state_1(
 ) {
     match win {
         Some(win) => {
-            state.name = win.get_name().to_owned();
-            state.app_name = win.get_app_name().to_owned();
+            win.get_name().clone_into(&mut state.name);
+            win.get_app_name().clone_into(&mut state.app_name);
             state.pid = win.pid.unwrap_or(UNKNOWN_PID);
             state.cached_text = subst_placeholders(fmt_str, html_escape, state);
 

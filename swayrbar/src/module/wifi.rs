@@ -40,14 +40,12 @@ impl WifiTool {
         let output = std::process::Command::new(cmd)
             .args(args)
             .output()
-            .map_err(|e| {
-                format!("Failed to run {}: {}", self.to_string(), e)
-            })?;
+            .map_err(|e| format!("Failed to run {}: {}", self, e))?;
 
         if !output.status.success() {
             return Err(format!(
                 "{} failed with status code {}",
-                self.to_string(),
+                self,
                 output.status.code().unwrap_or(-1)
             ));
         }
@@ -110,11 +108,11 @@ impl WifiTool {
     }
 }
 
-impl ToString for WifiTool {
-    fn to_string(&self) -> String {
+impl std::fmt::Display for WifiTool {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            WifiTool::Nmcli => String::from("nmcli"),
-            WifiTool::Iwctl => String::from("iwctl"),
+            WifiTool::Nmcli => "nmcli".fmt(f),
+            WifiTool::Iwctl => "iwctl".fmt(f),
         }
     }
 }

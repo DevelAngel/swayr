@@ -18,7 +18,7 @@ use regex::Regex;
 use rt_format::{
     Format, FormatArgument, NoNamedArguments, ParsedFormat, Specifier,
 };
-use std::fmt;
+use std::fmt::{self, Display};
 
 pub enum FmtArg {
     I64(i64),
@@ -71,15 +71,15 @@ impl From<String> for FmtArg {
     }
 }
 
-impl ToString for FmtArg {
-    fn to_string(&self) -> String {
+impl fmt::Display for FmtArg {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            FmtArg::String(x) => x.clone(),
-            FmtArg::I64(x) => x.to_string(),
-            FmtArg::I32(x) => x.to_string(),
-            FmtArg::U8(x) => x.to_string(),
-            FmtArg::F64(x) => x.to_string(),
-            FmtArg::F32(x) => x.to_string(),
+            FmtArg::String(x) => x.fmt(f),
+            FmtArg::I64(x) => x.fmt(f),
+            FmtArg::I32(x) => x.fmt(f),
+            FmtArg::U8(x) => x.fmt(f),
+            FmtArg::F64(x) => x.fmt(f),
+            FmtArg::F32(x) => x.fmt(f),
         }
     }
 }
@@ -91,12 +91,12 @@ impl FormatArgument for FmtArg {
 
     fn fmt_display(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Self::String(val) => fmt::Display::fmt(&val, f),
-            Self::I64(val) => fmt::Display::fmt(&val, f),
-            Self::I32(val) => fmt::Display::fmt(&val, f),
-            Self::U8(val) => fmt::Display::fmt(&val, f),
-            Self::F64(val) => fmt::Display::fmt(&val, f),
-            Self::F32(val) => fmt::Display::fmt(&val, f),
+            Self::String(val) => val.fmt(f),
+            Self::I64(val) => val.fmt(f),
+            Self::I32(val) => val.fmt(f),
+            Self::U8(val) => val.fmt(f),
+            Self::F64(val) => val.fmt(f),
+            Self::F32(val) => val.fmt(f),
         }
     }
 
@@ -157,7 +157,6 @@ fn test_format() {
     assert_eq!(rt_format("{:.10}", FmtArg::from("sway"), ""), "sway");
     assert_eq!(rt_format("{:.10}", FmtArg::from("sway"), "…"), "sway");
     assert_eq!(rt_format("{:.4}", FmtArg::from("𝔰𝔴𝔞𝔶"), "……"), "𝔰𝔴𝔞𝔶");
-
     assert_eq!(rt_format("{:.3}", FmtArg::from("sway"), ""), "swa");
     assert_eq!(rt_format("{:.3}", FmtArg::from("sway"), "…"), "sw…");
     assert_eq!(
