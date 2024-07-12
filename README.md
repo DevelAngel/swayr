@@ -814,12 +814,12 @@ tables](https://toml.io/en/v1.0.0#array-of-tables) in TOML where a module's
   markup](https://docs.gtk.org/Pango/pango_markup.html).  Obviously, if you
   make use of this feature, you want to set `html_escape = true` for that
   module.  This option is optional and may be omitted.
-* `on_click` is a table defining actions to be performed when you click on a
-  module's space in `swaybar`.  All placeholders available in `format` are
-  available here, too.  The action for each mouse button is specified as an
-  array `['command', 'arg1', 'arg2',...]`.  The available button names to be
-  assigned to are `Left`, `Middle`, `Right`, `WheelUp`, `WheelDown`,
-  `WheelLeft`, and `WheelRight`.
+* `on_click` is a table defining shell commands to be performed when you
+  click on a module's space in `swaybar`.  All placeholders available in
+  `format` are available here, too.  The action for each mouse button is
+  specified as an array `['command', 'arg1', 'arg2',...]`.  The
+  available button names to be assigned to are `Left`, `Middle`,
+  `Right`, `WheelUp`, `WheelDown`, `WheelLeft`, and `WheelRight`.
 
 The `on_click` table can also be written as inline table
 
@@ -910,6 +910,14 @@ following placeholders:
 The `date` module shows the date and time by defining the `format` using
 [chrono's strftime
 format](https://docs.rs/chrono/0.4.19/chrono/format/strftime/index.html#specifiers).
+
+#### The `cmd` module
+
+The `cmd` module can be used to run shell commands and display their
+output. The command can be passed through the `format` configuration
+option, which will be executed by `sh -c`.
+
+This module has no placeholders or default configuration.
 
 ### <a id="swayr-version-changes">Version changes</a>
 

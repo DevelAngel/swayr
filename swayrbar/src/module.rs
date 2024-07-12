@@ -20,6 +20,7 @@ use swaybar_types as s;
 use swayipc as si;
 
 pub mod battery;
+pub mod cmd;
 pub mod date;
 pub mod pactl;
 pub mod sysinfo;

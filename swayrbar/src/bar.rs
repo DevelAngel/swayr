@@ -99,6 +99,7 @@ fn create_modules(config: config::Config) -> Vec<Box<dyn BarModuleFn>> {
             "pactl" => module::pactl::create(mc),
             "nmcli" => module::wifi::create(module::wifi::WifiTool::Nmcli, mc),
             "iwctl" => module::wifi::create(module::wifi::WifiTool::Iwctl, mc),
+            "cmd" => module::cmd::create(mc),
             unknown => {
                 log::warn!("Unknown module name '{unknown}'.  Ignoring...");
                 continue;
@@ -202,8 +203,9 @@ fn handle_click(
 
 fn execute_command(cmd: &[String]) {
     log::debug!("Executing command: {cmd:?}");
-    let child = p::Command::new(&cmd[0])
-        .args(&cmd[1..])
+    let child = p::Command::new("sh")
+        .arg("-c")
+        .arg(&cmd.join(" "))
         // We must not write to stdout because swaybar interprets that!
         // Redirect command output to /dev/null.
         .stdout(Stdio::null())

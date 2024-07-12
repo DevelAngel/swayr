@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU General Public License along with
 // this program.  If not, see <https://www.gnu.org/licenses/>.
 
-//! The date `swayrbar` module.
+//! The battery `swayrbar` module.
 
 use crate::config;
 use crate::module::{BarModuleFn, RefreshReason};
