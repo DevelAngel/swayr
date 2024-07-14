@@ -205,7 +205,7 @@ fn execute_command(cmd: &[String]) {
     log::debug!("Executing command: {cmd:?}");
     let child = p::Command::new("sh")
         .arg("-c")
-        .arg(&cmd.join(" "))
+        .args(cmd)
         // We must not write to stdout because swaybar interprets that!
         // Redirect command output to /dev/null.
         .stdout(Stdio::null())
