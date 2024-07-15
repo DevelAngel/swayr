@@ -914,10 +914,14 @@ format](https://docs.rs/chrono/0.4.19/chrono/format/strftime/index.html#specifie
 #### The `cmd` module
 
 The `cmd` module can be used to run shell commands and display their
-output. The command can be passed through the `format` configuration
-option, which will be executed by `sh -c`.
+output.
 
-This module has no placeholders or default configuration.
+The command is specified using the `format` configuration option.  It will be
+executed by `sh -c` and its output will be displayed in the module's space in
+`swaybar`.
+
+This module has no placeholders or default configuration and the `html_escape`
+option has no meaning for it.
 
 ### <a id="swayr-version-changes">Version changes</a>
 
