@@ -813,7 +813,8 @@ tables](https://toml.io/en/v1.0.0#array-of-tables) in TOML where a module's
   `&gt;`, and `&amp;` because `format` may contain [pango
   markup](https://docs.gtk.org/Pango/pango_markup.html).  Obviously, if you
   make use of this feature, you want to set `html_escape = true` for that
-  module.  This option is optional and may be omitted.
+  module.  This option is optional and may be omitted which has the same
+  meaning as setting it to `false`.
 * `on_click` is a table defining shell commands to be performed when you
   click on a module's space in `swaybar`.  All placeholders available in
   `format` are available here, too.  The action for each mouse button is
@@ -920,8 +921,12 @@ The command is specified using the `format` configuration option.  It will be
 executed by `sh -c` and its output will be displayed in the module's space in
 `swaybar`.
 
-This module has no placeholders or default configuration and the `html_escape`
-option has no meaning for it.
+The `html_escape` option controls if HTML entity replacements should be
+performed on the command's output before it is displayed in the bar, i.e., you
+should set it to `true` if your command outputs text containing `<`, `>`, or
+`&` but is not valid pango markup.
+
+This module has no placeholders or default configuration.
 
 ### <a id="swayr-version-changes">Version changes</a>
 

@@ -17,6 +17,7 @@
 
 use crate::config;
 use crate::module::{BarModuleFn, RefreshReason};
+use crate::shared::fmt::maybe_html_escape;
 use std::process::Command;
 use std::string::String;
 use std::sync::Mutex;
@@ -80,7 +81,10 @@ impl BarModuleFn for BarModuleCmd {
             }
             _ => false,
         } {
-            state.cached_text = refresh_state(&self.config.format);
+            state.cached_text = maybe_html_escape(
+                self.config.is_html_escape(),
+                refresh_state(&self.config.format),
+            );
         }
 
         s::Block {
