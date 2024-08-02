@@ -55,7 +55,7 @@ impl OnceRefresher {
     }
 
     fn refresh_cpu(&self, sys: &mut si::System) {
-        self.cpu.call_once(|| sys.refresh_cpu());
+        self.cpu.call_once(|| sys.refresh_cpu_all());
     }
 
     fn refresh_memory(&self, sys: &mut si::System) {
@@ -65,7 +65,7 @@ impl OnceRefresher {
 
 fn get_cpu_usage(sys: &mut si::System, upd: &OnceRefresher) -> f32 {
     upd.refresh_cpu(sys);
-    sys.global_cpu_info().cpu_usage()
+    sys.global_cpu_usage()
 }
 
 fn get_memory_usage(sys: &mut si::System, upd: &OnceRefresher) -> f64 {

@@ -1,3 +1,10 @@
+swayrbar 0.4.0
+==============
+
+- New `cmd` module that runs a user-specified shell command and displays its
+  output.
+- The `pactl` module now also supports the default source (microphone).
+
 swayrbar 0.3.1
 ==============
 
