@@ -881,6 +881,9 @@ to be installed.  It supports the following placeholders:
 * `{volume}` is the current volume percentage of the default sink.
 * `{muted}` is the string `" muted"` if the default sink is currently muted,
   otherwise it is the empty string.
+* `{volume_source}` is the current volume percentage of the default source.
+* `{muted_source}` is the string `" muted"` if the default source is currently
+  muted, otherwise it is the empty string.
 
 By default, it has the following click bindings:
 * `Left` calls the `pavucontrol` program (PulseAudio GUI control).

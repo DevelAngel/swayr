@@ -30,6 +30,8 @@ const NAME: &str = "pactl";
 struct State {
     volume: u8,
     muted: bool,
+    volume_source: u8,
+    muted_source: bool,
     cached_text: String,
 }
 
@@ -46,16 +48,16 @@ fn run_pactl(args: &[&str]) -> String {
     }
 }
 
-fn get_volume() -> u8 {
-    let output = run_pactl(&["get-sink-volume", "@DEFAULT_SINK@"]);
+fn get_volume(get_volume: &str, device: &str) -> u8 {
+    let output = run_pactl(&[get_volume, device]);
     VOLUME_RX
         .captures(&output)
         .map(|c| c.get(1).unwrap().as_str().parse::<u8>().unwrap())
         .unwrap_or(255_u8)
 }
 
-fn get_mute_state() -> bool {
-    run_pactl(&["get-sink-mute", "@DEFAULT_SINK@"]).contains("yes")
+fn get_mute_state(get_mute: &str, device: &str) -> bool {
+    run_pactl(&[get_mute, device]).contains("yes")
 }
 
 pub struct BarModulePactl {
@@ -64,8 +66,10 @@ pub struct BarModulePactl {
 }
 
 fn refresh_state(state: &mut State, fmt_str: &str, html_escape: bool) {
-    state.volume = get_volume();
-    state.muted = get_mute_state();
+    state.volume = get_volume("get-sink-volume", "@DEFAULT_SINK@");
+    state.muted = get_mute_state("get-sink-mute", "@DEFAULT_SINK@");
+    state.volume_source = get_volume("get-source-volume", "@DEFAULT_SOURCE@");
+    state.muted_source = get_mute_state("get-source-mute", "@DEFAULT_SOURCE@");
     state.cached_text = subst_placeholders(fmt_str, html_escape, state);
 }
 
@@ -81,6 +85,16 @@ fn subst_placeholders(fmt: &str, html_escape: bool, state: &State) -> String {
                 ""
             }
         },
+        "volume_source" => {
+            state.volume_source
+        },
+        "muted_source" =>{
+            if state.muted_source {
+                " muted"
+            } else {
+                ""
+            }
+        },
     })
 }
 
@@ -90,6 +104,8 @@ pub fn create(config: config::ModuleConfig) -> Box<dyn BarModuleFn> {
         state: Mutex::new(State {
             volume: 255_u8,
             muted: false,
+            volume_source: 255_u8,
+            muted_source: false,
             cached_text: String::new(),
         }),
     })
